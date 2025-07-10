@@ -84,10 +84,10 @@ export default function SideBar({
 
   const handleMouseLeave = () => {
     if (!isMobile) {
-      // Add a small delay before hiding to prevent flickering
+      // Add a longer delay before hiding to prevent flickering
       const timeout = setTimeout(() => {
         setIsHovered(false);
-      }, 100);
+      }, 200);
       setHoverTimeout(timeout);
     }
   };
@@ -160,12 +160,10 @@ export default function SideBar({
       {!isMobile && (
         <button
           onClick={onToggle}
-          className="absolute -right-4 top-9 z-[60] w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
+          className="absolute -right-4 top-9 z-[60] w-9 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700"
           style={{
             transform: "translateY(-50%)",
           }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >
           <span className="text-xs text-gray-600 dark:text-gray-300 font-bold">
             {isCollapsed ? ">|" : "|<"}
