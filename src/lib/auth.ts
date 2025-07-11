@@ -9,11 +9,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         password: {},
       },
       authorize: async credentials => {
-        // const role = await db.
-        const user = await db.user.findFirst({
+        const user = await db.users.findFirst({
           where: {
             email: credentials.email,
-            password: credentials.password,
+            password_hash: credentials.password,
           },
         });
 
