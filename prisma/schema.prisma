@@ -1,161 +1,79 @@
-generator client {
-  provider = "prisma-client-js"
-  // output   = "../src/generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-model roles {
-  id    Int     @id @default(autoincrement())
-  name  String  @unique @db.VarChar(50)
-  users users[]
+ 
+generator client {
+  provider = "prisma-client-js"
 }
-
-model users {
-  id                  Int                   @id @default(autoincrement())
-  full_name           String                @db.VarChar(100)
-  email               String                @unique @db.VarChar(100)
-  password_hash       String
-  role_id             Int?
-  created_at          DateTime?             @default(now()) @db.Timestamp(6)
-  customer_orders     customer_orders[]
-  forwarded_requests  forwarded_requests[]
-  payments            payments[]
-  sales_requests      sales_requests[]
-  transactions        transactions[]
-  roles               roles?                @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  warehouse_responses warehouse_responses[]
+ 
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
-model customer_orders {
-  id             Int              @id @default(autoincrement())
-  customer_name  String?          @db.VarChar(100)
-  order_date     DateTime         @db.Date
-  sales_id       Int?
-  total_amount   Decimal?         @db.Decimal(12, 2)
-  status         String?          @default("new") @db.VarChar(20)
-  created_at     DateTime?        @default(now()) @db.Timestamp(6)
-  users          users?           @relation(fields: [sales_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  delivery_notes delivery_notes[]
-  invoices       invoices[]
-  order_items    order_items[]
+ 
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([provider, providerAccountId])
 }
-
-model delivery_notes {
-  id              Int              @id @default(autoincrement())
-  order_id        Int?
-  delivery_date   DateTime?        @db.Date
-  driver_name     String?          @db.VarChar(100)
-  vehicle_number  String?          @db.VarChar(50)
-  created_at      DateTime?        @default(now()) @db.Timestamp(6)
-  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+ 
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
-model forwarded_requests {
-  id                  Int                   @id @default(autoincrement())
-  sales_request_id    Int?
-  forwarded_by        Int?
-  forwarded_at        DateTime?             @default(now()) @db.Timestamp(6)
-  users               users?                @relation(fields: [forwarded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sales_requests      sales_requests?       @relation(fields: [sales_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  warehouse_responses warehouse_responses[]
+ 
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+ 
+  @@id([identifier, token])
 }
-
-model inventory {
-  id         Int       @id @default(autoincrement())
-  product_id Int?
-  quantity   Int
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-  products   products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model invoices {
-  id              Int              @id @default(autoincrement())
-  order_id        Int?
-  invoice_date    DateTime         @db.Date
-  due_date        DateTime         @db.Date
-  status          String?          @default("unpaid") @db.VarChar(20)
-  total_amount    Decimal?         @db.Decimal(12, 2)
-  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  payments        payments[]
-}
-
-model order_items {
-  id              Int              @id @default(autoincrement())
-  order_id        Int?
-  product_id      Int?
-  quantity        Int
-  price           Decimal?         @db.Decimal(10, 2)
-  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  products        products?        @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model payments {
-  id           Int       @id @default(autoincrement())
-  invoice_id   Int?
-  payment_date DateTime? @db.Date
-  amount       Decimal?  @db.Decimal(12, 2)
-  method       String?   @db.VarChar(50)
-  received_by  Int?
-  invoices     invoices? @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users        users?    @relation(fields: [received_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model products {
-  id                  Int                   @id @default(autoincrement())
-  name                String                @db.VarChar(100)
-  sku                 String?               @unique @db.VarChar(50)
-  unit                String?               @db.VarChar(20)
-  description         String?
-  created_at          DateTime?             @default(now()) @db.Timestamp(6)
-  inventory           inventory[]
-  order_items         order_items[]
-  sales_request_items sales_request_items[]
-}
-
-model sales_request_items {
-  id               Int             @id @default(autoincrement())
-  sales_request_id Int?
-  product_id       Int?
-  quantity         Int
-  products         products?       @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sales_requests   sales_requests? @relation(fields: [sales_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model sales_requests {
-  id                  Int                   @id @default(autoincrement())
-  sales_id            Int?
-  request_date        DateTime              @db.Date
-  status              String?               @default("pending") @db.VarChar(20)
-  note                String?
-  created_at          DateTime?             @default(now()) @db.Timestamp(6)
-  forwarded_requests  forwarded_requests[]
-  sales_request_items sales_request_items[]
-  users               users?                @relation(fields: [sales_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model transactions {
-  id               Int       @id @default(autoincrement())
-  type             String?   @db.VarChar(10)
-  amount           Decimal?  @db.Decimal(12, 2)
-  description      String?
-  recorded_by      Int?
-  transaction_date DateTime  @db.Date
-  created_at       DateTime? @default(now()) @db.Timestamp(6)
-  users            users?    @relation(fields: [recorded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-}
-
-model warehouse_responses {
-  id                   Int                 @id @default(autoincrement())
-  forwarded_request_id Int?
-  approved             Boolean
-  response_note        String?
-  responded_by         Int?
-  responded_at         DateTime?           @default(now()) @db.Timestamp(6)
-  forwarded_requests   forwarded_requests? @relation(fields: [forwarded_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users                users?              @relation(fields: [responded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+ 
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([userId, credentialID])
 }

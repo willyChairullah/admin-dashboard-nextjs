@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "npx prisma migrate dev"
+    "db:migrate": "npx prisma migrate dev",
+    "db:studio": "npx prisma studio ",
+    "db:reset": "prisma migrate reset && prisma migrate dev"
   },
   "prisma": {
     "schema": "./prisma/schema.prisma"
