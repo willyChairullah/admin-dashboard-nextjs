@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "@/lib/auth";
 import { useState, useEffect } from "react";
 
 interface NavbarProps {
@@ -46,6 +47,11 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
     e.preventDefault();
     // Handle search logic here
     console.log("Searching for:", searchQuery);
+  };
+
+  const handleSignOut = async () => {
+    await fetch("/api/signout", { method: "POST" });
+    window.location.href = "/sign-in"; // redirect ke halaman login
   };
 
   return (
@@ -126,13 +132,13 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
                     Pengaturan Akun
                   </a>
                   <hr className="my-1 border-gray-200 dark:border-gray-600" />
-                  <a
-                    href="#"
-                    className="flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  <button
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={handleSignOut}
                   >
                     <span className="mr-3">🚪</span>
                     Keluar
-                  </a>
+                  </button>
                 </div>
               </div>
             )}

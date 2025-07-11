@@ -1,6 +1,10 @@
-import Image from "next/image";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home() {
+  
+  const session = await auth();
+  if (!session) redirect("/sign-in");
   return (
     <div className="min-h-screen p-8 bg-gray-50 dark:bg-black">
       {/* Header */}

@@ -8,276 +8,154 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model activities {
-  activity_id BigInt   @id @default(autoincrement())
-  user_id     BigInt
-  activity    String   @db.VarChar(255)
-  module      String   @db.VarChar(255)
-  created_on  DateTime @db.Timestamp(6)
-  deleted     Int      @default(0) @db.SmallInt
-}
-
-model approval {
-  id              Int      @id @default(autoincrement())
-  kode_layanan    String   @db.VarChar(3)
-  tgl_buat        DateTime @default(now()) @db.Timestamp(6)
-  id_transaksi    Int
-  id_pemohon      Int?
-  status_total    Int      @default(0) @db.SmallInt
-  status_approval Int      @default(0) @db.SmallInt
-}
-
-model approval_items {
-  id              Int       @id @default(autoincrement())
-  role_id         Int
-  status_approval Int       @default(0)
-  tgl_proses      DateTime? @db.Timestamp(6)
-  approval_id     Int
-  index           Int
-}
-
-model approval_items_desc {
-  id               Int      @id @default(autoincrement())
-  approval_item_id Int
-  user_id          Int
-  description      String
-  status_approval  Int      @db.SmallInt
-  tgl_proses       DateTime @default(now()) @db.Timestamp(6)
-}
-
-model authority {
-  id           Int    @id @default(autoincrement())
-  kode_layanan String @db.VarChar(255)
-}
-
-model authority_items {
-  id           Int @id @default(autoincrement())
-  index        Int
-  authority_id Int
-  role_id      Int
-}
-
-model ci3_sessions {
-  id         String @id @db.VarChar(128)
-  ip_address String @db.VarChar(45)
-  timestamp  BigInt
-  data       Bytes
-}
-
-model cost_center {
-  id   Int    @id
-  nama String @db.VarChar(255)
-  type String @db.VarChar(50)
-}
-
-model email_queue {
-  id             Int       @id @default(autoincrement())
-  to_email       String    @db.VarChar(254)
-  subject        String    @db.VarChar(255)
-  message        String
-  alt_message    String?
-  max_attempts   Int
-  attempts       Int
-  success        Int       @db.SmallInt
-  date_published DateTime? @db.Timestamp(6)
-  last_attempt   DateTime? @db.Timestamp(6)
-  date_sent      DateTime? @db.Timestamp(6)
-  csv_attachment String?
-}
-
-model login_attempts {
-  id         BigInt   @id @default(autoincrement())
-  ip_address String   @db.VarChar(45)
-  login      String   @db.VarChar(255)
-  time       DateTime @db.Timestamp(6)
-}
-
-model opt_agama {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey1")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_kebangsaan {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey2")
-  nomor Int?    @db.SmallInt
-  nama  String? @db.VarChar(255)
-}
-
-model opt_kekerasan {
-  id    Int     @id(map: "kt_opt_kekerasan_pkey")
-  nomor Int?    @db.SmallInt
-  nama  String? @db.VarChar(255)
-}
-
-model opt_media {
-  id    Int     @id(map: "kt_opt_kekerasan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_pekerjaan {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_pendidikan {
-  id    Int     @id(map: "kt_opt_media_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_perkawinan {
-  id    Int     @id(map: "kt_opt_agama_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_tkp {
-  id    Int     @id(map: "kt_opt_perkawinan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model permissions {
-  permission_id Int    @id @default(autoincrement())
-  name          String @db.VarChar(255)
-  description   String @db.VarChar(100)
-  status        String @default("active") @db.VarChar(8)
-}
-
-model reg_districts {
-  id            String         @id @db.Char(6)
-  regency_id    String         @db.Char(4)
-  name          String         @db.VarChar(255)
-  reg_regencies reg_regencies  @relation(fields: [regency_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "district_regency_foreign")
-  reg_villages  reg_villages[]
-
-  @@index([regency_id], map: "districts_regency_id_index")
-}
-
-model reg_provinces {
-  id            String          @id @db.Char(2)
-  name          String          @db.VarChar(255)
-  reg_regencies reg_regencies[]
-}
-
-model reg_regencies {
-  id            String          @id @db.Char(4)
-  province_id   String          @db.Char(2)
-  name          String          @db.VarChar(255)
-  reg_districts reg_districts[]
-  reg_provinces reg_provinces   @relation(fields: [province_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regency_province_foreign")
-
-  @@index([province_id], map: "regencies_province_id_index")
-}
-
-model reg_villages {
-  id            String        @id @db.Char(10)
-  district_id   String        @db.Char(6)
-  name          String        @db.VarChar(255)
-  reg_districts reg_districts @relation(fields: [district_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "village_district_foreign")
-
-  @@index([district_id], map: "villages_district_id_index")
-}
-
-model registrations {
-  id            Int      @id(map: "registration_pkey") @default(autoincrement())
-  email         String   @db.VarChar(255)
-  nik           String   @db.VarChar(255)
-  nama          String   @db.VarChar(255)
-  jenis_kelamin String   @db.VarChar(255)
-  tgl_lahir     DateTime @db.Date
-  alamat        String   @db.VarChar(500)
-  user_id       Int?
-  role_id       Int?
-  file_code     String?  @db.VarChar
-  no_telp       String?  @db.VarChar(255)
-  kecamatan     String?  @db.VarChar(255)
-  kelurahan     String?  @db.VarChar(255)
-}
-
-model role_permissions {
-  role_id       Int
-  permission_id Int
-
-  @@id([role_id, permission_id])
-}
-
 model roles {
-  role_id           Int    @id @default(autoincrement())
-  role_name         String @db.VarChar(60)
-  description       String @db.VarChar(255)
-  default           Int    @default(0) @db.SmallInt
-  can_delete        Int    @default(0) @db.SmallInt
-  login_destination String @default("/") @db.VarChar(255)
-  default_context   String @default("content") @db.VarChar(255)
-  deleted           Int    @default(0) @db.SmallInt
-}
-
-model schema_version {
-  type    String @id @db.VarChar(40)
-  version Int
-}
-
-model services {
   id    Int     @id @default(autoincrement())
-  kode  String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-  table String? @db.VarChar(255)
-}
-
-model sessions {
-  session_id    String @id @db.VarChar(40)
-  ip_address    String @db.VarChar(45)
-  user_agent    String @db.VarChar(120)
-  last_activity BigInt
-  user_data     String
-}
-
-model settings {
-  name   String @id @db.VarChar(30)
-  module String @db.VarChar(255)
-  value  String @db.VarChar(255)
-}
-
-model user_cookies {
-  user_id    BigInt   @id @default(autoincrement())
-  token      String   @db.VarChar(128)
-  created_on DateTime @db.Timestamp(6)
-
-  @@index([token], map: "token")
-}
-
-model user_meta {
-  meta_id    BigInt  @id @default(autoincrement())
-  user_id    BigInt
-  meta_key   String  @db.VarChar(255)
-  meta_value String?
+  name  String  @unique @db.VarChar(50)
+  users users[]
 }
 
 model users {
-  id                   BigInt    @id @default(autoincrement())
-  role_id              Int
-  email                String    @db.VarChar(254)
-  username             String    @db.VarChar(30)
-  password_hash        String    @db.Char(60)
-  reset_hash           String?   @db.VarChar(40)
-  last_login           DateTime? @db.Timestamp(6)
-  last_ip              String    @db.VarChar(45)
-  created_on           DateTime  @db.Timestamp(6)
-  deleted              Int       @default(0) @db.SmallInt
-  reset_by             Int?
-  banned               Int       @db.SmallInt
-  ban_message          String?   @db.VarChar(255)
-  display_name         String    @db.VarChar(255)
-  display_name_changed DateTime? @db.Date
-  timezone             String    @db.VarChar(40)
-  language             String    @db.VarChar(20)
-  active               Int       @db.SmallInt
-  activate_hash        String    @db.VarChar(40)
-  force_password_reset Int?      @db.SmallInt
+  id                  Int                   @id @default(autoincrement())
+  full_name           String                @db.VarChar(100)
+  email               String                @unique @db.VarChar(100)
+  password_hash       String
+  role_id             Int?
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  customer_orders     customer_orders[]
+  forwarded_requests  forwarded_requests[]
+  payments            payments[]
+  sales_requests      sales_requests[]
+  transactions        transactions[]
+  roles               roles?                @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  warehouse_responses warehouse_responses[]
+}
 
-  @@index([email], map: "email")
+model customer_orders {
+  id             Int              @id @default(autoincrement())
+  customer_name  String?          @db.VarChar(100)
+  order_date     DateTime         @db.Date
+  sales_id       Int?
+  total_amount   Decimal?         @db.Decimal(12, 2)
+  status         String?          @default("new") @db.VarChar(20)
+  created_at     DateTime?        @default(now()) @db.Timestamp(6)
+  users          users?           @relation(fields: [sales_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  delivery_notes delivery_notes[]
+  invoices       invoices[]
+  order_items    order_items[]
+}
+
+model delivery_notes {
+  id              Int              @id @default(autoincrement())
+  order_id        Int?
+  delivery_date   DateTime?        @db.Date
+  driver_name     String?          @db.VarChar(100)
+  vehicle_number  String?          @db.VarChar(50)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model forwarded_requests {
+  id                  Int                   @id @default(autoincrement())
+  sales_request_id    Int?
+  forwarded_by        Int?
+  forwarded_at        DateTime?             @default(now()) @db.Timestamp(6)
+  users               users?                @relation(fields: [forwarded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_requests      sales_requests?       @relation(fields: [sales_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  warehouse_responses warehouse_responses[]
+}
+
+model inventory {
+  id         Int       @id @default(autoincrement())
+  product_id Int?
+  quantity   Int
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  products   products? @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model invoices {
+  id              Int              @id @default(autoincrement())
+  order_id        Int?
+  invoice_date    DateTime         @db.Date
+  due_date        DateTime         @db.Date
+  status          String?          @default("unpaid") @db.VarChar(20)
+  total_amount    Decimal?         @db.Decimal(12, 2)
+  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payments        payments[]
+}
+
+model order_items {
+  id              Int              @id @default(autoincrement())
+  order_id        Int?
+  product_id      Int?
+  quantity        Int
+  price           Decimal?         @db.Decimal(10, 2)
+  customer_orders customer_orders? @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products        products?        @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model payments {
+  id           Int       @id @default(autoincrement())
+  invoice_id   Int?
+  payment_date DateTime? @db.Date
+  amount       Decimal?  @db.Decimal(12, 2)
+  method       String?   @db.VarChar(50)
+  received_by  Int?
+  invoices     invoices? @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users        users?    @relation(fields: [received_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model products {
+  id                  Int                   @id @default(autoincrement())
+  name                String                @db.VarChar(100)
+  sku                 String?               @unique @db.VarChar(50)
+  unit                String?               @db.VarChar(20)
+  description         String?
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  inventory           inventory[]
+  order_items         order_items[]
+  sales_request_items sales_request_items[]
+}
+
+model sales_request_items {
+  id               Int             @id @default(autoincrement())
+  sales_request_id Int?
+  product_id       Int?
+  quantity         Int
+  products         products?       @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_requests   sales_requests? @relation(fields: [sales_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model sales_requests {
+  id                  Int                   @id @default(autoincrement())
+  sales_id            Int?
+  request_date        DateTime              @db.Date
+  status              String?               @default("pending") @db.VarChar(20)
+  note                String?
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  forwarded_requests  forwarded_requests[]
+  sales_request_items sales_request_items[]
+  users               users?                @relation(fields: [sales_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model transactions {
+  id               Int       @id @default(autoincrement())
+  type             String?   @db.VarChar(10)
+  amount           Decimal?  @db.Decimal(12, 2)
+  description      String?
+  recorded_by      Int?
+  transaction_date DateTime  @db.Date
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  users            users?    @relation(fields: [recorded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model warehouse_responses {
+  id                   Int                 @id @default(autoincrement())
+  forwarded_request_id Int?
+  approved             Boolean
+  response_note        String?
+  responded_by         Int?
+  responded_at         DateTime?           @default(now()) @db.Timestamp(6)
+  forwarded_requests   forwarded_requests? @relation(fields: [forwarded_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                users?              @relation(fields: [responded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
