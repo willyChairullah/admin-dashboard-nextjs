@@ -10,7 +10,7 @@ import {
   FormField,
   SearchBar,
   Alert,
-  Table,
+  DataTable,
   Modal,
   Card,
 } from "@/components/ui";
@@ -324,7 +324,7 @@ const Category2And3Demo = () => {
             }
             className="mb-8"
           >
-            <Table
+            <DataTable
               columns={columns}
               data={sampleData}
               isLoading={isTableLoading}

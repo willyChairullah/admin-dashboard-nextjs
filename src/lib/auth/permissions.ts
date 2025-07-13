@@ -1,6 +1,6 @@
 import type {
   ModuleName,
-  ContextName,
+  PageName,
   ActionName,
   PermissionString,
   Permission,
@@ -8,39 +8,39 @@ import type {
 } from "@/types/permission";
 
 /**
- * Creates a permission string in the format: Module.Context.Action
+ * Creates a permission string in the format: Module.Page.Action
  * @param module - The module name (e.g., 'sales', 'inventory')
- * @param context - The context name (e.g., 'Master', 'Content')
+ * @param page - The page name (e.g., 'SalesDashboard', 'SalesOrder')
  * @param action - The action name (e.g., 'View', 'Create', 'Edit', 'Delete')
  * @returns Permission string
  */
 export function createPermission(
   module: ModuleName,
-  context: ContextName,
+  page: PageName,
   action: ActionName
 ): PermissionString {
-  return `${module}.${context}.${action}` as PermissionString;
+  return `${module}.${page}.${action}` as PermissionString;
 }
 
 /**
  * Parses a permission string into its components
  * @param permission - Permission string to parse
- * @returns Object with module, context, and action
+ * @returns Object with module, page, and action
  */
 export function parsePermission(permission: PermissionString) {
-  const [module, context, action] = permission.split(".") as [
+  const [module, page, action] = permission.split(".") as [
     ModuleName,
-    ContextName,
+    PageName,
     ActionName
   ];
 
-  if (!module || !context || !action) {
+  if (!module || !page || !action) {
     throw new Error(
-      `Invalid permission format: ${permission}. Expected format: Module.Context.Action`
+      `Invalid permission format: ${permission}. Expected format: Module.Page.Action`
     );
   }
 
-  return { module, context, action };
+  return { module, page, action };
 }
 
 /**
@@ -196,7 +196,7 @@ export function getUserPermissions(
         if (rolePermission.permission) {
           const permissionString = createPermission(
             rolePermission.permission.module as ModuleName,
-            rolePermission.permission.context as ContextName,
+            rolePermission.permission.page as PageName,
             rolePermission.permission.action as ActionName
           );
           console.log("✅ Added permission:", permissionString);
@@ -216,37 +216,65 @@ export function getUserPermissions(
  */
 export const COMMON_PERMISSIONS = {
   // Sales Module
-  SALES_VIEW: createPermission("sales", "Content", "View"),
-  SALES_CREATE: createPermission("sales", "Content", "Create"),
-  SALES_EDIT: createPermission("sales", "Content", "Edit"),
-  SALES_DELETE: createPermission("sales", "Content", "Delete"),
-  SALES_DASHBOARD: createPermission("sales", "Dashboard", "View"),
+  SALES_ORDER_VIEW: createPermission("sales", "SalesOrder", "View"),
+  SALES_ORDER_CREATE: createPermission("sales", "SalesOrder", "Create"),
+  SALES_ORDER_EDIT: createPermission("sales", "SalesOrder", "Edit"),
+  SALES_ORDER_DELETE: createPermission("sales", "SalesOrder", "Delete"),
+  SALES_DASHBOARD_VIEW: createPermission("sales", "SalesDashboard", "View"),
+  DELIVERY_ORDER_VIEW: createPermission("sales", "DeliveryOrder", "View"),
+  DELIVERY_ORDER_CREATE: createPermission("sales", "DeliveryOrder", "Create"),
+  INVOICE_VIEW: createPermission("sales", "Invoice", "View"),
+  INVOICE_CREATE: createPermission("sales", "Invoice", "Create"),
+  SALES_RETURN_VIEW: createPermission("sales", "SalesReturn", "View"),
 
   // Inventory Module
-  INVENTORY_VIEW: createPermission("inventory", "Content", "View"),
-  INVENTORY_CREATE: createPermission("inventory", "Content", "Create"),
-  INVENTORY_EDIT: createPermission("inventory", "Content", "Edit"),
-  INVENTORY_DELETE: createPermission("inventory", "Content", "Delete"),
-  INVENTORY_DASHBOARD: createPermission("inventory", "Dashboard", "View"),
+  STOCK_DASHBOARD_VIEW: createPermission("inventory", "StockDashboard", "View"),
+  ITEM_LIST_VIEW: createPermission("inventory", "ItemList", "View"),
+  ITEM_LIST_CREATE: createPermission("inventory", "ItemList", "Create"),
+  ITEM_LIST_EDIT: createPermission("inventory", "ItemList", "Edit"),
+  ITEM_LIST_DELETE: createPermission("inventory", "ItemList", "Delete"),
+  STOCK_MANAGEMENT_VIEW: createPermission(
+    "inventory",
+    "StockManagement",
+    "View"
+  ),
+  STOCK_MANAGEMENT_EDIT: createPermission(
+    "inventory",
+    "StockManagement",
+    "Edit"
+  ),
+  STOCK_TAKING_VIEW: createPermission("inventory", "StockTaking", "View"),
+  STOCK_TAKING_CREATE: createPermission("inventory", "StockTaking", "Create"),
 
   // Purchasing Module
-  PURCHASING_VIEW: createPermission("purchasing", "Content", "View"),
-  PURCHASING_CREATE: createPermission("purchasing", "Content", "Create"),
-  PURCHASING_EDIT: createPermission("purchasing", "Content", "Edit"),
-  PURCHASING_DELETE: createPermission("purchasing", "Content", "Delete"),
-  PURCHASING_DASHBOARD: createPermission("purchasing", "Dashboard", "View"),
+  PURCHASE_ORDER_VIEW: createPermission("purchasing", "PurchaseOrder", "View"),
+  PURCHASE_ORDER_CREATE: createPermission(
+    "purchasing",
+    "PurchaseOrder",
+    "Create"
+  ),
+  PURCHASE_ORDER_EDIT: createPermission("purchasing", "PurchaseOrder", "Edit"),
+  PURCHASE_ORDER_DELETE: createPermission(
+    "purchasing",
+    "PurchaseOrder",
+    "Delete"
+  ),
+  PO_PAYMENTS_VIEW: createPermission("purchasing", "POPayments", "View"),
+  PO_PAYMENTS_CREATE: createPermission("purchasing", "POPayments", "Create"),
 
   // Finance Module
-  FINANCE_VIEW: createPermission("finance", "Content", "View"),
-  FINANCE_CREATE: createPermission("finance", "Content", "Create"),
-  FINANCE_EDIT: createPermission("finance", "Content", "Edit"),
-  FINANCE_DELETE: createPermission("finance", "Content", "Delete"),
-  FINANCE_DASHBOARD: createPermission("finance", "Dashboard", "View"),
+  REVENUE_VIEW: createPermission("finance", "Revenue", "View"),
+  REVENUE_CREATE: createPermission("finance", "Revenue", "Create"),
+  REVENUE_EDIT: createPermission("finance", "Revenue", "Edit"),
+  REVENUE_DELETE: createPermission("finance", "Revenue", "Delete"),
+  EXPENSES_VIEW: createPermission("finance", "Expenses", "View"),
+  EXPENSES_CREATE: createPermission("finance", "Expenses", "Create"),
+  EXPENSES_EDIT: createPermission("finance", "Expenses", "Edit"),
+  EXPENSES_DELETE: createPermission("finance", "Expenses", "Delete"),
 
   // HR Module
-  HR_VIEW: createPermission("hr", "Content", "View"),
-  HR_CREATE: createPermission("hr", "Content", "Create"),
-  HR_EDIT: createPermission("hr", "Content", "Edit"),
-  HR_DELETE: createPermission("hr", "Content", "Delete"),
-  HR_DASHBOARD: createPermission("hr", "Dashboard", "View"),
-} as const;
+  ATTENDANCE_VIEW: createPermission("hr", "Attendance", "View"),
+  ATTENDANCE_CREATE: createPermission("hr", "Attendance", "Create"),
+  ATTENDANCE_EDIT: createPermission("hr", "Attendance", "Edit"),
+  ATTENDANCE_DELETE: createPermission("hr", "Attendance", "Delete"),
+};

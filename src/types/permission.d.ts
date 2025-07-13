@@ -4,7 +4,7 @@ export interface Permission {
   name: string;
   description: string;
   module: string;
-  context: string;
+  page: string;
   action: string;
   status: string;
   createdAt: Date;
@@ -50,11 +50,25 @@ export type ModuleName =
   | "finance"
   | "hr";
 
-export type ContextName = "Master" | "Content" | "List" | "Dashboard";
+export type PageName =
+  | "SalesDashboard"
+  | "SalesOrder"
+  | "DeliveryOrder"
+  | "Invoice"
+  | "SalesReturn"
+  | "StockDashboard"
+  | "ItemList"
+  | "StockManagement"
+  | "StockTaking"
+  | "PurchaseOrder"
+  | "POPayments"
+  | "Revenue"
+  | "Expenses"
+  | "Attendance";
 
 export type ActionName = "View" | "Create" | "Edit" | "Delete";
 
-export type PermissionString = `${ModuleName}.${ContextName}.${ActionName}`;
+export type PermissionString = `${ModuleName}.${PageName}.${ActionName}`;
 
 // Menu Item Types
 export interface MenuItem {

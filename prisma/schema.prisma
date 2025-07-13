@@ -73,7 +73,7 @@ model permissions {
   name           String    @db.VarChar(255)
   description    String    @db.VarChar(100)
   module         String    @db.VarChar(50)   // e.g., "sales", "inventory"
-  context        String    @db.VarChar(50)   // e.g., "Master", "Content"
+  page           String    @db.VarChar(50)   // e.g., "SalesDashboard", "SalesOrder", "DeliveryOrder"
   action         String    @db.VarChar(50)   // e.g., "View", "Create", "Edit", "Delete"
   status         String    @default("active") @db.VarChar(8)
   
@@ -82,7 +82,7 @@ model permissions {
 
   role_permissions role_permissions[]
 
-  @@unique([module, context, action])
+  @@unique([module, page, action])
   @@index([module])
   @@index([status])
 }
