@@ -1,79 +1,88 @@
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
+
 generator client {
   provider = "prisma-client-js"
 }
- 
+
 model User {
   id            String          @id @default(cuid())
+  roles         roles[]         
   name          String?
   email         String          @unique
   password      String?
   emailVerified DateTime?
   image         String?
-  accounts      Account[]
   sessions      Session[]
-  // Optional for WebAuthn support
-  Authenticator Authenticator[]
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
- 
-model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
- 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
-  @@id([provider, providerAccountId])
 }
  
 model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires       DateTime
  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
  
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
- 
-  @@id([identifier, token])
+model roles {
+  id             String    @id @default(cuid())
+  role_name      String    @db.VarChar(60)
+  description    String    @db.VarChar(255)
+  default        Int       @default(0) @db.SmallInt
+  can_delete     Int       @default(0) @db.SmallInt
+  login_destination String @default("/") @db.VarChar(255)
+  default_context String  @default("content") @db.VarChar(255)
+  deleted        Int       @default(0) @db.SmallInt
+  status         String    @default("active") @db.VarChar(20)
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  users             User[]
+  role_permissions  role_permissions[]
+
+  @@index([status])
+  @@index([deleted])
 }
- 
-// Optional for WebAuthn support
-model Authenticator {
-  credentialID         String  @unique
-  userId               String
-  providerAccountId    String
-  credentialPublicKey  String
-  counter              Int
-  credentialDeviceType String
-  credentialBackedUp   Boolean
-  transports           String?
- 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
-  @@id([userId, credentialID])
+
+model role_permissions {
+  id             String    @id @default(cuid())
+  role_id        String
+  permission_id  String
+  granted_at     DateTime  @default(now())
+
+  role           roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission     permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permission_id])
+  @@index([role_id])
+  @@index([permission_id])
+}
+
+model permissions {
+  id             String    @id @default(cuid())
+  name           String    @db.VarChar(255)
+  description    String    @db.VarChar(100)
+  module         String    @db.VarChar(50)   // e.g., "sales", "inventory"
+  context        String    @db.VarChar(50)   // e.g., "Master", "Content"
+  action         String    @db.VarChar(50)   // e.g., "View", "Create", "Edit", "Delete"
+  status         String    @default("active") @db.VarChar(8)
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  role_permissions role_permissions[]
+
+  @@unique([module, context, action])
+  @@index([module])
+  @@index([status])
 }
