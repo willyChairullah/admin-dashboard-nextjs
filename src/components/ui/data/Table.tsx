@@ -87,7 +87,7 @@ const SearchAndFilter: React.FC<{
             <select
               value={filterState.column}
               onChange={e => onFilter(e.target.value, filterState.value)}
-              className="w-32 pl-2 pr-8 py-2 border-y border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-sm rounded-r-md focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
+              className="w-32 pl-2 pr-8 py-2 border-y border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 text-sm rounded-r-md focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
             >
               {filterableColumns.map(column => (
                 <option key={column.accessor} value={column.accessor}>
