@@ -4,9 +4,14 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { usePermissions } from "@/hooks/use-permissions";
-import { createMenuGenerator } from "@/lib/utils/menu-generator";
-import type { MenuItem } from "@/types/permission";
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: string;
+  href: string;
+  children: MenuItem[];
+}
 
 interface SideBarProps {
   isCollapsed: boolean;
@@ -121,14 +126,186 @@ export default function SideBar({
   const [isHovered, setIsHovered] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Get user permissions and generate menu
-  const { accessControl, isAuthenticated } = usePermissions();
-
+  // Static menu data
   const menuItems = useMemo(() => {
-    if (!isAuthenticated || !accessControl) return [];
-    const menuGenerator = createMenuGenerator(accessControl);
-    return menuGenerator.generateSidebar();
-  }, [accessControl, isAuthenticated]);
+    // Static menu items
+    return [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: "🏠",
+        href: "/",
+        children: [],
+      },
+      {
+        id: "sales",
+        label: "Sales",
+        icon: "🛒",
+        href: "#",
+        children: [
+          {
+            id: "sales-dashboard",
+            label: "Sales Dashboard",
+            icon: "📊",
+            href: "/sales/dashboard",
+            children: [],
+          },
+          {
+            id: "sales-order",
+            label: "Sales Order (SO)",
+            icon: "📝",
+            href: "/sales/orders",
+            children: [],
+          },
+          {
+            id: "delivery-order",
+            label: "Delivery Order",
+            icon: "🚚",
+            href: "/sales/delivery",
+            children: [],
+          },
+          {
+            id: "invoice",
+            label: "Invoice",
+            icon: "💵",
+            href: "/sales/invoices",
+            children: [],
+          },
+          {
+            id: "sales-return",
+            label: "Sales Return",
+            icon: "↩️",
+            href: "/sales/returns",
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "inventory",
+        label: "Inventory",
+        icon: "📦",
+        href: "#",
+        children: [
+          {
+            id: "stock-dashboard",
+            label: "Stock Dashboard",
+            icon: "📊",
+            href: "/inventory/dashboard",
+            children: [],
+          },
+          {
+            id: "item-list",
+            label: "Item List",
+            icon: "📋",
+            href: "/inventory/items",
+            children: [],
+          },
+          {
+            id: "stock-management",
+            label: "Stock Management",
+            icon: "🗄️",
+            href: "/inventory/stock",
+            children: [],
+          },
+          {
+            id: "stock-taking",
+            label: "Stock Taking",
+            icon: "🔍",
+            href: "/inventory/stocktaking",
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "purchasing",
+        label: "Purchasing",
+        icon: "🛍️",
+        href: "#",
+        children: [
+          {
+            id: "purchase-order",
+            label: "Purchase Order (PO)",
+            icon: "📜",
+            href: "/purchasing/orders",
+            children: [],
+          },
+          {
+            id: "po-payments",
+            label: "PO Payments",
+            icon: "💰",
+            href: "/purchasing/payments",
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "finance",
+        label: "Finance",
+        icon: "💰",
+        href: "#",
+        children: [
+          {
+            id: "revenue",
+            label: "Revenue",
+            icon: "📈",
+            href: "/finance/revenue",
+            children: [],
+          },
+          {
+            id: "expenses",
+            label: "Expenses",
+            icon: "📉",
+            href: "/finance/expenses",
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "hr",
+        label: "HR",
+        icon: "👥",
+        href: "#",
+        children: [
+          {
+            id: "attendance",
+            label: "Attendance",
+            icon: "📅",
+            href: "/hr/attendance",
+            children: [],
+          },
+        ],
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        icon: "⚙️",
+        href: "#",
+        children: [
+          {
+            id: "user-management",
+            label: "User Management",
+            icon: "👤",
+            href: "/settings/users",
+            children: [],
+          },
+          {
+            id: "roles",
+            label: "Roles",
+            icon: "🔑",
+            href: "/settings/roles",
+            children: [],
+          },
+          {
+            id: "permissions",
+            label: "Permissions",
+            icon: "🔒",
+            href: "/settings/permissions",
+            children: [],
+          },
+        ],
+      },
+    ];
+  }, []);
 
   // Determine if sidebar should show expanded content
   const shouldShowExpanded = isMobile
@@ -169,11 +346,6 @@ export default function SideBar({
       }
     };
   }, [hoverTimeout]);
-
-  // Don't render sidebar if user is not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div

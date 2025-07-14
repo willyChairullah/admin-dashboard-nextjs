@@ -186,6 +186,17 @@ const Pagination: React.FC<PaginationProps> = ({
 }) => {
   const canGoPrevious = currentPage > 1;
   const canGoNext = currentPage < totalPages;
+  const [jumpToPage, setJumpToPage] = useState<string>("");
+
+  // Handle direct page jump
+  const handleJumpToPage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pageNum = parseInt(jumpToPage);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      onPageChange(pageNum);
+      setJumpToPage("");
+    }
+  };
 
   // Calculate page numbers to show
   const getPageNumbers = () => {
@@ -227,27 +238,31 @@ const Pagination: React.FC<PaginationProps> = ({
     return pages;
   };
 
-  const startItem = (currentPage - 1) * pageSize + 1;
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-6 gap-4">
       {/* Items info and page size selector */}
-      <div className="flex flex-col sm:flex-row items-center gap-4">
-        <p className="text-sm text-gray-700 dark:text-gray-300">
+      <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+        <p className="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
           Showing <span className="font-medium">{startItem}</span> to{" "}
           <span className="font-medium">{endItem}</span> of{" "}
           <span className="font-medium">{totalItems}</span> results
         </p>
 
         {onPageSizeChange && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2 sm:mt-0">
             <label className="text-sm text-gray-700 dark:text-gray-300">
-              Show:
+              Rows per page:
             </label>
             <select
               value={pageSize}
-              onChange={e => onPageSizeChange(Number(e.target.value))}
+              onChange={e => {
+                onPageSizeChange(Number(e.target.value));
+                // Reset to page 1 when changing page size
+                if (currentPage > 1) onPageChange(1);
+              }}
               className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
             >
               <option value={5}>5</option>
@@ -261,41 +276,74 @@ const Pagination: React.FC<PaginationProps> = ({
       </div>
 
       {/* Pagination controls */}
-      <div className="flex items-center space-x-1">
+      <div className="flex flex-wrap items-center space-x-1">
         <Button
           variant="outline"
           size="small"
           disabled={!canGoPrevious}
           onClick={() => onPageChange(currentPage - 1)}
+          className="whitespace-nowrap"
         >
           Previous
         </Button>
 
-        {getPageNumbers().map((page, index) =>
-          page === "..." ? (
-            <span key={index} className="px-3 py-1 text-gray-500">
-              ...
-            </span>
-          ) : (
-            <Button
-              key={index}
-              variant={page === currentPage ? "primary" : "outline"}
-              size="small"
-              onClick={() => onPageChange(page as number)}
-            >
-              {page}
-            </Button>
-          )
-        )}
+        <div className="hidden sm:flex items-center space-x-1">
+          {getPageNumbers().map((page, index) =>
+            page === "..." ? (
+              <span key={index} className="px-3 py-1 text-gray-500">
+                ...
+              </span>
+            ) : (
+              <Button
+                key={index}
+                variant={page === currentPage ? "primary" : "outline"}
+                size="small"
+                onClick={() => onPageChange(page as number)}
+              >
+                {page}
+              </Button>
+            )
+          )}
+        </div>
+
+        {/* Mobile page indicator */}
+        <div className="sm:hidden px-2 py-1 text-sm text-gray-700 dark:text-gray-300">
+          Page {currentPage} of {totalPages}
+        </div>
 
         <Button
           variant="outline"
           size="small"
           disabled={!canGoNext}
           onClick={() => onPageChange(currentPage + 1)}
+          className="whitespace-nowrap"
         >
           Next
         </Button>
+
+        {/* Jump to page form - visible on larger screens */}
+        {totalPages > 5 && (
+          <form
+            onSubmit={handleJumpToPage}
+            className="hidden sm:flex items-center ml-4 space-x-2"
+          >
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              Go to:
+            </span>
+            <input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={jumpToPage}
+              onChange={e => setJumpToPage(e.target.value)}
+              className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              placeholder="Page"
+            />
+            <Button type="submit" variant="outline" size="small">
+              Go
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -434,7 +482,7 @@ const DataTable: React.FC<TableProps> = ({
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
+      className={`w-full max-w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
     >
       {/* Search and Filter */}
       {enableFiltering && columns.some(col => col.filterable !== false) && (
@@ -451,63 +499,8 @@ const DataTable: React.FC<TableProps> = ({
         <>
           {/* Desktop Table View */}
           <div className="hidden lg:block">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    {columns.map((column, index) => (
-                      <th
-                        key={index}
-                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
-                          enableSorting && column.sortable !== false
-                            ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                            : ""
-                        }`}
-                        onClick={() => handleSort(column)}
-                      >
-                        <div className="flex items-center">
-                          {column.header}
-                          {enableSorting && column.sortable !== false && (
-                            <SortIcon
-                              direction={
-                                sortState.column === column.accessor
-                                  ? sortState.direction
-                                  : null
-                              }
-                            />
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {displayData.map((row, rowIndex) => (
-                    <tr
-                      key={rowIndex}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                    >
-                      {columns.map((column, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100"
-                        >
-                          {column.render
-                            ? column.render(row[column.accessor], row)
-                            : row[column.accessor]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Tablet View */}
-          <div className="hidden md:block lg:hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     {columns.map((column, index) => (
@@ -545,9 +538,64 @@ const DataTable: React.FC<TableProps> = ({
                       {columns.map((column, colIndex) => (
                         <td
                           key={colIndex}
-                          className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
+                          className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 break-words max-w-xs"
                         >
-                          <div className="truncate max-w-32">
+                          {column.render
+                            ? column.render(row[column.accessor], row)
+                            : row[column.accessor]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Tablet View */}
+          <div className="hidden md:block lg:hidden">
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    {columns.map((column, index) => (
+                      <th
+                        key={index}
+                        className={`px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                          enableSorting && column.sortable !== false
+                            ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                            : ""
+                        }`}
+                        onClick={() => handleSort(column)}
+                      >
+                        <div className="flex items-center">
+                          {column.header}
+                          {enableSorting && column.sortable !== false && (
+                            <SortIcon
+                              direction={
+                                sortState.column === column.accessor
+                                  ? sortState.direction
+                                  : null
+                              }
+                            />
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {displayData.map((row, rowIndex) => (
+                    <tr
+                      key={rowIndex}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                    >
+                      {columns.map((column, colIndex) => (
+                        <td
+                          key={colIndex}
+                          className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words max-w-xs"
+                        >
+                          <div className="truncate max-w-28">
                             {column.render
                               ? column.render(row[column.accessor], row)
                               : row[column.accessor]}
@@ -566,17 +614,17 @@ const DataTable: React.FC<TableProps> = ({
             {displayData.map((row, rowIndex) => (
               <div
                 key={rowIndex}
-                className="border-b border-gray-200 dark:border-gray-700 p-4 space-y-3"
+                className="border-b border-gray-200 dark:border-gray-700 p-4 space-y-3 max-w-full"
               >
                 {columns.map((column, colIndex) => (
                   <div
                     key={colIndex}
-                    className="flex justify-between items-start"
+                    className="flex justify-between items-start gap-2"
                   >
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0 w-1/3">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0 w-1/3 min-w-0">
                       {column.header}:
                     </span>
-                    <span className="text-sm text-gray-900 dark:text-gray-100 text-right flex-1 ml-2">
+                    <span className="text-sm text-gray-900 dark:text-gray-100 text-right flex-1 min-w-0 break-words">
                       {column.render
                         ? column.render(row[column.accessor], row)
                         : row[column.accessor]}
@@ -590,14 +638,14 @@ const DataTable: React.FC<TableProps> = ({
       )}
 
       {/* Pagination */}
-      {showPagination && totalPages > 1 && onPageChange && (
+      {showPagination && onPageChange && (
         <Pagination
           currentPage={currentPage}
-          totalPages={totalPages}
+          totalPages={Math.max(totalPages, 1)}
           onPageChange={onPageChange}
           pageSize={pageSize}
           onPageSizeChange={onPageSizeChange}
-          totalItems={totalItems}
+          totalItems={totalItems || processedData.length}
         />
       )}
     </div>

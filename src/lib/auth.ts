@@ -41,50 +41,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return token;
     },
-    async session({ session, token }) {
-      console.log("🔄 Session callback called for user:", session.user?.id);
+    // async session({ session, token }) {
+    //   // console.log("🔄 Session callback called for user:", session.user?.id);
 
-      if (session.user?.id) {
-        try {
-          // Fetch user with roles and permissions
-          const userWithRoles = await db.user.findUnique({
-            where: { id: session.user.id },
-            include: {
-              roles: {
-                include: {
-                  role_permissions: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
+    //   if (session.user?.id) {
+    //     try {
+    //       // Fetch user with roles and permissions
+    //       const userWithRoles = await db.user.findUnique({
+    //         where: { id: session.user.id },
+    //         include: {
+    //           roles: {
+    //             include: {
+    //               role_permissions: {
+    //                 include: {
+    //                   permission: true,
+    //                 },
+    //               },
+    //             },
+    //           },
+    //         },
+    //       });
 
-          console.log(
-            "🔍 Found user with roles:",
-            userWithRoles
-              ? {
-                  id: userWithRoles.id,
-                  email: userWithRoles.email,
-                  roles: userWithRoles.roles?.map(r => ({
-                    name: r.role_name,
-                    permissions: r.role_permissions?.length || 0,
-                  })),
-                }
-              : "null"
-          );
-
-          if (userWithRoles) {
-            session.user = userWithRoles;
-          }
-        } catch (error) {
-          console.error("❌ Error fetching user roles:", error);
-        }
-      }
-      return session;
-    },
+    //       if (userWithRoles) {
+    //         session.user = userWithRoles;
+    //       }
+    //     } catch (error) {
+    //       console.error("❌ Error fetching user roles:", error);
+    //     }
+    //   }
+    //   return session;
+    // },
   },
   jwt: {
     encode: async function (params) {
