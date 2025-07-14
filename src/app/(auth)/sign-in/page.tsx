@@ -6,8 +6,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 const Page = async () => {
-  const session = await auth();
-  if (session) redirect("/");
+  // Temporarily disable session check to avoid JWT errors
+  // const session = await auth();
+  // if (session) redirect("/");
 
   return (
     <div className="min-h-screen flex items-center justify-center w-full">
@@ -30,11 +31,37 @@ const Page = async () => {
           className="space-y-4"
           action={async (formData: FormData) => {
             "use server";
-            await executeAction({
+
+            const result = await executeAction({
               actionFn: async () => {
-                await signIn("credentials", formData);
+                const email = formData.get("email") as string;
+                const password = formData.get("password") as string;
+
+                console.log("Sign-in form data:", {
+                  email,
+                  password: password ? "***" : "missing",
+                });
+
+                const signInResult = await signIn("credentials", {
+                  email,
+                  password,
+                  redirect: false, // Don't redirect automatically
+                });
+
+                console.log("Sign-in result:", signInResult);
+
+                if (signInResult?.error) {
+                  throw new Error("Invalid credentials");
+                }
+
+                return signInResult;
               },
             });
+
+            // If sign-in was successful, redirect to dashboard
+            if (result.success) {
+              redirect("/");
+            }
           }}
         >
           <Input

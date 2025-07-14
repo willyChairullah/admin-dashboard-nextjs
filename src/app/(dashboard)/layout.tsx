@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
 import Navbar from "@/components/layouts/Navbar";
 import SideBar from "@/components/layouts/SideBar";
+import { SessionHandler } from "@/components/auth/SessionHandler";
 
 export default function DashboardLayout({
   children,
@@ -46,6 +47,7 @@ export default function DashboardLayout({
 
   return (
     <SessionProvider>
+      <SessionHandler />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex">
           {/* Overlay for mobile */}

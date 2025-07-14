@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useCurrentUser, filterMenuByRole } from "@/hooks/useCurrentUser";
 
 interface MenuItem {
   id: string;
@@ -101,7 +102,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map(child => (
+          {item.children?.map((child) => (
             <MenuItemComponent
               key={child.id}
               item={child}
@@ -125,9 +126,10 @@ export default function SideBar({
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  const { user, loading } = useCurrentUser();
 
   // Static menu data
-  const menuItems = useMemo(() => {
+  const allMenuItems = useMemo(() => {
     // Static menu items
     return [
       {
@@ -307,6 +309,12 @@ export default function SideBar({
     ];
   }, []);
 
+  // Filter menu items based on user role
+  const menuItems = useMemo(() => {
+    if (loading || !user?.role) return [];
+    return filterMenuByRole(allMenuItems, user.role);
+  }, [allMenuItems, user?.role, loading]);
+
   // Determine if sidebar should show expanded content
   const shouldShowExpanded = isMobile
     ? !isCollapsed
@@ -422,11 +430,13 @@ export default function SideBar({
       <nav className="mt-4 flex-1 overflow-y-auto">
         {menuItems.length > 0 ? (
           <ul className="space-y-2 px-3">
-            {menuItems.map(item => {
+            {menuItems.map((item: MenuItem) => {
               const isActive =
                 pathname === item.href ||
                 (item.children &&
-                  item.children.some(child => child.href === pathname)) ||
+                  item.children.some(
+                    (child: MenuItem) => child.href === pathname
+                  )) ||
                 false;
 
               return (

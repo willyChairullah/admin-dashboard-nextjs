@@ -1,88 +1,314 @@
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model categories {
+  id          String     @id
+  name        String
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  products    products[]
 }
 
-model User {
-  id            String          @id @default(cuid())
-  roles         roles[]         
-  name          String?
-  email         String          @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  sessions      Session[]
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model customer_visits {
+  id         String    @id
+  visitDate  DateTime  @default(now())
+  latitude   Float
+  longitude  Float
+  notes      String?
+  photoUrl   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime
+  customerId String
+  salesId    String
+  customers  customers @relation(fields: [customerId], references: [id])
+  users      users     @relation(fields: [salesId], references: [id])
 }
- 
-model Session {
-  id            String   @id @default(cuid())
-  sessionToken  String   @unique
+
+model customers {
+  id              String            @id
+  code            String            @unique
+  name            String
+  email           String?
+  phone           String?
+  address         String
+  city            String
+  latitude        Float?
+  longitude       Float?
+  creditLimit     Float             @default(0)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  customer_visits customer_visits[]
+  delivery_notes  delivery_notes[]
+  invoices        invoices[]
+  orders          orders[]
+}
+
+model delivery_notes {
+  id              String         @id
+  deliveryNumber  String         @unique
+  deliveryDate    DateTime       @default(now())
+  status          DeliveryStatus @default(PENDING)
+  driverName      String
+  vehicleNumber   String
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime
+  customerId      String
+  orderId         String         @unique
+  warehouseUserId String
+  customers       customers      @relation(fields: [customerId], references: [id])
+  orders          orders         @relation(fields: [orderId], references: [id])
+  users           users          @relation(fields: [warehouseUserId], references: [id])
+}
+
+model invoice_items {
+  id         String   @id
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  invoiceId  String
+  productId  String
+  invoices   invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products   products @relation(fields: [productId], references: [id])
+}
+
+model invoices {
+  id              String          @id
+  invoiceNumber   String          @unique
+  invoiceDate     DateTime        @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus   @default(DRAFT)
+  subtotal        Float           @default(0)
+  tax             Float           @default(0)
+  totalAmount     Float           @default(0)
+  paidAmount      Float           @default(0)
+  remainingAmount Float           @default(0)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  customerId      String
+  orderId         String?         @unique
+  invoice_items   invoice_items[]
+  customers       customers       @relation(fields: [customerId], references: [id])
+  orders          orders?         @relation(fields: [orderId], references: [id])
+  payments        payments[]
+}
+
+model notifications {
+  id                 String               @id
+  title              String
+  message            String
+  type               String
+  isGlobal           Boolean              @default(false)
+  isRead             Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  user_notifications user_notifications[]
+}
+
+model order_items {
+  id         String   @id
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  orderId    String
+  productId  String
+  orders     orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  products   products @relation(fields: [productId], references: [id])
+}
+
+model orders {
+  id             String          @id
+  orderNumber    String          @unique
+  orderDate      DateTime        @default(now())
+  deliveryDate   DateTime?
+  status         OrderStatus     @default(NEW)
+  totalAmount    Float           @default(0)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  customerId     String
+  salesId        String
+  delivery_notes delivery_notes?
+  invoices       invoices?
+  order_items    order_items[]
+  customers      customers       @relation(fields: [customerId], references: [id])
+  users          users           @relation(fields: [salesId], references: [id])
+}
+
+model payments {
+  id          String   @id
+  paymentDate DateTime @default(now())
+  amount      Float
+  method      String
+  reference   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  invoiceId   String
+  invoices    invoices @relation(fields: [invoiceId], references: [id])
+}
+
+model products {
+  id              String            @id
+  code            String            @unique
+  name            String
+  description     String?
+  unit            String
+  price           Float
+  cost            Float
+  minStock        Int               @default(0)
+  currentStock    Int               @default(0)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  categoryId      String
+  supplierId      String
+  invoice_items   invoice_items[]
+  order_items     order_items[]
+  categories      categories        @relation(fields: [categoryId], references: [id])
+  suppliers       suppliers         @relation(fields: [supplierId], references: [id])
+  stock_movements stock_movements[]
+}
+
+model settings {
+  id          String   @id
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model stock_movements {
+  id            String            @id
+  movementDate  DateTime          @default(now())
+  type          StockMovementType
+  quantity      Float
+  previousStock Int
+  newStock      Int
+  reference     String?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime
+  productId     String
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expires       DateTime
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
- 
-model roles {
-  id             String    @id @default(cuid())
-  role_name      String    @db.VarChar(60)
-  description    String    @db.VarChar(255)
-  default        Int       @default(0) @db.SmallInt
-  can_delete     Int       @default(0) @db.SmallInt
-  login_destination String @default("/") @db.VarChar(255)
-  default_context String  @default("content") @db.VarChar(255)
-  deleted        Int       @default(0) @db.SmallInt
-  status         String    @default("active") @db.VarChar(20)
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  users             User[]
-  role_permissions  role_permissions[]
-
-  @@index([status])
-  @@index([deleted])
+  products      products          @relation(fields: [productId], references: [id])
+  users         users             @relation(fields: [userId], references: [id])
 }
 
-model role_permissions {
-  id             String    @id @default(cuid())
-  role_id        String
-  permission_id  String
-  granted_at     DateTime  @default(now())
-
-  role           roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  permission     permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
-
-  @@unique([role_id, permission_id])
-  @@index([role_id])
-  @@index([permission_id])
+model suppliers {
+  id           String         @id
+  code         String         @unique
+  name         String
+  email        String?
+  phone        String?
+  address      String
+  city         String
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  products     products[]
+  transactions transactions[]
 }
 
-model permissions {
-  id             String    @id @default(cuid())
-  name           String    @db.VarChar(255)
-  description    String    @db.VarChar(100)
-  module         String    @db.VarChar(50)   // e.g., "sales", "inventory"
-  page           String    @db.VarChar(50)   // e.g., "SalesDashboard", "SalesOrder", "DeliveryOrder"
-  action         String    @db.VarChar(50)   // e.g., "View", "Create", "Edit", "Delete"
-  status         String    @default("active") @db.VarChar(8)
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+model transactions {
+  id              String          @id
+  transactionDate DateTime        @default(now())
+  type            TransactionType
+  amount          Float
+  description     String
+  category        String
+  reference       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  userId          String?
+  supplierId      String?
+  suppliers       suppliers?      @relation(fields: [supplierId], references: [id])
+  users           users?          @relation(fields: [userId], references: [id])
+}
 
-  role_permissions role_permissions[]
+model user_notifications {
+  id             String        @id
+  isRead         Boolean       @default(false)
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+  userId         String
+  notificationId String
+  notifications  notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  users          users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([module, page, action])
-  @@index([module])
-  @@index([status])
+  @@unique([userId, notificationId])
+}
+
+model users {
+  id                 String               @id
+  email              String               @unique
+  name               String
+  password           String
+  role               UserRole             @default(SALES)
+  phone              String?
+  address            String?
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  customer_visits    customer_visits[]
+  delivery_notes     delivery_notes[]
+  orders             orders[]
+  stock_movements    stock_movements[]
+  transactions       transactions[]
+  user_notifications user_notifications[]
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  SALES
+  WAREHOUSE
 }

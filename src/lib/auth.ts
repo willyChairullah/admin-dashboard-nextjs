@@ -1,99 +1,86 @@
 import db from "./db";
 import NextAuth from "next-auth";
-import { encode as defaultEncode } from "next-auth/jwt";
-import { v4 as uuid } from "uuid";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { schema } from "./schema";
 
-const adapter = PrismaAdapter(db);
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter,
+  pages: {
+    signIn: "/sign-in",
+  },
   providers: [
     Credentials({
       credentials: {
         email: {},
         password: {},
       },
-      authorize: async credentials => {
+      authorize: async (credentials) => {
+        console.log("Auth attempt with credentials:", {
+          email: credentials?.email,
+          password: credentials?.password ? "***" : "missing",
+        });
+
         const validatedCredentials = schema.parse(credentials);
 
-        const user = await db.user.findFirst({
+        const user = await db.users.findFirst({
           where: {
             email: validatedCredentials.email,
-            password: validatedCredentials.password,
           },
         });
 
+        console.log(
+          "User found:",
+          user
+            ? {
+                id: user.id,
+                email: user.email,
+                storedPassword: user.password ? "***" : "no password",
+                inputPassword: validatedCredentials.password
+                  ? "***"
+                  : "no password",
+              }
+            : "No user found"
+        );
+
         if (!user) {
+          console.log("User not found - throwing error");
           throw new Error("Invalid credentials.");
         }
 
-        return user;
+        // Compare passwords directly (since they're stored as plain text)
+        if (user.password !== validatedCredentials.password) {
+          console.log("Password mismatch - throwing error");
+          throw new Error("Invalid credentials.");
+        }
+
+        console.log("Authentication successful for user:", user.email);
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
       },
     }),
   ],
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
-    async jwt({ token, account }) {
-      if (account?.provider === "credentials") {
-        token.credentials = true;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
       }
       return token;
     },
-    // async session({ session, token }) {
-    //   // console.log("🔄 Session callback called for user:", session.user?.id);
-
-    //   if (session.user?.id) {
-    //     try {
-    //       // Fetch user with roles and permissions
-    //       const userWithRoles = await db.user.findUnique({
-    //         where: { id: session.user.id },
-    //         include: {
-    //           roles: {
-    //             include: {
-    //               role_permissions: {
-    //                 include: {
-    //                   permission: true,
-    //                 },
-    //               },
-    //             },
-    //           },
-    //         },
-    //       });
-
-    //       if (userWithRoles) {
-    //         session.user = userWithRoles;
-    //       }
-    //     } catch (error) {
-    //       console.error("❌ Error fetching user roles:", error);
-    //     }
-    //   }
-    //   return session;
-    // },
-  },
-  jwt: {
-    encode: async function (params) {
-      if (params.token?.credentials) {
-        const sessionToken = uuid();
-
-        if (!params.token.sub) {
-          throw new Error("No user ID found in token");
-        }
-
-        const createdSession = await adapter?.createSession?.({
-          sessionToken: sessionToken,
-          userId: params.token.sub,
-          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        });
-
-        if (!createdSession) {
-          throw new Error("Failed to create session");
-        }
-
-        return sessionToken;
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
       }
-      return defaultEncode(params);
+      return session;
     },
   },
 });
