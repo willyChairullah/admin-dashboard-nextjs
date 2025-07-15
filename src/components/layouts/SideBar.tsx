@@ -149,7 +149,7 @@ export default function SideBar({
             id: "sales-dashboard",
             label: "Sales Dashboard",
             icon: "📊",
-            href: "/sales/dashboard",
+            href: "/sales",
             children: [],
           },
           {
