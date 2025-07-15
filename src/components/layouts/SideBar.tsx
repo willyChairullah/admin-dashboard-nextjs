@@ -153,10 +153,10 @@ export default function SideBar({
             children: [],
           },
           {
-            id: "sales-order",
-            label: "Sales Order (SO)",
+            id: "sales-field",
+            label: "Sales Field (SF)",
             icon: "📝",
-            href: "/sales/orders",
+            href: "/sales/fields",
             children: [],
           },
           {
