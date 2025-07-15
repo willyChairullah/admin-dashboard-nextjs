@@ -325,6 +325,23 @@ model stockOpnameItem {
   product     products    @relation(fields: [productId], references: [id])
 }
 
+model transactions {
+  id              String          @id @default(cuid())
+  transactionDate DateTime        @default(now())
+  type            TransactionType
+  amount          Float
+  description     String
+  category        String
+  reference       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt // FIXED: Added @updatedAt
+  userId          String?
+
+  user    users?   @relation(fields: [userId], references: [id])
+  // supplierId      String?
+  // supplier suppliers? @relation(fields: [supplierId], references: [id])
+}
+
 model userNotifications {
   id             String   @id @default(cuid())
   isRead         Boolean  @default(false)
@@ -358,6 +375,7 @@ model users {
   financialRecords  financialRecord[]
   orders            orders[]
   payments          payments[]
+  transactions      transactions[]
   stockMovements    stockMovements[]
   stockOpnames      stockOpname[]
   userNotifications userNotifications[]

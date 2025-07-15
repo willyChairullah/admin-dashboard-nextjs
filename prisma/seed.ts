@@ -11,15 +11,15 @@ async function main() {
     console.log("🗑️ Clearing existing data...");
 
     // Clear in order due to foreign key constraints
-    await prisma.user_notifications.deleteMany({});
+    await prisma.userNotifications.deleteMany({});
     await prisma.payments.deleteMany({});
-    await prisma.invoice_items.deleteMany({});
+    await prisma.invoiceItems.deleteMany({});
     await prisma.invoices.deleteMany({});
-    await prisma.order_items.deleteMany({});
-    await prisma.delivery_notes.deleteMany({});
-    await prisma.customer_visits.deleteMany({});
+    await prisma.orderItems.deleteMany({});
+    await prisma.deliveryNotes.deleteMany({});
+    await prisma.customerVisits.deleteMany({});
     await prisma.orders.deleteMany({});
-    await prisma.stock_movements.deleteMany({});
+    await prisma.stockMovements.deleteMany({});
     await prisma.transactions.deleteMany({});
     const deletedUsers = await prisma.users.deleteMany({});
     console.log(`✅ Cleared ${deletedUsers.count} users and related data`);
