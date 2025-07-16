@@ -11,15 +11,15 @@ async function main() {
     console.log("🗑️ Clearing existing data...");
 
     // Clear in order due to foreign key constraints
-    await prisma.user_notifications.deleteMany({});
+    await prisma.userNotifications.deleteMany({});
     await prisma.payments.deleteMany({});
-    await prisma.invoice_items.deleteMany({});
+    await prisma.invoiceItems.deleteMany({});
     await prisma.invoices.deleteMany({});
-    await prisma.order_items.deleteMany({});
-    await prisma.delivery_notes.deleteMany({});
-    await prisma.customer_visits.deleteMany({});
+    await prisma.orderItems.deleteMany({});
+    await prisma.deliveryNotes.deleteMany({});
+    await prisma.customerVisits.deleteMany({});
     await prisma.orders.deleteMany({});
-    await prisma.stock_movements.deleteMany({});
+    await prisma.stockMovements.deleteMany({});
     await prisma.transactions.deleteMany({});
     const deletedUsers = await prisma.users.deleteMany({});
     console.log(`✅ Cleared ${deletedUsers.count} users and related data`);
@@ -30,9 +30,9 @@ async function main() {
     const usersToCreate = [
       {
         id: uuid(),
-        email: "owner@palmapoil.com",
+        email: "owner@indana.com",
         name: "Owner User",
-        password: "owner123",
+        password: "password123",
         role: "OWNER" as const,
         phone: "+62812345678",
         address: "Jakarta",
@@ -41,9 +41,9 @@ async function main() {
       },
       {
         id: uuid(),
-        email: "admin@palmapoil.com",
+        email: "admin@indana.com",
         name: "Admin User",
-        password: "admin123",
+        password: "password123",
         role: "ADMIN" as const,
         phone: "+62812345679",
         address: "Jakarta",
@@ -52,9 +52,9 @@ async function main() {
       },
       {
         id: uuid(),
-        email: "warehouse@palmapoil.com",
+        email: "warehouse@indana.com",
         name: "Warehouse User",
-        password: "warehouse123",
+        password: "password123",
         role: "WAREHOUSE" as const,
         phone: "+62812345680",
         address: "Jakarta",
@@ -63,9 +63,9 @@ async function main() {
       },
       {
         id: uuid(),
-        email: "sales@palmapoil.com",
+        email: "sales@indana.com",
         name: "Sales User",
-        password: "sales123",
+        password: "password123",
         role: "SALES" as const,
         phone: "+62812345681",
         address: "Jakarta",
@@ -83,10 +83,10 @@ async function main() {
 
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
-    console.log("👑 OWNER: owner@palmapoil.com / owner123");
-    console.log("👔 ADMIN: admin@palmapoil.com / admin123");
-    console.log("📦 WAREHOUSE: warehouse@palmapoil.com / warehouse123");
-    console.log("🛒 SALES: sales@palmapoil.com / sales123");
+    console.log("👑 OWNER: owner@indana.com / password123");
+    console.log("👔 ADMIN: admin@indana.com / password123");
+    console.log("📦 WAREHOUSE: warehouse@indana.com / password123");
+    console.log("🛒 SALES: sales@indana.com / password123");
   } catch (error) {
     console.error("❌ Error seeding database:", error);
     throw error;
@@ -95,7 +95,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
+main().catch(e => {
   console.error(e);
   process.exit(1);
 });

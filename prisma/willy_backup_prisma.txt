@@ -1,0 +1,437 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =================================================================
+// Models
+// =================================================================
+
+model attendance {
+  id             Int              @id @default(autoincrement())
+  userId         String // FIXED: Int -> String
+  attendanceDate DateTime         @default(now())
+  checkIn        DateTime?
+  checkOut       DateTime?
+  workHours      Decimal          @db.Decimal(4, 2) @default(0)
+  status         AttendanceStatus @default(present)
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user users @relation(fields: [userId], references: [id]) // IMPROVED: Renamed from 'User'
+
+  @@unique([userId, attendanceDate])
+}
+
+model categories {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt // FIXED: Added @updatedAt
+
+  products products[]
+}
+
+model customerVisits {
+  id         String    @id @default(cuid())
+  visitDate  DateTime  @default(now())
+  latitude   Float
+  longitude  Float
+  notes      String?
+  photoUrl   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt // FIXED: Added @updatedAt
+  customerId String
+  salesId    String
+
+  customer customers @relation(fields: [customerId], references: [id])
+  sales    users     @relation(fields: [salesId], references: [id])
+}
+
+model customers {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  email     String?
+  phone     String?
+  address   String
+  city      String
+  latitude  Float?
+  longitude Float?
+  creditLimit Float    @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // FIXED: Added @updatedAt
+
+  customerVisits customerVisits[]
+  deliveryNotes  deliveryNotes[]
+  invoices       invoices[]
+  orders         orders[]
+}
+
+model deliveryNotes {
+  id              String         @id @default(cuid())
+  deliveryNumber  String         @unique
+  deliveryDate    DateTime       @default(now())
+  status          DeliveryStatus @default(PENDING)
+  driverName      String
+  vehicleNumber   String
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt // FIXED: Added @updatedAt
+  customerId      String
+  orderId         String         @unique
+  warehouseUserId String
+
+  customer      customers @relation(fields: [customerId], references: [id])
+  order         orders    @relation(fields: [orderId], references: [id])
+  warehouseUser users     @relation(fields: [warehouseUserId], references: [id])
+}
+
+model financialRecord {
+  id                Int             @id @default(autoincrement())
+  transactionNumber String          @unique
+  transactionDate   DateTime        @default(now())
+  transactionType   TransactionType
+  category          String
+  amount            Decimal         @db.Decimal(15, 2)
+  description       String
+  referenceType     String?
+  referenceId       String? // IMPROVED: Renamed from referenceTd for clarity
+  createdBy         String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  createdByUser users? @relation(fields: [createdBy], references: [id]) // IMPROVED & FIXED: Renamed and made optional
+}
+
+model invoiceItems {
+  id         String   @id @default(cuid())
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt // FIXED: Added @updatedAt
+  invoiceId  String
+  productId  String
+
+  invoice invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product products @relation(fields: [productId], references: [id])
+}
+
+model invoices {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  invoiceDate     DateTime      @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Float         @default(0)
+  tax             Float         @default(0)
+  totalAmount     Float         @default(0)
+  paidAmount      Float         @default(0)
+  remainingAmount Float         @default(0)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt // FIXED: Added @updatedAt
+  customerId      String
+  orderId         String?       @unique
+
+  invoiceItems invoiceItems[]
+  customer     customers    @relation(fields: [customerId], references: [id])
+  order        orders?      @relation(fields: [orderId], references: [id])
+  payments     payments[]
+}
+
+model notifications {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String
+  isGlobal  Boolean  @default(false)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // FIXED: Added @updatedAt
+
+  userNotifications userNotifications[]
+}
+
+model orderItems {
+  id         String   @id @default(cuid())
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt // FIXED: Added @updatedAt
+  orderId    String
+  productId  String
+
+  order   orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product products @relation(fields: [productId], references: [id])
+}
+
+model orders {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  orderDate    DateTime    @default(now())
+  deliveryDate DateTime?
+  status       OrderStatus @default(NEW)
+  totalAmount  Float       @default(0)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt // FIXED: Added @updatedAt
+  customerId   String
+  salesId      String
+
+  deliveryNote deliveryNotes?
+  invoice      invoices?
+  orderItems   orderItems[]
+  customer     customers    @relation(fields: [customerId], references: [id])
+  sales        users        @relation(fields: [salesId], references: [id])
+}
+
+model payments {
+  id              Int           @id @default(autoincrement())
+  paymentNumber   String        @unique
+  invoiceId       String?
+  paymentDate     DateTime      @default(now())
+  amount          Decimal       @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod
+  referenceNumber String?
+  status          PaymentStatus @default(pending)
+  notes           String?
+  processedBy     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  invoice         invoices? @relation(fields: [invoiceId], references: [id]) // FIXED: Made optional
+  processedByUser users?    @relation(fields: [processedBy], references: [id]) // FIXED & IMPROVED: Renamed and made optional
+}
+
+model products {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  description  String?
+  unit         String
+  price        Float
+  cost         Float
+  minStock     Int      @default(0)
+  currentStock Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt // FIXED: Added @updatedAt
+  categoryId   String
+  // supplierId   String
+
+  invoiceItems   invoiceItems[]
+  orderItems     orderItems[]
+  category       categories     @relation(fields: [categoryId], references: [id])
+  // supplier       suppliers      @relation(fields: [supplierId], references: [id])
+  stockMovements stockMovements[]
+  stockOpnameItems stockOpnameItem[] 
+}
+
+model settings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt // FIXED: Added @updatedAt
+}
+
+model stockMovements {
+  id            String            @id @default(cuid())
+  movementDate  DateTime          @default(now())
+  type          StockMovementType
+  quantity      Float
+  previousStock Int
+  newStock      Int
+  reference     String?
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt // FIXED: Added @updatedAt
+  productId     String
+  userId        String
+
+  product products @relation(fields: [productId], references: [id])
+  user    users    @relation(fields: [userId], references: [id])
+}
+
+model stockOpname {
+  id            Int          @id @default(autoincrement())
+  opnameNumber  String       @unique
+  opnameDate    DateTime     @default(now())
+  conductedBy   String // FIXED: Int -> String
+  status        OpnameStatus @default(in_progress)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  conductedByUser users @relation(fields: [conductedBy], references: [id]) // IMPROVED: Renamed from 'ConductedBy'
+  stockOpnameItems stockOpnameItem[] 
+}
+
+model stockOpnameItem {
+  id            Int         @id @default(autoincrement())
+  opnameId      Int
+  productId     String // FIXED: Int -> String
+  systemStock   Int
+  physicalStock Int
+  difference    Int         @default(0)
+  notes         String?
+
+  stockOpname stockOpname @relation(fields: [opnameId], references: [id]) 
+  product     products    @relation(fields: [productId], references: [id]) 
+}
+
+// model suppliers {
+//   id        String   @id @default(cuid())
+//   code      String   @unique
+//   name      String
+//   email     String?
+//   phone     String?
+//   address   String
+//   city      String
+//   isActive  Boolean  @default(true)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt // FIXED: Added @updatedAt
+
+//   products     products[]
+//   transactions transactions[]
+// }
+
+model transactions {
+  id              String          @id @default(cuid())
+  transactionDate DateTime        @default(now())
+  type            TransactionType
+  amount          Float
+  description     String
+  category        String
+  reference       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt // FIXED: Added @updatedAt
+  userId          String?
+  // supplierId      String?
+
+  // supplier suppliers? @relation(fields: [supplierId], references: [id])
+  user     users?     @relation(fields: [userId], references: [id])
+}
+
+model userNotifications {
+  id             String        @id @default(cuid())
+  isRead         Boolean       @default(false)
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+  userId         String
+  notificationId String
+
+  notification notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+}
+
+model users {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String
+  password          String
+  role              UserRole           @default(SALES)
+  phone             String?
+  address           String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt // FIXED: Added @updatedAt
+
+  attendances       attendance[]
+  customerVisits    customerVisits[]
+  deliveryNotes     deliveryNotes[]
+  financialRecords  financialRecord[]
+  orders            orders[]
+  payments          payments[]
+  stockMovements    stockMovements[] // FIXED: Renamed from stock_movements
+  stockOpnames      stockOpname[]
+  transactions      transactions[]
+  userNotifications userNotifications[]
+}
+
+// =================================================================
+// Enums
+// =================================================================
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  SALES
+  WAREHOUSE
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  credit_card
+  check
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  early_leave
+}
+
+enum OpnameStatus {
+  in_progress
+  completed
+  cancelled
+}
