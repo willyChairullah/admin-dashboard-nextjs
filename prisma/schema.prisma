@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -15,6 +16,65 @@ model categories {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime
   products    products[]
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  fieldVisits FieldVisit[]
+
+  @@map("stores")
+}
+
+model SalesRepresentative {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  phone      String?
+  employeeId String   @unique
+  territory  String[] @default([])
+  target     Float    @default(0)
+  achieved   Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  fieldVisits FieldVisit[]
+
+  @@map("sales_representatives")
+}
+
+model FieldVisit {
+  id           String    @id @default(cuid())
+  salesRepId   String
+  storeId      String?
+  storeName    String? // For new stores not in Store table
+  storeAddress String? // For new stores not in Store table
+  visitDate    DateTime  @default(now())
+  checkInTime  DateTime  @default(now())
+  checkOutTime DateTime?
+  latitude     Float
+  longitude    Float
+  photos       String[]  @default([])
+  notes        String?
+  visitPurpose String
+  result       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  salesRep SalesRepresentative @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
+  store    Store?              @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@map("field_visits")
 }
 
 model customer_visits {
@@ -131,22 +191,28 @@ model order_items {
 }
 
 model orders {
-  id             String          @id
-  orderNumber    String          @unique
-  orderDate      DateTime        @default(now())
-  deliveryDate   DateTime?
-  status         OrderStatus     @default(NEW)
-  totalAmount    Float           @default(0)
-  notes          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime
-  customerId     String
-  salesId        String
-  delivery_notes delivery_notes?
-  invoices       invoices?
-  order_items    order_items[]
-  customers      customers       @relation(fields: [customerId], references: [id])
-  users          users           @relation(fields: [salesId], references: [id])
+  id                   String          @id
+  orderNumber          String          @unique
+  orderDate            DateTime        @default(now())
+  deliveryDate         DateTime?
+  status               OrderStatus     @default(NEW)
+  totalAmount          Float           @default(0)
+  notes                String?
+  adminNotes           String? // Added for admin notes
+  confirmedAt          DateTime? // Added for admin confirmation
+  confirmedBy          String? // Added for tracking who confirmed
+  requiresConfirmation Boolean         @default(false) // Added to flag orders needing confirmation
+  completedAt          DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime
+  customerId           String
+  salesId              String
+  delivery_notes       delivery_notes?
+  invoices             invoices?
+  order_items          order_items[]
+  customers            customers       @relation(fields: [customerId], references: [id])
+  users                users           @relation(fields: [salesId], references: [id])
 }
 
 model payments {
@@ -290,9 +356,12 @@ enum InvoiceStatus {
 
 enum OrderStatus {
   NEW
+  PENDING_CONFIRMATION
+  IN_PROCESS
   PROCESSING
   COMPLETED
   CANCELLED
+  CANCELED
 }
 
 enum StockMovementType {
