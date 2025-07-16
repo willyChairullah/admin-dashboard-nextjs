@@ -91,21 +91,20 @@ export default async function CreateInvoicePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Create Invoice</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Create a new invoice for a customer.
-        </p>
-      </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">Create Invoice</h1>
+        </div>
 
-      <InvoiceForm
-        mode="create"
-        invoice={defaultInvoice}
-        customers={customers}
-        products={products}
-        orders={orders}
-      />
+        <InvoiceForm
+          mode="create"
+          invoice={defaultInvoice}
+          customers={customers}
+          products={products}
+          orders={orders}
+        />
+      </div>
     </div>
   );
 }
