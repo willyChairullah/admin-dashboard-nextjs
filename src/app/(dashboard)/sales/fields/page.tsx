@@ -272,7 +272,7 @@ export default function SalesFieldPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
-          <p>Loading...</p>
+          <p className="text-gray-900 dark:text-white">Loading...</p>
         </div>
       </div>
     );
@@ -284,22 +284,24 @@ export default function SalesFieldPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Check-in Kunjungan
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-gray-600 dark:text-gray-300">
               Form check-in untuk sales lapangan - {currentSalesRep.name}
             </p>
           </div>
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <p className="text-sm text-gray-500">ID Sales</p>
-              <p className="font-semibold text-gray-900">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                ID Sales
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
                 {currentSalesRep.employeeId}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600" />
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <Users className="h-6 w-6 text-blue-600 dark:text-blue-300" />
             </div>
           </div>
         </div>
@@ -307,12 +309,12 @@ export default function SalesFieldPage() {
 
       {/* Check-in Form */}
       <div className="max-w-2xl">
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700 rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Check-in Kunjungan Baru
             </h3>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
               Catat bukti kunjungan lapangan dengan lokasi GPS dan foto
             </p>
           </div>
@@ -320,7 +322,7 @@ export default function SalesFieldPage() {
           <div className="p-6 space-y-6">
             {/* Store Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Pilih Toko *
               </label>
 
@@ -335,7 +337,7 @@ export default function SalesFieldPage() {
                       onChange={() => setUseExistingStore(true)}
                       className="mr-2"
                     />
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
                       Pilih dari daftar toko
                     </span>
                   </label>
@@ -347,7 +349,9 @@ export default function SalesFieldPage() {
                       onChange={() => setUseExistingStore(false)}
                       className="mr-2"
                     />
-                    <span className="text-sm text-gray-700">Toko baru</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Toko baru
+                    </span>
                   </label>
                 </div>
               </div>
@@ -357,7 +361,7 @@ export default function SalesFieldPage() {
                   <select
                     value={selectedStore}
                     onChange={(e) => setSelectedStore(e.target.value)}
-                    className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                   >
                     <option value="">Pilih toko yang dikunjungi</option>
                     {stores.map((store) => (
@@ -371,9 +375,9 @@ export default function SalesFieldPage() {
                   {selectedStore &&
                     getSelectedStore()?.latitude &&
                     getSelectedStore()?.longitude && (
-                      <div className="mt-2 p-2 bg-blue-50 rounded-md">
+                      <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
                         <div className="flex items-center justify-between">
-                          <div className="text-sm text-blue-700">
+                          <div className="text-sm text-blue-700 dark:text-blue-300">
                             <p className="font-medium">
                               {getSelectedStore()?.name}
                             </p>
@@ -391,7 +395,7 @@ export default function SalesFieldPage() {
                                 window.open(url, "_blank");
                               }
                             }}
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
                           >
                             <MapPin className="h-5 w-5" />
                           </button>
@@ -402,7 +406,7 @@ export default function SalesFieldPage() {
               ) : (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       Nama Toko *
                     </label>
                     <input
@@ -410,11 +414,11 @@ export default function SalesFieldPage() {
                       value={storeName}
                       onChange={(e) => setStoreName(e.target.value)}
                       placeholder="Masukkan nama toko"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                       Alamat Toko
                     </label>
                     <input
@@ -422,10 +426,10 @@ export default function SalesFieldPage() {
                       value={storeAddress}
                       onChange={(e) => setStoreAddress(e.target.value)}
                       placeholder="Masukkan alamat toko (opsional)"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                     />
                   </div>
-                  <div className="text-sm text-gray-500 bg-yellow-50 p-2 rounded-md">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md">
                     💡 Toko baru akan disimpan ke database dengan lokasi GPS
                     saat ini
                   </div>
@@ -435,13 +439,13 @@ export default function SalesFieldPage() {
 
             {/* Visit Purpose */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tujuan Kunjungan *
               </label>
               <select
                 value={visitPurpose}
                 onChange={(e) => setVisitPurpose(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
               >
                 <option value="">Pilih tujuan kunjungan</option>
                 <option value="sales">Sales Visit</option>
@@ -456,7 +460,7 @@ export default function SalesFieldPage() {
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Lokasi GPS *
               </label>
               <div className="flex items-center space-x-3">
@@ -464,7 +468,7 @@ export default function SalesFieldPage() {
                   type="button"
                   onClick={handleGetLocation}
                   disabled={isCheckingIn}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <Navigation className="h-4 w-4 mr-2" />
                   {isCheckingIn ? "Mendapatkan Lokasi..." : "Ambil Lokasi GPS"}
@@ -477,7 +481,7 @@ export default function SalesFieldPage() {
                     <button
                       type="button"
                       onClick={openInMaps}
-                      className="inline-flex items-center px-3 py-1 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-3 py-1 border border-blue-300 dark:border-blue-600 shadow-sm text-sm font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <ExternalLink className="h-4 w-4 mr-1" />
                       Buka di Maps
@@ -486,7 +490,7 @@ export default function SalesFieldPage() {
                 )}
               </div>
               {currentLocation && (
-                <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-2 rounded">
                   <p>Latitude: {currentLocation.lat.toFixed(6)}</p>
                   <p>Longitude: {currentLocation.lng.toFixed(6)}</p>
                 </div>
@@ -495,7 +499,7 @@ export default function SalesFieldPage() {
 
             {/* Photos */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Foto Kunjungan
               </label>
               <div className="space-y-3">
@@ -503,7 +507,7 @@ export default function SalesFieldPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingPhotos}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Camera className="h-4 w-4 mr-2" />
                   {isUploadingPhotos ? "Mengupload..." : "Tambah Foto"}
@@ -520,14 +524,14 @@ export default function SalesFieldPage() {
                 {photos.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {photos.length} foto telah diupload
                       </p>
                       <button
                         type="button"
                         onClick={clearAllPhotos}
                         disabled={isUploadingPhotos}
-                        className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-300 rounded disabled:opacity-50"
+                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 px-2 py-1 border border-red-300 dark:border-red-600 rounded disabled:opacity-50"
                       >
                         Hapus Semua
                       </button>
@@ -539,7 +543,7 @@ export default function SalesFieldPage() {
                           <img
                             src={photo}
                             alt={`Foto ${index + 1}`}
-                            className="h-24 w-24 object-cover rounded-lg border border-gray-200"
+                            className="h-24 w-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                           />
                           <button
                             type="button"
@@ -558,7 +562,7 @@ export default function SalesFieldPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       📁 Foto disimpan di folder uploads server
                     </div>
                   </div>
@@ -568,20 +572,20 @@ export default function SalesFieldPage() {
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Catatan Kunjungan
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Tuliskan catatan mengenai kunjungan ini..."
               />
             </div>
 
             {/* Check-in Button */}
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={handleCheckIn}
@@ -600,7 +604,7 @@ export default function SalesFieldPage() {
                 (useExistingStore ? !selectedStore : !storeName) ||
                 !visitPurpose) &&
                 !isSaving && (
-                  <p className="mt-2 text-sm text-gray-500 text-center">
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                     * Lengkapi semua field yang wajib diisi
                   </p>
                 )}
