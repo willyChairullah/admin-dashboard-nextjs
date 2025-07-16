@@ -1,6 +1,7 @@
+// schema.prisma
+
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -8,276 +9,453 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model activities {
-  activity_id BigInt   @id @default(autoincrement())
-  user_id     BigInt
-  activity    String   @db.VarChar(255)
-  module      String   @db.VarChar(255)
-  created_on  DateTime @db.Timestamp(6)
-  deleted     Int      @default(0) @db.SmallInt
+// ==========================================
+// Models (Tabel Database)
+// ==========================================
+
+model attendance {
+  id             Int              @id @default(autoincrement())
+  userId         String
+  attendanceDate DateTime
+  checkIn        DateTime?
+  checkOut       DateTime?
+  workHours      Decimal          @db.Decimal(4, 2) @default(0)
+  status         AttendanceStatus @default(present)
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user users @relation(fields: [userId], references: [id])
+
+  @@unique([userId, attendanceDate])
 }
 
-model approval {
-  id              Int      @id @default(autoincrement())
-  kode_layanan    String   @db.VarChar(3)
-  tgl_buat        DateTime @default(now()) @db.Timestamp(6)
-  id_transaksi    Int
-  id_pemohon      Int?
-  status_total    Int      @default(0) @db.SmallInt
-  status_approval Int      @default(0) @db.SmallInt
+model categories {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  products products[]
 }
 
-model approval_items {
-  id              Int       @id @default(autoincrement())
-  role_id         Int
-  status_approval Int       @default(0)
-  tgl_proses      DateTime? @db.Timestamp(6)
-  approval_id     Int
-  index           Int
+model customers {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  email       String?  @unique
+  phone       String?
+  address     String
+  city        String
+  latitude    Float?
+  longitude   Float?
+  creditLimit Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customerVisits customerVisits[]
+  deliveryNotes  deliveryNotes[]
+  invoices       invoices[]
+  orders         orders[]
 }
 
-model approval_items_desc {
-  id               Int      @id @default(autoincrement())
-  approval_item_id Int
-  user_id          Int
-  description      String
-  status_approval  Int      @db.SmallInt
-  tgl_proses       DateTime @default(now()) @db.Timestamp(6)
+model customerVisits {
+  id         String    @id @default(cuid())
+  visitDate  DateTime  @default(now())
+  latitude   Float
+  longitude  Float
+  notes      String?
+  photoUrl   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  customerId String
+  salesId    String
+
+  customer customers @relation(fields: [customerId], references: [id])
+  sales    users     @relation(fields: [salesId], references: [id])
 }
 
-model authority {
-  id           Int    @id @default(autoincrement())
-  kode_layanan String @db.VarChar(255)
+model deliveryNotes {
+  id              String         @id @default(cuid())
+  deliveryNumber  String         @unique
+  deliveryDate    DateTime       @default(now())
+  status          DeliveryStatus @default(PENDING)
+  driverName      String
+  vehicleNumber   String
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  customerId      String
+  orderId         String         @unique
+  warehouseUserId String
+
+  customer      customers @relation(fields: [customerId], references: [id])
+  order         orders    @relation(fields: [orderId], references: [id])
+  warehouseUser users     @relation(fields: [warehouseUserId], references: [id])
 }
 
-model authority_items {
-  id           Int @id @default(autoincrement())
-  index        Int
-  authority_id Int
-  role_id      Int
+model financialRecord {
+  id                Int             @id @default(autoincrement())
+  transactionNumber String          @unique
+  transactionDate   DateTime        @default(now())
+  transactionType   TransactionType
+  category          String
+  amount            Decimal         @db.Decimal(15, 2)
+  description       String
+  referenceType     String? // e.g., "INVOICE", "EXPENSE"
+  referenceId       String? // e.g., id dari invoice
+  createdBy         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  createdByUser users @relation(fields: [createdBy], references: [id])
 }
 
-model ci3_sessions {
-  id         String @id @db.VarChar(128)
-  ip_address String @db.VarChar(45)
-  timestamp  BigInt
-  data       Bytes
+model invoices {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  invoiceDate     DateTime      @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Float         @default(0)
+  tax             Float         @default(0)
+  totalAmount     Float         @default(0)
+  paidAmount      Float         @default(0)
+  remainingAmount Float         @default(0)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  customerId      String
+  orderId         String?       @unique
+
+  invoiceItems invoiceItems[]
+  customer     customers    @relation(fields: [customerId], references: [id])
+  order        orders?      @relation(fields: [orderId], references: [id])
+  payments     payments[]
 }
 
-model cost_center {
-  id   Int    @id
-  nama String @db.VarChar(255)
-  type String @db.VarChar(50)
+model invoiceItems {
+  id         String   @id @default(cuid())
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  invoiceId  String
+  productId  String
+
+  invoice invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product products @relation(fields: [productId], references: [id])
 }
 
-model email_queue {
-  id             Int       @id @default(autoincrement())
-  to_email       String    @db.VarChar(254)
-  subject        String    @db.VarChar(255)
-  message        String
-  alt_message    String?
-  max_attempts   Int
-  attempts       Int
-  success        Int       @db.SmallInt
-  date_published DateTime? @db.Timestamp(6)
-  last_attempt   DateTime? @db.Timestamp(6)
-  date_sent      DateTime? @db.Timestamp(6)
-  csv_attachment String?
+model notifications {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String // e.g., 'INFO', 'WARNING', 'NEW_ORDER'
+  isGlobal  Boolean  @default(false)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userNotifications userNotifications[]
 }
 
-model login_attempts {
-  id         BigInt   @id @default(autoincrement())
-  ip_address String   @db.VarChar(45)
-  login      String   @db.VarChar(255)
-  time       DateTime @db.Timestamp(6)
+model orders {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  orderDate    DateTime    @default(now())
+  deliveryDate DateTime?
+  status       OrderStatus @default(NEW)
+  totalAmount  Float       @default(0)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  customerId   String
+  salesId      String
+
+  deliveryNote deliveryNotes?
+  invoice      invoices?
+  orderItems   orderItems[]
+  customer     customers   @relation(fields: [customerId], references: [id])
+  sales        users       @relation(fields: [salesId], references: [id])
 }
 
-model opt_agama {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey1")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
+model orderItems {
+  id         String   @id @default(cuid())
+  quantity   Float
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orderId    String
+  productId  String
+
+  order   orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product products @relation(fields: [productId], references: [id])
 }
 
-model opt_kebangsaan {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey2")
-  nomor Int?    @db.SmallInt
-  nama  String? @db.VarChar(255)
+model payments {
+  id              Int           @id @default(autoincrement())
+  paymentNumber   String        @unique
+  invoiceId       String
+  paymentDate     DateTime      @default(now())
+  amount          Decimal       @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod
+  referenceNumber String?
+  status          PaymentStatus @default(pending)
+  notes           String?
+  processedBy     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  invoice         invoices @relation(fields: [invoiceId], references: [id])
+  processedByUser users    @relation(fields: [processedBy], references: [id])
 }
 
-model opt_kekerasan {
-  id    Int     @id(map: "kt_opt_kekerasan_pkey")
-  nomor Int?    @db.SmallInt
-  nama  String? @db.VarChar(255)
+/// MODIFIED: Relasi ke supplier dan tabel terkait supplier dihapus.
+/// Ditambahkan relasi ke productionOrderItems untuk melacak kapan produk ini diminta untuk diproduksi.
+model products {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  description  String?
+  unit         String // e.g., 'Box', 'Pcs', 'Ton'
+  price        Float    // Harga Jual
+  cost         Float    // Biaya Produksi
+  minStock     Int      @default(0)
+  currentStock Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  categoryId   String
+
+  invoiceItems         invoiceItems[]
+  orderItems           orderItems[]
+  category             categories           @relation(fields: [categoryId], references: [id])
+  stockMovements       stockMovements[]
+  stockOpnameItems     stockOpnameItem[]
+  productionOrderItems productionOrderItems[]
 }
 
-model opt_media {
-  id    Int     @id(map: "kt_opt_kekerasan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
+/// NEW: Tabel untuk permintaan produksi internal (PO Internal) saat stok di gudang habis.
+model productionOrders {
+  id                     String           @id @default(cuid())
+  productionOrderNumber  String           @unique
+  requestDate            DateTime         @default(now())
+  expectedCompletionDate DateTime?
+  status                 ProductionStatus @default(PENDING)
+  notes                  String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  requestedById          String
+
+  requestedByUser      users                  @relation(fields: [requestedById], references: [id])
+  productionOrderItems productionOrderItems[]
 }
 
-model opt_pekerjaan {
-  id    Int     @id(map: "kt_opt_pendidikan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
+/// NEW: Tabel detail untuk productionOrders, berisi produk apa saja yang harus dibuat.
+model productionOrderItems {
+  id                String   @id @default(cuid())
+  quantityToProduce Float
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  productionOrderId String
+  productId         String
+
+  productionOrder productionOrders @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  product         products         @relation(fields: [productId], references: [id])
 }
 
-model opt_pendidikan {
-  id    Int     @id(map: "kt_opt_media_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_perkawinan {
-  id    Int     @id(map: "kt_opt_agama_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model opt_tkp {
-  id    Int     @id(map: "kt_opt_perkawinan_copy1_pkey")
-  nomor String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-}
-
-model permissions {
-  permission_id Int    @id @default(autoincrement())
-  name          String @db.VarChar(255)
-  description   String @db.VarChar(100)
-  status        String @default("active") @db.VarChar(8)
-}
-
-model reg_districts {
-  id            String         @id @db.Char(6)
-  regency_id    String         @db.Char(4)
-  name          String         @db.VarChar(255)
-  reg_regencies reg_regencies  @relation(fields: [regency_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "district_regency_foreign")
-  reg_villages  reg_villages[]
-
-  @@index([regency_id], map: "districts_regency_id_index")
-}
-
-model reg_provinces {
-  id            String          @id @db.Char(2)
-  name          String          @db.VarChar(255)
-  reg_regencies reg_regencies[]
-}
-
-model reg_regencies {
-  id            String          @id @db.Char(4)
-  province_id   String          @db.Char(2)
-  name          String          @db.VarChar(255)
-  reg_districts reg_districts[]
-  reg_provinces reg_provinces   @relation(fields: [province_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "regency_province_foreign")
-
-  @@index([province_id], map: "regencies_province_id_index")
-}
-
-model reg_villages {
-  id            String        @id @db.Char(10)
-  district_id   String        @db.Char(6)
-  name          String        @db.VarChar(255)
-  reg_districts reg_districts @relation(fields: [district_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "village_district_foreign")
-
-  @@index([district_id], map: "villages_district_id_index")
-}
-
-model registrations {
-  id            Int      @id(map: "registration_pkey") @default(autoincrement())
-  email         String   @db.VarChar(255)
-  nik           String   @db.VarChar(255)
-  nama          String   @db.VarChar(255)
-  jenis_kelamin String   @db.VarChar(255)
-  tgl_lahir     DateTime @db.Date
-  alamat        String   @db.VarChar(500)
-  user_id       Int?
-  role_id       Int?
-  file_code     String?  @db.VarChar
-  no_telp       String?  @db.VarChar(255)
-  kecamatan     String?  @db.VarChar(255)
-  kelurahan     String?  @db.VarChar(255)
-}
-
-model role_permissions {
-  role_id       Int
-  permission_id Int
-
-  @@id([role_id, permission_id])
-}
-
-model roles {
-  role_id           Int    @id @default(autoincrement())
-  role_name         String @db.VarChar(60)
-  description       String @db.VarChar(255)
-  default           Int    @default(0) @db.SmallInt
-  can_delete        Int    @default(0) @db.SmallInt
-  login_destination String @default("/") @db.VarChar(255)
-  default_context   String @default("content") @db.VarChar(255)
-  deleted           Int    @default(0) @db.SmallInt
-}
-
-model schema_version {
-  type    String @id @db.VarChar(40)
-  version Int
-}
-
-model services {
-  id    Int     @id @default(autoincrement())
-  kode  String? @db.VarChar(255)
-  nama  String? @db.VarChar(255)
-  table String? @db.VarChar(255)
-}
-
-model sessions {
-  session_id    String @id @db.VarChar(40)
-  ip_address    String @db.VarChar(45)
-  user_agent    String @db.VarChar(120)
-  last_activity BigInt
-  user_data     String
-}
 
 model settings {
-  name   String @id @db.VarChar(30)
-  module String @db.VarChar(255)
-  value  String @db.VarChar(255)
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model user_cookies {
-  user_id    BigInt   @id @default(autoincrement())
-  token      String   @db.VarChar(128)
-  created_on DateTime @db.Timestamp(6)
+model stockMovements {
+  id            String            @id @default(cuid())
+  movementDate  DateTime          @default(now())
+  type          StockMovementType
+  quantity      Float
+  previousStock Int
+  newStock      Int
+  reference     String? // Bisa diisi orderNumber atau productionOrderNumber
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  productId     String
+  userId        String
 
-  @@index([token], map: "token")
+  product products @relation(fields: [productId], references: [id])
+  user    users    @relation(fields: [userId], references: [id])
 }
 
-model user_meta {
-  meta_id    BigInt  @id @default(autoincrement())
-  user_id    BigInt
-  meta_key   String  @db.VarChar(255)
-  meta_value String?
+model stockOpname {
+  id           Int        @id @default(autoincrement())
+  opnameNumber String     @unique
+  opnameDate   DateTime   @default(now())
+  conductedBy  String
+  status       OpnameStatus @default(in_progress)
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  conductedByUser  users             @relation(fields: [conductedBy], references: [id])
+  stockOpnameItems stockOpnameItem[]
 }
 
+model stockOpnameItem {
+  id            Int     @id @default(autoincrement())
+  opnameId      Int
+  productId     String
+  systemStock   Int
+  physicalStock Int
+  difference    Int
+  notes         String?
+
+  stockOpname stockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  product     products    @relation(fields: [productId], references: [id])
+}
+
+model transactions {
+  id              String          @id @default(cuid())
+  transactionDate DateTime        @default(now())
+  type            TransactionType
+  amount          Float
+  description     String
+  category        String
+  reference       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt // FIXED: Added @updatedAt
+  userId          String?
+
+  user    users?   @relation(fields: [userId], references: [id])
+  // supplierId      String?
+  // supplier suppliers? @relation(fields: [supplierId], references: [id])
+}
+
+model userNotifications {
+  id             String   @id @default(cuid())
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+  userId         String
+  notificationId String
+
+  notification notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+}
+
+/// MODIFIED: Ditambahkan relasi ke `productionOrders` untuk melacak siapa yang me-request produksi.
 model users {
-  id                   BigInt    @id @default(autoincrement())
-  role_id              Int
-  email                String    @db.VarChar(254)
-  username             String    @db.VarChar(30)
-  password_hash        String    @db.Char(60)
-  reset_hash           String?   @db.VarChar(40)
-  last_login           DateTime? @db.Timestamp(6)
-  last_ip              String    @db.VarChar(45)
-  created_on           DateTime  @db.Timestamp(6)
-  deleted              Int       @default(0) @db.SmallInt
-  reset_by             Int?
-  banned               Int       @db.SmallInt
-  ban_message          String?   @db.VarChar(255)
-  display_name         String    @db.VarChar(255)
-  display_name_changed DateTime? @db.Date
-  timezone             String    @db.VarChar(40)
-  language             String    @db.VarChar(20)
-  active               Int       @db.SmallInt
-  activate_hash        String    @db.VarChar(40)
-  force_password_reset Int?      @db.SmallInt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  password   String
+  role       UserRole @default(SALES)
+  phone      String?
+  address    String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([email], map: "email")
+  attendances       attendance[]
+  customerVisits    customerVisits[]
+  deliveryNotes     deliveryNotes[]
+  financialRecords  financialRecord[]
+  orders            orders[]
+  payments          payments[]
+  transactions      transactions[]
+  stockMovements    stockMovements[]
+  stockOpnames      stockOpname[]
+  userNotifications userNotifications[]
+  productionOrders  productionOrders[]
+}
+
+// =================================================================
+// Enums
+// =================================================================
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum OrderStatus {
+  NEW
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  SALES
+  WAREHOUSE
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  credit_card
+  check
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  early_leave
+}
+
+enum OpnameStatus {
+  in_progress
+  completed
+  cancelled
+}
+
+enum ProductionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
