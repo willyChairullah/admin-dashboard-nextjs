@@ -149,7 +149,7 @@ export default function SideBar({
             id: "sales-dashboard",
             label: "Sales Dashboard",
             icon: "📊",
-            href: "/sales/dashboard",
+            href: "/sales",
             children: [],
           },
           {
@@ -160,17 +160,17 @@ export default function SideBar({
             children: [],
           },
           {
-            id: "delivery-order",
-            label: "Delivery Order",
+            id: "field-visits",
+            label: "Field Visits",
             icon: "🚚",
-            href: "/sales/delivery",
+            href: "/sales/field-visits",
             children: [],
           },
           {
-            id: "invoice",
-            label: "Invoice",
-            icon: "💵",
-            href: "/sales/invoices",
+            id: "orders",
+            label: "Orders",
+            icon: "📦",
+            href: "/sales/orders",
             children: [],
           },
           {

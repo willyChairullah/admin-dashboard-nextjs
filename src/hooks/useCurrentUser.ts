@@ -28,15 +28,8 @@ export function filterMenuByRole(menuItems: any[], userRole: string) {
 
   switch (userRole) {
     case "SALES":
-      // Sales can only see Sales Dashboard (not the entire Sales module)
-      return menuItems
-        .filter((item) => item.id === "sales")
-        .map((item) => ({
-          ...item,
-          children: item.children.filter(
-            (child: any) => child.id === "sales-dashboard"
-          ),
-        }));
+      // Sales can access the entire Sales module and all its children components
+      return menuItems.filter((item) => item.id === "sales");
 
     case "WAREHOUSE":
     case "ADMIN":
