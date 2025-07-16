@@ -3,24 +3,14 @@
 import { useState, useEffect, useTransition } from "react";
 import { ShoppingCart, Plus, Trash2, Users } from "lucide-react";
 import { createOrder } from "@/lib/actions/orders";
-import { getStores, getSalesReps } from "@/lib/actions/stores";
+import { getStores } from "@/lib/actions/stores";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface Store {
   id: string;
   name: string;
   address: string;
   phone: string | null;
-}
-
-interface SalesRep {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  employeeId: string;
-  territory: string[];
-  target: number;
-  achieved: number;
 }
 
 interface OrderItem {
@@ -30,9 +20,9 @@ interface OrderItem {
 }
 
 export default function OrdersPage() {
+  const { user, loading: userLoading } = useCurrentUser();
   const [isSaving, setIsSaving] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
-  const [currentSalesRep, setCurrentSalesRep] = useState<SalesRep | null>(null);
   const [, startTransition] = useTransition();
 
   // Form states
@@ -52,7 +42,6 @@ export default function OrdersPage() {
   // Load data on component mount
   useEffect(() => {
     loadStores();
-    loadSalesReps();
   }, []);
 
   const loadStores = async () => {
@@ -63,17 +52,6 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error("Error loading stores:", error);
-    }
-  };
-
-  const loadSalesReps = async () => {
-    try {
-      const result = await getSalesReps();
-      if (result.success && result.data.length > 0) {
-        setCurrentSalesRep(result.data[0]); // Use first sales rep as current user
-      }
-    } catch (error) {
-      console.error("Error loading sales reps:", error);
     }
   };
 
@@ -107,8 +85,8 @@ export default function OrdersPage() {
 
   const handleSubmitOrder = async () => {
     // Validation
-    if (!currentSalesRep) {
-      alert("Data sales representative tidak ditemukan.");
+    if (!user) {
+      alert("User tidak ditemukan. Silakan login ulang.");
       return;
     }
 
@@ -142,7 +120,7 @@ export default function OrdersPage() {
       startTransition(async () => {
         try {
           const result = await createOrder({
-            salesRepId: currentSalesRep.id,
+            salesRepId: user.id, // Use current user ID
             storeId: useExistingStore ? selectedStore : undefined,
             storeName: useExistingStore ? undefined : storeName,
             storeAddress: useExistingStore ? undefined : storeAddress,
@@ -185,11 +163,26 @@ export default function OrdersPage() {
     }
   };
 
-  if (!currentSalesRep) {
+  if (userLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
           <p className="text-gray-900 dark:text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "SALES") {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Akses Ditolak
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Halaman ini hanya dapat diakses oleh sales representative.
+          </p>
         </div>
       </div>
     );
@@ -205,16 +198,16 @@ export default function OrdersPage() {
               Buat Order Baru
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Form pembuatan order untuk sales lapangan - {currentSalesRep.name}
+              Form pembuatan order untuk sales lapangan - {user.name}
             </p>
           </div>
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                ID Sales
+                Sales Rep
               </p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {currentSalesRep.employeeId}
+                {user.email}
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">

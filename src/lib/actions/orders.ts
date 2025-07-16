@@ -47,6 +47,26 @@ export async function createOrder({
       };
     }
 
+    // Validate that sales rep exists
+    const salesRep = await db.users.findUnique({
+      where: { id: salesRepId },
+      select: { id: true, role: true },
+    });
+
+    if (!salesRep) {
+      return {
+        success: false,
+        error: "Sales representative not found",
+      };
+    }
+
+    if (salesRep.role !== "SALES") {
+      return {
+        success: false,
+        error: "User is not a sales representative",
+      };
+    }
+
     // Calculate total amount
     const totalAmount = items.reduce((sum: number, item: OrderItem) => {
       return sum + item.quantity * item.price;
@@ -180,7 +200,11 @@ export async function getOrders({
       include: {
         customers: true,
         users: true, // This is the sales rep relation
-        order_items: true,
+        order_items: {
+          include: {
+            products: true, // Include product details for better display
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
