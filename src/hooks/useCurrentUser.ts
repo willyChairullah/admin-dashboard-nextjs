@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 
 interface User {
   id: string;
@@ -9,17 +10,70 @@ interface User {
 
 export function useCurrentUser() {
   const { userEmail, userRole } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const user: User | null = userEmail
-    ? {
-        id: "1",
-        email: userEmail,
-        name: userEmail.split("@")[0],
-        role: userRole || "SALES",
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!userEmail) {
+        setUser(null);
+        setLoading(false);
+        return;
       }
-    : null;
 
-  return { user, loading: false };
+      try {
+        const response = await fetch("/api/user/details", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: userEmail }),
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUser({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role,
+          });
+        } else if (response.status === 404) {
+          // User not found in database, create a fallback user
+          console.warn("User not found in database, using fallback");
+          setUser({
+            id: `user_${Date.now()}`, // Generate a temporary ID
+            email: userEmail,
+            name: userEmail.split("@")[0],
+            role: userRole || "SALES",
+          });
+        } else {
+          // Other error, use fallback
+          setUser({
+            id: userEmail, // Use email as fallback ID
+            email: userEmail,
+            name: userEmail.split("@")[0],
+            role: userRole || "SALES",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+        // Fallback to basic user data
+        setUser({
+          id: userEmail, // Use email as fallback ID
+          email: userEmail,
+          name: userEmail.split("@")[0],
+          role: userRole || "SALES",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, [userEmail, userRole]);
+
+  return { user, loading };
 }
 
 // Role-based menu filtering
