@@ -1,228 +1,144 @@
-## Sidebar Division for Admin & Warehouse
-
-This is the process flow division into logical modules for the sidebar of an application dashboard. This structure separates functions based on their purposes to ensure easy access for each role.
-
-Here is the structure of the modules and the pages within them:
-
----
-
-### **1. Module: Sales**
-
-This module focuses on all activities related to the customer order process through to billing.
-
-* **Page: Sales Dashboard**
-
-  * *Content:* A summary display of sales performance, orders in progress, and unpaid invoices.
-* **Page: Sales Order (SO)**
-
-  * *Content:* A list of all sales orders. This is where **Sales** creates new requests. **Admin** accesses this page to verify and forward the requests.
-* **Page: Delivery Order**
-
-  * *Content:* A list of all delivery orders created. **Admin** creates delivery orders here after stock is confirmed. **Warehouse** uses this as a reference for shipment.
-* **Page: Invoice**
-
-  * *Content:* A list of all invoices. **Admin** creates invoices here after goods are confirmed to be delivered.
-* **Page: Sales Return**
-
-  * *Content:* A dedicated page for managing the return process, from submission by **Sales** to resolution by **Admin**.
-
-### **2. Module: Inventory**
-
-This module is used to manage all things related to physical stock in the warehouse.
-
-* **Page: Stock Dashboard**
-
-  * *Content:* A summary of stock conditions, a list of low-stock alerts, and the latest movements of goods.
-* **Page: Item List (Master Data)**
-
-  * *Content:* A list of all products/items sold along with their details (SKU, name, price, etc.).
-* **Page: Stock Management**
-
-  * *Content:* The current view of stock for all items. Here, **Warehouse** monitors and can make adjustments to stock as needed.
-* **Page: Stock Taking**
-
-  * *Content:* A feature for the periodic physical stock counting process by the **Warehouse** team.
-
-### **3. Module: Purchasing**
-
-This module manages the process of procuring goods from suppliers.
-
-* **Page: Purchase Order (PO)**
-
-  * *Content:* A list of all POs created by **Admin** to add stock.
-* **Page: PO Payments**
-
-  * *Content:* A page for **Admin** to record and track payment status to suppliers.
-
-### **4. Module: Finance**
-
-This module focuses on recording and reporting the company's finances.
-
-* **Page: Revenue**
-
-  * *Content:* A record of all income, mainly from customer invoice payments, managed by **Admin**.
-* **Page: Expenses**
-
-  * *Content:* A record of all operational costs input by **Admin**.
-
-### **5. Module: HR**
-
-This module is dedicated to personnel administration, separate from the goods flow.
-
-* **Page: Attendance**
-
-  * *Content:* A page for **Admin** to record and manage employee attendance data.
-
----
-
-Important Notes:
-
-Each user (Sales, Admin, Warehouse) will have different access rights. For example, Sales users may only be able to view the Sales module, while Admin can access almost all modules. Warehouse users will primarily interact with the Inventory module.
-
-## Sidebar Role Access
-
-Here is the detailed access rights for each role (Sales, Admin, Warehouse) based on the modules we've designed. It follows the principle of "least privilege," meaning each role can only access what is necessary for them to perform their tasks.
-
-### **Access Rights per Role**
-
----
-
-### **1. Role: Sales**
-
-The main focus is creating orders and tracking their status to inform customers.
-
-* **Module: Sales**
-
-  * **Sales Dashboard:** `[View]`
-
-    * Justification: Only allowed to view the summary of performance and the status of their own orders.
-  * **Sales Order (SO):** `[Create, View, Edit Limited]`
-
-    * Justification: Can create new SO, view their own SO list, and edit their own SO *only if* its status is still "Draft" or hasn't been processed by Admin. Cannot view other people's SO.
-  * **Delivery Order:** `[View]`
-
-    * Justification: Can only view the delivery orders related to their SO to track the shipments.
-  * **Invoice:** `[View]`
-
-    * Justification: Can only view invoices related to their SO to confirm with the customer.
-  * **Sales Return:** `[Create, View]`
-
-    * Justification: Can submit a new return request and track the status of the return.
-* **Other Modules (Inventory, Purchasing, Finance, HR):** `[No Access]`
-
-  * *Optional:* May be given `[View]` access to **Stock Management** page in the Inventory module to check stock availability before making promises to customers.
-
----
-
-### **2. Role: Admin**
-
-As the coordination center, Admin has the broadest access to operational and financial modules.
-
-* **Module: Sales**
-
-  * **All Pages (SO, Delivery Order, Invoice, Return):** `[Create, View, Edit, Delete]`
-
-    * Justification: Full control to verify SOs, create documents, change statuses, and cancel if needed. Can view data from all Sales teams.
-* **Module: Inventory**
-
-  * **Item List (Master Data):** `[Create, View, Edit, Delete]`
-
-    * Justification: Fully responsible for the master data of products.
-  * **Other Pages (Dashboard, Stock Management, Stock Taking):** `[View]`
-
-    * Justification: Needs to see all stock data for reporting and coordination, but cannot modify stock data directly (that’s the Warehouse’s responsibility).
-* **Module: Purchasing**
-
-  * **All Pages (Purchase Order, PO Payments):** `[Create, View, Edit, Delete]`
-
-    * Justification: Fully responsible for the entire procurement cycle.
-* **Module: Finance**
-
-  * **All Pages (Revenue, Expenses):** `[Create, View, Edit, Delete]`
-
-    * Justification: The primary person responsible for financial records.
-* **Module: HR**
-
-  * **Attendance:** `[Create, View, Edit, Delete]`
-
-    * Justification: Fully responsible for employee administration.
-
----
-
-### **3. Role: Warehouse**
-
-The main focus is on managing physical goods, from receiving, storing, to shipping.
-
-* **Module: Sales**
-
-  * **Sales Order (SO):** `[View]`
-
-    * Justification: Only allowed to view SOs that have been forwarded by Admin for preparation.
-  * **Delivery Order:** `[View, Edit Status]`
-
-    * Justification: Can view the list of goods to be shipped and change its status (e.g., from "Prepared" to "Shipped").
-  * **Sales Return:** `[View, Edit Status]`
-
-    * Justification: Can view return requests and change their status after goods have been received and inspected (e.g., "Goods Received," "Condition Good").
-  * **Invoice:** `[No Access]`
-* **Module: Inventory**
-
-  * **Stock Dashboard & Item List:** `[View]`
-
-    * Justification: Needs to see summaries and details of goods but cannot modify the master data.
-  * **Stock Management:** `[View, Edit]`
-
-    * Justification: Main access to update stock quantities whenever goods are received or shipped out.
-  * **Stock Taking:** `[Create, View, Edit]`
-
-    * Justification: Full control to start, fill, and complete the stock-taking process.
-* **Other Modules (Purchasing, Finance, HR):** `[No Access]`
-
-  * *Optional:* May be given `[View]` access to **Purchase Order** page in the Purchasing module to prepare for goods receipt from suppliers.
-
-
-## Sidebar Layout
-
-The order of modules in the sidebar is crucial for ease of use (user experience). A well-organized order typically follows the main business workflow, placing the most frequently accessed modules at the top.
-
-Here’s a recommended order for the sidebar modules that is logical and efficient:
-
----
-
-### **Recommended Sidebar Module Order**
-
-This order is arranged from the most frequently accessed modules, representing the core business flow, down to the administrative sections.
-
-**1. 🏠 Dashboard**
-
-* **Reason:** Always the first page seen by users upon login to get a summary of important information.
-
-**2. 🛒 Sales**
-
-* **Reason:** This is the "entry point" of the entire business flow (starting from customer orders). This module has the highest frequency of use by Sales and Admin teams.
-
-**3. 📦 Inventory**
-
-* **Reason:** Directly follows the sales process (checking and shipping stock). It’s closely related to the Sales module and is frequently accessed by both Admin and Warehouse teams.
-
-**4. 🚚 Purchasing**
-
-* **Reason:** Tightly linked to stock management in the Inventory module (for procuring items when stock is low). It logically follows after Inventory.
-
-**5. 💰 Finance**
-
-* **Reason:** This module records the outcomes of all previous activities (revenue from sales, expenses for purchases). It’s placed after the main operational workflow is completed.
-
-**6. 👥 HR (Human Resources)**
-
-* **Reason:** A supporting function that isn’t directly related to goods and money flow. Thus, it is placed towards the bottom.
-
-**7. ⚙️ Settings**
-
-* **Reason:** This module is the least frequently accessed (only for user configurations, etc.). As a standard practice in app design, the Settings module is placed at the very bottom.
-
----
-
-The documentation you provided outlines the key features and architecture for a dynamic access management system and sidebar design for an Enterprise Resource Planning (ERP) application. Here's a breakdown of the points covered:
-
----
+Here's an updated and more detailed breakdown, incorporating your new requirements for dummy data, create/edit page functionality, and delete options:
+
+-----
+
+## Page: Invoice / Faktur (sales/invoice) - Enhanced Details
+
+This page will display a list of all invoices in an interactive **Data Table**. This Data Table will provide search and filter functionalities, along with navigation for creating and editing invoices.
+
+### Core Components
+
+This page will utilize existing components from your `components` folder.
+
+### Data Table Elements
+
+Here are the key elements that will be displayed in the Data Table:
+
+  * **Displayed Columns (Important Only):**
+
+      * **Invoice Number:** The unique invoice number. This will function as a **clickable link**.
+      * **Customer Name:** The name of the customer associated with the invoice.
+      * **Invoice Date:** The date the invoice was created.
+      * **Due Date:** The payment due date for the invoice.
+      * **Total Amount:** The total amount to be paid on the invoice.
+      * **Status:** The current status of the invoice (e.g., `DRAFT`, `SENT`, `PAID`, `OVERDUE`).
+      * **(Optional) Remaining Amount:** The outstanding amount yet to be paid.
+
+  * **Search Functionality (Search Input):**
+
+      * A text input field will be available at the top of the Data Table.
+      * Users can type in an **Invoice Number** or **Customer Name** to filter results in *real-time* or after pressing enter.
+
+  * **Filter Functionality:**
+
+      * There will be filter options based on **Invoice Status**. This could be a dropdown or checkboxes allowing users to select one or more statuses (e.g., show only "PAID" or "OVERDUE" invoices).
+      * **(Optional) Date Range Filter:** Filter by `invoiceDate` or `dueDate` to view invoices within a specific period.
+
+  * **"Add Data" Button:**
+
+      * A clearly visible button, perhaps labeled **"+ Create New Invoice"** or **"Add Invoice"**.
+      * When this button is clicked, users will be directed to the new invoice creation page.
+
+### Dummy Data for Display Example
+
+To illustrate the Data Table, here are some dummy invoice data examples:
+
+```json
+[
+  {
+    "id": "inv001",
+    "invoiceNumber": "INV-2024-0001",
+    "invoiceDate": "2024-07-01",
+    "dueDate": "2024-07-31",
+    "status": "PAID",
+    "subtotal": 150.00,
+    "tax": 15.00,
+    "totalAmount": 165.00,
+    "paidAmount": 165.00,
+    "remainingAmount": 0.00,
+    "notes": "Payment received via bank transfer.",
+    "customerId": "custA",
+    "customerName": "PT. Maju Mundur",
+    "orderId": "order101"
+  },
+  {
+    "id": "inv002",
+    "invoiceNumber": "INV-2024-0002",
+    "invoiceDate": "2024-07-05",
+    "dueDate": "2024-08-05",
+    "status": "SENT",
+    "subtotal": 250.50,
+    "tax": 25.05,
+    "totalAmount": 275.55,
+    "paidAmount": 0.00,
+    "remainingAmount": 275.55,
+    "notes": "Awaiting payment.",
+    "customerId": "custB",
+    "customerName": "CV. Jaya Abadi",
+    "orderId": "order102"
+  },
+  {
+    "id": "inv003",
+    "invoiceNumber": "INV-2024-0003",
+    "invoiceDate": "2024-06-10",
+    "dueDate": "2024-07-10",
+    "status": "OVERDUE",
+    "subtotal": 75.00,
+    "tax": 7.50,
+    "totalAmount": 82.50,
+    "paidAmount": 0.00,
+    "remainingAmount": 82.50,
+    "notes": "Follow up required.",
+    "customerId": "custC",
+    "customerName": "UD. Sejahtera",
+    "orderId": "order103"
+  },
+  {
+    "id": "inv004",
+    "invoiceNumber": "INV-2024-0004",
+    "invoiceDate": "2024-07-15",
+    "dueDate": "2024-08-15",
+    "status": "DRAFT",
+    "subtotal": 120.00,
+    "tax": 12.00,
+    "totalAmount": 132.00,
+    "paidAmount": 0.00,
+    "remainingAmount": 132.00,
+    "notes": "Invoice for pending order.",
+    "customerId": "custA",
+    "customerName": "PT. Maju Mundur",
+    "orderId": "order104"
+  }
+]
+```
+
+-----
+
+### Page Navigation & Functionality
+
+  * **Create New Invoice Page (`/sales/invoice/create`):**
+
+      * This page will contain a form for creating a new invoice.
+      * **Fields:** All relevant fields from your `invoices` model will be present as input fields (e.g., `invoiceNumber`, `invoiceDate`, `dueDate`, `customerId` (likely a dropdown/autocomplete for existing customers), `orderId` (optional, also a dropdown/autocomplete), `notes`).
+      * **Invoice Items:** There should be a section to add multiple `invoiceItems` (e.g., product name, quantity, unit price, total for each item). This might involve dynamic "Add Item" buttons.
+      * **Automatic Calculation:** `subtotal`, `tax`, `totalAmount`, `remainingAmount` should be calculated automatically based on `invoiceItems` and `paidAmount` input.
+      * **Status Default:** `status` will default to `DRAFT`.
+      * **Actions:**
+          * **"Save" Button:** Submits the form data to create a new invoice entry in the database.
+          * **"Cancel" Button:** Navigates back to the main invoice list page (`/sales/invoice`).
+
+  * **Edit Invoice Page (`/sales/invoice/edit/[id]`):**
+
+      * This page will display a form pre-populated with the data of the selected invoice (identified by `id`).
+      * **Fields:** All fields from the `invoices` model and `invoiceItems` will be editable.
+      * **Automatic Calculation:** Similar to the create page, `subtotal`, `tax`, `totalAmount`, `remainingAmount` should update automatically upon changes.
+      * **Actions:**
+          * **"Save Changes" Button:** Updates the existing invoice record in the database with the modified data.
+          * **"Mark as Paid" Button (Conditional):** If the `status` is not `PAID` and `remainingAmount` is greater than 0, this button could appear to quickly mark the invoice as paid (setting `paidAmount` to `totalAmount` and `status` to `PAID`).
+          * **"Delete Invoice" Button:**
+              * **Crucially, the "Delete Invoice" button will ONLY be available on this edit page.**
+              * When clicked, it should trigger a confirmation dialog (a custom modal, NOT `alert()` or `confirm()`) to prevent accidental deletion.
+              * Upon confirmation, the invoice record will be removed from the database, and the user will be redirected back to the main invoice list page (`/sales/invoice`).
+          * **"Cancel" Button:** Navigates back to the main invoice list page (`/sales/invoice`) without saving changes.
+
+-----
