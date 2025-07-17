@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "./generated"
 }
 
 datasource db {
@@ -8,14 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model categories {
+model Categories {
   id          String     @id @default(cuid())
   name        String
   description String?
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  products    products[]
+  products    Products[]
+
+  @@map("categories")
 }
 
 model Store {
@@ -71,70 +72,76 @@ model FieldVisit {
   @@map("field_visits")
 }
 
-model customers {
-  id              String            @id @default(cuid())
-  code            String            @unique
-  name            String
-  email           String?
-  phone           String?
-  address         String
-  city            String
-  latitude        Float?
-  longitude       Float?
-  creditLimit     Float             @default(0)
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  customer_visits customer_visits[]
-  delivery_notes  delivery_notes[]
-  invoices        invoices[]
-  orders          orders[]
+model Customers {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  name           String
+  email          String?
+  phone          String?
+  address        String
+  city           String
+  latitude       Float?
+  longitude      Float?
+  creditLimit    Float            @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  customerVisits CustomerVisits[]
+  deliveryNotes  DeliveryNotes[]
+  invoices       Invoices[]
+  orders         Orders[]
+
+  @@map("customers")
 }
 
-model invoices {
-  id              String          @id @default(cuid())
-  invoiceNumber   String          @unique
-  invoiceDate     DateTime        @default(now())
+model Invoices {
+  id              String         @id @default(cuid())
+  invoiceNumber   String         @unique
+  invoiceDate     DateTime       @default(now())
   dueDate         DateTime
-  status          InvoiceStatus   @default(DRAFT)
-  subtotal        Float           @default(0)
-  tax             Float           @default(0)
-  totalAmount     Float           @default(0)
-  paidAmount      Float           @default(0)
-  remainingAmount Float           @default(0)
+  status          InvoiceStatus  @default(DRAFT)
+  subtotal        Float          @default(0)
+  tax             Float          @default(0)
+  totalAmount     Float          @default(0)
+  paidAmount      Float          @default(0)
+  remainingAmount Float          @default(0)
   notes           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   customerId      String
-  orderId         String?         @unique
-  invoice_items   invoice_items[]
-  customer        customers       @relation(fields: [customerId], references: [id])
-  order           orders?         @relation(fields: [orderId], references: [id])
-  payments        payments[]
+  orderId         String?        @unique
+  invoiceItems    InvoiceItems[]
+  customer        Customers      @relation(fields: [customerId], references: [id])
+  order           Orders?        @relation(fields: [orderId], references: [id])
+  payments        Payments[]
+
+  @@map("invoices")
 }
 
-model notifications {
-  id                 String               @id @default(cuid())
-  title              String
-  message            String
-  type               String
-  isGlobal           Boolean              @default(false)
-  isRead             Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  user_notifications user_notifications[]
+model Notifications {
+  id                String              @id @default(cuid())
+  title             String
+  message           String
+  type              String
+  isGlobal          Boolean             @default(false)
+  isRead            Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  userNotifications UserNotifications[]
+
+  @@map("notifications")
 }
 
-model orders {
-  id                   String          @id @default(cuid())
-  orderNumber          String          @unique
-  orderDate            DateTime        @default(now())
+model Orders {
+  id                   String         @id @default(cuid())
+  orderNumber          String         @unique
+  orderDate            DateTime       @default(now())
   deliveryDate         DateTime?
-  status               OrderStatus     @default(NEW)
-  totalAmount          Float           @default(0)
+  status               OrderStatus    @default(NEW)
+  totalAmount          Float          @default(0)
   notes                String?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
   customerId           String
   salesId              String
   adminNotes           String?
@@ -142,15 +149,17 @@ model orders {
   completedAt          DateTime?
   confirmedAt          DateTime?
   confirmedBy          String?
-  requiresConfirmation Boolean         @default(false)
-  delivery_notes       delivery_notes?
-  invoice              invoices?
-  order_items          order_items[]
-  customer             customers       @relation(fields: [customerId], references: [id])
-  sales                users           @relation(fields: [salesId], references: [id])
+  requiresConfirmation Boolean        @default(false)
+  deliveryNotes        DeliveryNotes?
+  invoice              Invoices?
+  orderItems           OrderItems[]
+  customer             Customers      @relation(fields: [customerId], references: [id])
+  sales                Users          @relation(fields: [salesId], references: [id])
+
+  @@map("orders")
 }
 
-model payments {
+model Payments {
   id          String   @id
   paymentDate DateTime @default(now())
   amount      Float
@@ -160,43 +169,47 @@ model payments {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   invoiceId   String
-  invoice     invoices @relation(fields: [invoiceId], references: [id])
+  invoice     Invoices @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
 }
 
-/// MODIFIED: Relasi ke supplier dan tabel terkait supplier dihapus.
-/// Ditambahkan relasi ke productionOrderItems untuk melacak kapan produk ini diminta untuk diproduksi.
-model products {
-  id              String            @id @default(cuid())
-  code            String            @unique
-  name            String
-  description     String?
-  unit            String
-  price           Float
-  cost            Float
-  minStock        Int               @default(0)
-  currentStock    Int               @default(0)
-  isActive        Boolean           @default(true)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  categoryId      String
-  supplierId      String
-  invoice_items   invoice_items[]
-  order_items     order_items[]
-  category        categories        @relation(fields: [categoryId], references: [id])
-  suppliers       suppliers         @relation(fields: [supplierId], references: [id])
-  stock_movements stock_movements[]
+model Products {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  name           String
+  description    String?
+  unit           String
+  price          Float
+  cost           Float
+  minStock       Int              @default(0)
+  currentStock   Int              @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  categoryId     String
+  supplierId     String
+  invoiceItems   InvoiceItems[]
+  orderItems     OrderItems[]
+  category       Categories       @relation(fields: [categoryId], references: [id])
+  suppliers      Suppliers        @relation(fields: [supplierId], references: [id])
+  stockMovements StockMovements[]
+
+  @@map("products")
 }
 
-model settings {
+model Settings {
   id          String   @id @default(cuid())
   key         String   @unique
   value       String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@map("settings")
 }
 
-model transactions {
+model Transactions {
   id              String          @id @default(cuid())
   transactionDate DateTime        @default(now())
   type            TransactionType
@@ -208,31 +221,34 @@ model transactions {
   updatedAt       DateTime        @updatedAt
   userId          String?
   supplierId      String?
-  suppliers       suppliers?      @relation(fields: [supplierId], references: [id])
-  user            users?          @relation(fields: [userId], references: [id])
+  suppliers       Suppliers?      @relation(fields: [supplierId], references: [id])
+  user            Users?          @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
 }
 
-/// MODIFIED: Ditambahkan relasi ke `productionOrders` untuk melacak siapa yang me-request produksi.
-model users {
-  id                 String               @id @default(cuid())
-  email              String               @unique
-  name               String
-  password           String
-  role               UserRole             @default(SALES)
-  phone              String?
-  address            String?
-  isActive           Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  customer_visits    customer_visits[]
-  delivery_notes     delivery_notes[]
-  orders             orders[]
-  stock_movements    stock_movements[]
-  transactions       transactions[]
-  user_notifications user_notifications[]
+model Users {
+  id                String              @id @default(cuid())
+  email             String              @unique
+  name              String
+  password          String
+  role              UserRole            @default(SALES)
+  phone             String?
+  address           String?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  customerVisits    CustomerVisits[]
+  deliveryNotes     DeliveryNotes[]
+  orders            Orders[]
+  stockMovements    StockMovements[]
+  transactions      Transactions[]
+  userNotifications UserNotifications[]
+
+  @@map("users")
 }
 
-model customer_visits {
+model CustomerVisits {
   id         String    @id
   visitDate  DateTime  @default(now())
   latitude   Float
@@ -243,11 +259,13 @@ model customer_visits {
   updatedAt  DateTime
   customerId String
   salesId    String
-  customers  customers @relation(fields: [customerId], references: [id])
-  users      users     @relation(fields: [salesId], references: [id])
+  customers  Customers @relation(fields: [customerId], references: [id])
+  users      Users     @relation(fields: [salesId], references: [id])
+
+  @@map("customer_visits")
 }
 
-model delivery_notes {
+model DeliveryNotes {
   id              String         @id
   deliveryNumber  String         @unique
   deliveryDate    DateTime       @default(now())
@@ -260,12 +278,14 @@ model delivery_notes {
   customerId      String
   orderId         String         @unique
   warehouseUserId String
-  customers       customers      @relation(fields: [customerId], references: [id])
-  orders          orders         @relation(fields: [orderId], references: [id])
-  users           users          @relation(fields: [warehouseUserId], references: [id])
+  customers       Customers      @relation(fields: [customerId], references: [id])
+  orders          Orders         @relation(fields: [orderId], references: [id])
+  users           Users          @relation(fields: [warehouseUserId], references: [id])
+
+  @@map("delivery_notes")
 }
 
-model invoice_items {
+model InvoiceItems {
   id         String   @id
   quantity   Float
   price      Float
@@ -274,11 +294,13 @@ model invoice_items {
   updatedAt  DateTime
   invoiceId  String
   productId  String
-  invoices   invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products   products @relation(fields: [productId], references: [id])
+  invoices   Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products   Products @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
 }
 
-model order_items {
+model OrderItems {
   id         String   @id
   quantity   Float
   price      Float
@@ -287,11 +309,13 @@ model order_items {
   updatedAt  DateTime
   orderId    String
   productId  String
-  orders     orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  products   products @relation(fields: [productId], references: [id])
+  orders     Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  products   Products @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
 }
 
-model stock_movements {
+model StockMovements {
   id            String            @id
   movementDate  DateTime          @default(now())
   type          StockMovementType
@@ -304,11 +328,13 @@ model stock_movements {
   updatedAt     DateTime
   productId     String
   userId        String
-  products      products          @relation(fields: [productId], references: [id])
-  users         users             @relation(fields: [userId], references: [id])
+  products      Products          @relation(fields: [productId], references: [id])
+  users         Users             @relation(fields: [userId], references: [id])
+
+  @@map("stock_movements")
 }
 
-model suppliers {
+model Suppliers {
   id           String         @id
   code         String         @unique
   name         String
@@ -319,21 +345,24 @@ model suppliers {
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime
-  products     products[]
-  transactions transactions[]
+  products     Products[]
+  transactions Transactions[]
+
+  @@map("suppliers")
 }
 
-model user_notifications {
+model UserNotifications {
   id             String        @id
   isRead         Boolean       @default(false)
   readAt         DateTime?
   createdAt      DateTime      @default(now())
   userId         String
   notificationId String
-  notifications  notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  users          users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications  Notifications @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  users          Users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, notificationId])
+  @@map("user_notifications")
 }
 
 enum DeliveryStatus {
