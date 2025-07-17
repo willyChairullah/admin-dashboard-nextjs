@@ -16,7 +16,6 @@ import {
   TrendingUp,
   DollarSign,
   Users,
-  AlertCircle,
 } from "lucide-react";
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -24,10 +23,15 @@ import { OrderTracking, OrderStatsCard } from "@/components/sales";
 
 interface OrderItem {
   id: string;
-  productName: string;
   quantity: number;
   price: number;
-  total: number;
+  totalPrice: number;
+  productId: string;
+  products?: {
+    id: string;
+    name: string;
+    code: string;
+  };
 }
 
 interface Order {
@@ -36,35 +40,25 @@ interface Order {
   totalAmount: number;
   status: string;
   orderDate: Date;
+  deliveryDate: Date | null;
   notes: string | null;
-  adminNotes: string | null;
-  requiresConfirmation: boolean;
-  confirmedAt: Date | null;
-  confirmedBy: string | null;
-  customers: {
+  createdAt: Date;
+  updatedAt: Date;
+  customerId: string;
+  salesId: string;
+  customer: {
     id: string;
     name: string;
     email: string | null;
     phone: string | null;
     address: string;
   };
-  users: {
+  sales: {
     id: string;
     name: string;
     email: string;
   } | null;
-  order_items: {
-    id: string;
-    quantity: number;
-    price: number;
-    totalPrice: number;
-    productId: string;
-    products?: {
-      id: string;
-      name: string;
-      code: string;
-    };
-  }[];
+  order_items: OrderItem[];
 }
 
 export default function OrderHistoryPage() {
@@ -98,7 +92,7 @@ export default function OrderHistoryPage() {
 
       if (result.success) {
         // Filter by date range
-        const filteredByDate = result.data.filter((order: Order) => {
+        const filteredByDate = (result.data as Order[]).filter((order) => {
           if (dateRange === "ALL") return true;
 
           const orderDate = new Date(order.orderDate);
@@ -191,8 +185,8 @@ export default function OrderHistoryPage() {
     return (
       order.id.toLowerCase().includes(searchLower) ||
       order.orderNumber.toLowerCase().includes(searchLower) ||
-      order.customers.name.toLowerCase().includes(searchLower) ||
-      order.customers.address.toLowerCase().includes(searchLower)
+      order.customer.name.toLowerCase().includes(searchLower) ||
+      order.customer.address.toLowerCase().includes(searchLower)
     );
   });
 
@@ -365,13 +359,6 @@ export default function OrderHistoryPage() {
                         {order.orderNumber}
                       </h3>
                       {getStatusBadge(order.status)}
-                      {order.requiresConfirmation &&
-                        order.status === "PENDING_CONFIRMATION" && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            Perlu Konfirmasi Admin
-                          </span>
-                        )}
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="text-right">
@@ -415,7 +402,7 @@ export default function OrderHistoryPage() {
                           Customer
                         </p>
                         <p className="font-medium dark:text-white">
-                          {order.customers.name}
+                          {order.customer.name}
                         </p>
                       </div>
                     </div>
@@ -426,7 +413,7 @@ export default function OrderHistoryPage() {
                           Alamat
                         </p>
                         <p className="font-medium dark:text-white">
-                          {order.customers.address}
+                          {order.customer.address}
                         </p>
                       </div>
                     </div>
@@ -440,12 +427,6 @@ export default function OrderHistoryPage() {
                         <OrderTracking
                           status={order.status}
                           orderDate={new Date(order.orderDate)}
-                          confirmedAt={
-                            order.confirmedAt
-                              ? new Date(order.confirmedAt)
-                              : null
-                          }
-                          requiresConfirmation={order.requiresConfirmation}
                         />
                       </div>
                       {/* Order Items */}
@@ -501,20 +482,19 @@ export default function OrderHistoryPage() {
                           </h4>
                           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm">
                             <p className="dark:text-white">
-                              <strong>Nama:</strong> {order.customers.name}
+                              <strong>Nama:</strong> {order.customer.name}
                             </p>
                             <p className="dark:text-white">
-                              <strong>Alamat:</strong> {order.customers.address}
+                              <strong>Alamat:</strong> {order.customer.address}
                             </p>
-                            {order.customers.email && (
+                            {order.customer.email && (
                               <p className="dark:text-white">
-                                <strong>Email:</strong> {order.customers.email}
+                                <strong>Email:</strong> {order.customer.email}
                               </p>
                             )}
-                            {order.customers.phone && (
+                            {order.customer.phone && (
                               <p className="dark:text-white">
-                                <strong>Telepon:</strong>{" "}
-                                {order.customers.phone}
+                                <strong>Telepon:</strong> {order.customer.phone}
                               </p>
                             )}
                           </div>
@@ -522,39 +502,16 @@ export default function OrderHistoryPage() {
                       </div>
 
                       {/* Notes */}
-                      {(order.notes || order.adminNotes) && (
+                      {order.notes && (
                         <div className="mb-4">
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                             Catatan
                           </h4>
-                          {order.notes && (
-                            <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3 mb-2">
-                              <p className="text-sm text-blue-900 dark:text-blue-300">
-                                <strong>Catatan Sales:</strong> {order.notes}
-                              </p>
-                            </div>
-                          )}
-                          {order.adminNotes && (
-                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                              <p className="text-sm text-gray-900 dark:text-white">
-                                <strong>Catatan Admin:</strong>{" "}
-                                {order.adminNotes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Confirmation Details */}
-                      {order.confirmedAt && (
-                        <div className="bg-green-50 dark:bg-green-900 rounded-lg p-3">
-                          <p className="text-sm text-green-800 dark:text-green-300">
-                            <strong>Dikonfirmasi pada:</strong>{" "}
-                            {formatDate(order.confirmedAt)}
-                            {order.confirmedBy && (
-                              <span> oleh {order.confirmedBy}</span>
-                            )}
-                          </p>
+                          <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3 mb-2">
+                            <p className="text-sm text-blue-900 dark:text-blue-300">
+                              <strong>Catatan Sales:</strong> {order.notes}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>

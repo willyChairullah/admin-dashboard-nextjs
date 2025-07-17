@@ -18,27 +18,32 @@ interface Order {
   totalAmount: number;
   status: string;
   orderDate: string | Date;
+  deliveryDate: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  salesId: string;
   order_items: OrderItem[];
-  customers: {
+  customer: {
     name: string;
     email?: string | null;
     phone?: string | null;
+    address: string;
   };
-  users: {
+  sales: {
     name: string;
   };
-  // Computed properties for backward compatibility
-  customerName?: string;
-  salesPersonName?: string;
 }
 
 interface OrderItem {
   id: string;
-  productName?: string;
   quantity: number;
   price: number;
+  totalPrice: number;
+  productId: string;
   products?: {
     name: string;
+    code: string;
     price: number;
   };
 }
@@ -114,20 +119,20 @@ const SalesDashboard = () => {
       // Load orders for this sales rep
       const ordersResult = await getOrders({ salesRepId: user.id });
       if (ordersResult.success) {
-        setOrders(ordersResult.data);
+        setOrders(ordersResult.data as Order[]);
       }
 
       // Load field visits for this sales rep
       const visitsResult = await getFieldVisits({ salesRepId: user.id });
       if (visitsResult.success) {
-        setFieldVisits(visitsResult.data);
+        setFieldVisits(visitsResult.data as FieldVisit[]);
       }
 
       // Calculate dashboard statistics
       if (ordersResult.success) {
         calculateDashboardStats(
-          ordersResult.data,
-          visitsResult.success ? visitsResult.data : []
+          ordersResult.data as Order[],
+          visitsResult.success ? (visitsResult.data as FieldVisit[]) : []
         );
       }
     } catch (error) {
@@ -485,7 +490,7 @@ const SalesDashboard = () => {
                               </Badge>
                             </div>
                             <h4 className="font-semibold text-gray-900 dark:text-white mt-1 break-words">
-                              {order.customers.name}
+                              {order.customer.name}
                             </h4>
                           </div>
                         </div>
@@ -560,11 +565,11 @@ const SalesDashboard = () => {
                               </td>
                               <td className="px-4 py-4">
                                 <div className="text-sm font-medium text-gray-900 dark:text-white max-w-[150px] break-words">
-                                  {order.customers.name}
+                                  {order.customer.name}
                                 </div>
-                                {order.customers.email && (
+                                {order.customer.email && (
                                   <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[150px] break-words">
-                                    {order.customers.email}
+                                    {order.customer.email}
                                   </div>
                                 )}
                               </td>
@@ -899,7 +904,7 @@ const SalesDashboard = () => {
                     Customer
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedOrder.customers.name}
+                    {selectedOrder.customer.name}
                   </p>
                 </div>
                 <div>
@@ -920,7 +925,7 @@ const SalesDashboard = () => {
                     Email
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedOrder.customers.email || "-"}
+                    {selectedOrder.customer.email || "-"}
                   </p>
                 </div>
                 <div>
@@ -928,7 +933,7 @@ const SalesDashboard = () => {
                     Telepon
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedOrder.customers.phone || "-"}
+                    {selectedOrder.customer.phone || "-"}
                   </p>
                 </div>
               </div>
@@ -960,7 +965,8 @@ const SalesDashboard = () => {
                         {selectedOrder.order_items.map((item) => (
                           <tr key={item.id}>
                             <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                              {item.products?.name || item.productName}
+                              {item.products?.name ||
+                                `Product ${item.productId}`}
                             </td>
                             <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
                               {item.quantity}
@@ -971,10 +977,7 @@ const SalesDashboard = () => {
                               )}
                             </td>
                             <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                              {formatCurrency(
-                                item.quantity *
-                                  (item.products?.price || item.price)
-                              )}
+                              {formatCurrency(item.totalPrice)}
                             </td>
                           </tr>
                         ))}

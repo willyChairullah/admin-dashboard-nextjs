@@ -142,8 +142,8 @@ export async function createOrder({
         updatedAt: new Date(),
       },
       include: {
-        customers: true,
-        users: true, // This is the sales rep relation
+        customer: true,
+        sales: true, // This is the sales rep relation
         order_items: true,
       },
     });
@@ -198,8 +198,8 @@ export async function getOrders({
     const orders = await db.orders.findMany({
       where,
       include: {
-        customers: true,
-        users: true, // This is the sales rep relation
+        customer: true,
+        sales: true, // This is the sales rep relation
         order_items: {
           include: {
             products: true, // Include product details for better display
