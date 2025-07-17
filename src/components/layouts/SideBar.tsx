@@ -12,6 +12,7 @@ interface MenuItem {
   icon: string;
   href: string;
   children: MenuItem[];
+  roles?: string[]; // Added roles property
 }
 
 interface SideBarProps {
@@ -102,7 +103,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map((child) => (
+          {item.children?.map(child => (
             <MenuItemComponent
               key={child.id}
               item={child}
@@ -128,9 +129,8 @@ export default function SideBar({
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   const { user, loading } = useCurrentUser();
 
-  // Static menu data
+  // Static menu data with roles added
   const allMenuItems = useMemo(() => {
-    // Static menu items
     return [
       {
         id: "dashboard",
@@ -138,12 +138,14 @@ export default function SideBar({
         icon: "🏠",
         href: "/",
         children: [],
+        roles: ["ADMIN", "SALES", "WAREHOUSE", "OWNER"], // Added roles
       },
       {
         id: "sales",
         label: "Sales",
         icon: "🛒",
         href: "#",
+        roles: ["SALES", "ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "sales-dashboard",
@@ -151,6 +153,7 @@ export default function SideBar({
             icon: "📊",
             href: "/sales",
             children: [],
+            roles: ["SALES", "OWNER"],
           },
           {
             id: "sales-field",
@@ -158,6 +161,7 @@ export default function SideBar({
             icon: "📝",
             href: "/sales/fields",
             children: [],
+            roles: ["SALES", "OWNER"],
           },
           {
             id: "field-visits",
@@ -165,6 +169,7 @@ export default function SideBar({
             icon: "🚚",
             href: "/sales/field-visits",
             children: [],
+            roles: ["SALES", "OWNER"],
           },
           {
             id: "orders",
@@ -172,6 +177,7 @@ export default function SideBar({
             icon: "📦",
             href: "/sales/orders",
             children: [],
+            roles: ["SALES", "OWNER"],
           },
           {
             id: "order-history",
@@ -179,6 +185,15 @@ export default function SideBar({
             icon: "📜",
             href: "/sales/order-history",
             children: [],
+            roles: ["SALES", "OWNER"],
+          },
+          {
+            id: "Invoice",
+            label: "Invoice",
+            icon: "📜",
+            href: "/sales/invoice",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
           },
         ],
       },
@@ -187,6 +202,7 @@ export default function SideBar({
         label: "Inventory",
         icon: "📦",
         href: "#",
+        roles: ["WAREHOUSE", "ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "stock-dashboard",
@@ -194,6 +210,7 @@ export default function SideBar({
             icon: "📊",
             href: "/inventory/dashboard",
             children: [],
+            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },
           {
             id: "item-list",
@@ -201,6 +218,7 @@ export default function SideBar({
             icon: "📋",
             href: "/inventory/items",
             children: [],
+            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },
           {
             id: "stock-management",
@@ -208,6 +226,7 @@ export default function SideBar({
             icon: "🗄️",
             href: "/inventory/stock",
             children: [],
+            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },
           {
             id: "stock-taking",
@@ -215,6 +234,7 @@ export default function SideBar({
             icon: "🔍",
             href: "/inventory/stocktaking",
             children: [],
+            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },
         ],
       },
@@ -223,6 +243,7 @@ export default function SideBar({
         label: "Purchasing",
         icon: "🛍️",
         href: "#",
+        roles: ["ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "purchase-order",
@@ -230,6 +251,7 @@ export default function SideBar({
             icon: "📜",
             href: "/purchasing/orders",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
           {
             id: "po-payments",
@@ -237,6 +259,7 @@ export default function SideBar({
             icon: "💰",
             href: "/purchasing/payments",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
         ],
       },
@@ -245,6 +268,7 @@ export default function SideBar({
         label: "Finance",
         icon: "💰",
         href: "#",
+        roles: ["ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "revenue",
@@ -252,6 +276,7 @@ export default function SideBar({
             icon: "📈",
             href: "/finance/revenue",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
           {
             id: "expenses",
@@ -259,6 +284,7 @@ export default function SideBar({
             icon: "📉",
             href: "/finance/expenses",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
         ],
       },
@@ -267,6 +293,7 @@ export default function SideBar({
         label: "HR",
         icon: "👥",
         href: "#",
+        roles: ["ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "attendance",
@@ -274,6 +301,7 @@ export default function SideBar({
             icon: "📅",
             href: "/hr/attendance",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
         ],
       },
@@ -282,6 +310,7 @@ export default function SideBar({
         label: "Settings",
         icon: "⚙️",
         href: "#",
+        roles: ["ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "user-management",
@@ -289,6 +318,7 @@ export default function SideBar({
             icon: "👤",
             href: "/settings/users",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
           {
             id: "roles",
@@ -296,6 +326,7 @@ export default function SideBar({
             icon: "🔑",
             href: "/settings/roles",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
           {
             id: "permissions",
@@ -303,6 +334,7 @@ export default function SideBar({
             icon: "🔒",
             href: "/settings/permissions",
             children: [],
+            roles: ["ADMIN", "OWNER"],
           },
         ],
       },
