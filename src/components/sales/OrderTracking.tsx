@@ -20,7 +20,7 @@ interface OrderTrackingProps {
 const OrderTracking: FC<OrderTrackingProps> = ({
   status,
   orderDate,
-  confirmedAt,
+  confirmedAt = null,
   requiresConfirmation = false,
   compact = false,
 }) => {
