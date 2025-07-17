@@ -144,7 +144,7 @@ export async function createOrder({
       include: {
         customer: true,
         sales: true, // This is the sales rep relation
-        order_items: true,
+        orderItems: true,
       },
     });
 
@@ -200,7 +200,7 @@ export async function getOrders({
       include: {
         customer: true,
         sales: true, // This is the sales rep relation
-        order_items: {
+        orderItems: {
           include: {
             products: true, // Include product details for better display
           },
@@ -257,9 +257,9 @@ export async function confirmOrder({
         adminNotes: adminNotes || null,
       },
       include: {
-        customers: true,
-        users: true, // This is the sales rep relation
-        order_items: true,
+        customer: true,
+        sales: true, // This is the sales rep relation
+        orderItems: true,
       },
     });
 
