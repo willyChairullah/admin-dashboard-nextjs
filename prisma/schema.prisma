@@ -107,7 +107,7 @@ model invoices {
   updatedAt       DateTime        @updatedAt
   customerId      String
   orderId         String?         @unique
-  invoice_items   invoice_items[]
+  // invoice_items   invoice_items[]
   customer        customers       @relation(fields: [customerId], references: [id])
   order           orders?         @relation(fields: [orderId], references: [id])
   payments        payments[]
@@ -180,7 +180,7 @@ model products {
   updatedAt       DateTime          @updatedAt
   categoryId      String
   supplierId      String
-  invoice_items   invoice_items[]
+  // invoice_items   invoice_items[]
   order_items     order_items[]
   category        categories        @relation(fields: [categoryId], references: [id])
   suppliers       suppliers         @relation(fields: [supplierId], references: [id])
@@ -263,19 +263,6 @@ model delivery_notes {
   customers       customers      @relation(fields: [customerId], references: [id])
   orders          orders         @relation(fields: [orderId], references: [id])
   users           users          @relation(fields: [warehouseUserId], references: [id])
-}
-
-model invoice_items {
-  id         String   @id
-  quantity   Float
-  price      Float
-  totalPrice Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime
-  invoiceId  String
-  productId  String
-  invoices   invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products   products @relation(fields: [productId], references: [id])
 }
 
 model order_items {

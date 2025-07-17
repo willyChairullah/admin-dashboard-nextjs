@@ -96,17 +96,6 @@ export async function getInvoices({
             phone: true,
           },
         },
-        invoiceItems: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              },
-            },
-          },
-        },
       },
       orderBy: {
         [sortBy]: sortOrder,
