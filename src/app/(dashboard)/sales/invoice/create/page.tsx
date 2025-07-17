@@ -5,7 +5,6 @@ import InvoiceForm from "@/components/sales/invoices/InvoiceForm";
 import { Card } from "@/components/ui/common";
 import db from "@/lib/db";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Create Invoice | Admin Dashboard",

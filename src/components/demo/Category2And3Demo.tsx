@@ -13,9 +13,26 @@ import {
   DataTable,
   Modal,
   Card,
+  DataRangePicker,
 } from "@/components/ui";
 
 const Category2And3Demo = () => {
+  const selectOptions = [
+    { value: "option1", label: "Option 1" },
+    { value: "option2", label: "Option 2" },
+    { value: "option3", label: "Option 3" },
+  ];
+
+  // Event handlers
+  const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
+    setStartDate(dates.startDate);
+    setEndDate(dates.endDate);
+    console.log("Date range changed:", dates);
+  };
+  const [startDate, setStartDate] = useState(
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  );
+  const [endDate, setEndDate] = useState(new Date());
   // State for various components
   const [searchQuery, setSearchQuery] = useState("");
   const [showAlert, setShowAlert] = useState(true);
@@ -314,11 +331,32 @@ const Category2And3Demo = () => {
                 <Button>Add New</Button>
               </div>
             }
-            className="mb-8"
           >
             <div className="flex flex-col">
-              <div className="flex">
-                
+              <div className="flex  mb-4">
+                <div className="">
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onSearch={handleSearch}
+                    placeholder="Search users, products, or orders..."
+                  />
+                </div>
+                <div className="">
+                  <Select
+                    options={selectOptions}
+                    label="Choose an Option"
+                    name="option"
+                    placeholder="— Select an Option —"
+                  />
+                </div>
+                <div className="">
+                  <DataRangePicker
+                    startDate={startDate}
+                    endDate={endDate}
+                    onDatesChange={handleDateChange}
+                  />
+                </div>
               </div>
               <DataTable
                 enableFiltering={false}

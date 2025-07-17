@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,11 +19,11 @@ export default function DashboardLayout({
     const checkIsMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Automatically collapse sidebar on mobile
+      
+      // Automatically handle sidebar state
       if (mobile) {
         setIsSidebarCollapsed(true);
       } else {
-        // On desktop, restore the previous state or default to false
         const savedState = localStorage.getItem("sidebarCollapsed");
         setIsSidebarCollapsed(savedState === "true");
       }
@@ -39,10 +40,17 @@ export default function DashboardLayout({
   const toggleSidebar = () => {
     const newState = !isSidebarCollapsed;
     setIsSidebarCollapsed(newState);
-    // Save state for desktop
+    
+    // Save state only for desktop
     if (!isMobile) {
       localStorage.setItem("sidebarCollapsed", newState.toString());
     }
+  };
+
+  // Calculate main content margin based on sidebar state
+  const getMainContentMargin = () => {
+    if (isMobile) return "ml-0";
+    return isSidebarCollapsed ? "ml-20" : "ml-64";
   };
 
   return (
@@ -50,15 +58,22 @@ export default function DashboardLayout({
       <SessionHandler />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex">
-          {/* Overlay for mobile */}
+          {/* Mobile Overlay */}
           {isMobile && !isSidebarCollapsed && (
-            <div className="mobile-overlay" onClick={toggleSidebar} />
+            <div 
+              className="fixed inset-0 bg-black/50 z-40" 
+              onClick={toggleSidebar} 
+            />
           )}
 
-          {/* Sidebar */}
+          {/* Sidebar for Desktop */}
           {!isMobile && (
-            <div
-              className={`fixed left-0 top-0 bottom-0 z-30 transition-transform duration-300`}
+            <div 
+              className={`
+                fixed left-0 top-0 bottom-0 z-30 
+                transition-all duration-300 
+                ${isSidebarCollapsed ? 'w-20' : 'w-64'}
+              `}
             >
               <SideBar
                 isCollapsed={isSidebarCollapsed}
@@ -77,23 +92,24 @@ export default function DashboardLayout({
             />
           )}
 
-          {/* Main Content Area */}
-          <div
-            className={`flex-1 main-content-transition ${
-              !isMobile && !isSidebarCollapsed
-                ? "ml-64"
-                : !isMobile && isSidebarCollapsed
-                ? "ml-20"
-                : "ml-0"
-            }`}
+          {/* Main Content Area - Fully Responsive */}
+          <div 
+            className={`
+              flex-1 transition-all duration-300 
+              ${getMainContentMargin()} 
+              w-[calc(100% - theme(spacing.64))] 
+              max-w-full overflow-x-hidden
+            `}
           >
-            {/* Navbar */}
+            {/* Sticky Navbar */}
             <div className="sticky top-0 z-20 navbar-transition">
               <Navbar onSidebarToggle={toggleSidebar} />
             </div>
 
-            {/* Main Content */}
-            <main>{children}</main>
+            {/* Main Content with Full Width */}
+            <main className="w-full max-w-full px-4 sm:px-6 lg:px-8">
+              {children}
+            </main>
           </div>
         </div>
       </div>

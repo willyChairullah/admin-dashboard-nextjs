@@ -11,6 +11,7 @@ const ClientInvoiceTable = ({ initialData }: { initialData: any }) => {
   const searchParams = useSearchParams();
 
   const [data, setData] = useState(initialData);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [status, setStatus] = useState<InvoiceStatus | null>(

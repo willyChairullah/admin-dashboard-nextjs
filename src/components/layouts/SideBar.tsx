@@ -393,7 +393,9 @@ export default function SideBar({
         sidebar-transition bg-white dark:bg-gray-900 shadow-md 
         ${
           isMobile
-            ? `mobile-sidebar ${!isCollapsed ? "open" : ""}`
+            ? `mobile-sidebar w-[30vw] min-w-[240px] ${
+                !isCollapsed ? "open" : ""
+              }`
             : `transition-all duration-300 ${
                 shouldShowExpanded ? "w-64" : "w-20"
               } h-screen border-r border-gray-200 dark:border-gray-700 relative`
