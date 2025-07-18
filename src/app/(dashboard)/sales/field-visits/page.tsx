@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MapPin, Camera, Clock, User, Building } from "lucide-react";
 import { getFieldVisits } from "@/lib/actions/field-visits";
 import Loading from "@/components/ui/common/Loading";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface FieldVisit {
   id: string;
@@ -29,16 +30,21 @@ interface FieldVisit {
 }
 
 export default function FieldVisitsPage() {
+  const { user, loading: userLoading } = useCurrentUser();
   const [fieldVisits, setFieldVisits] = useState<FieldVisit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadFieldVisits();
-  }, []);
+    if (user) {
+      loadFieldVisits();
+    }
+  }, [user]);
 
   const loadFieldVisits = async () => {
+    if (!user) return;
+    
     try {
-      const result = await getFieldVisits();
+      const result = await getFieldVisits({ salesId: user.id });
       if (result.success) {
         setFieldVisits(result.data as any);
       }
@@ -54,8 +60,23 @@ export default function FieldVisitsPage() {
     window.open(googleMapsUrl, "_blank");
   };
 
-  if (loading) {
+  if (userLoading || loading) {
     return <Loading />;
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Authentication Required
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">
+            Please log in to view your field visits.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -63,10 +84,10 @@ export default function FieldVisitsPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Field Visits
+          My Field Visits
         </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-300">
-          History of sales field visits with photos and GPS locations
+          Your history of field visits with photos and GPS locations
         </p>
       </div>
 
