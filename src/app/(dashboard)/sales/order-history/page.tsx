@@ -248,20 +248,20 @@ export default function OrderHistoryPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-gray-900 min-h-screen">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 dark:bg-gray-900 min-h-screen">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Riwayat Order Saya
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-300">
+        <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
           Pantau semua order yang telah Anda buat dan status progressnya
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
@@ -270,40 +270,44 @@ export default function OrderHistoryPage() {
               placeholder="Cari order, customer, atau alamat..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             />
           </div>
 
-          {/* Status Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 dark:text-white"
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="NEW">Baru</option>
-              <option value="PENDING_CONFIRMATION">Menunggu Konfirmasi</option>
-              <option value="IN_PROCESS">Dalam Proses</option>
-              <option value="COMPLETED">Selesai</option>
-              <option value="CANCELED">Dibatal</option>
-            </select>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Status Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="ALL">Semua Status</option>
+                <option value="NEW">Baru</option>
+                <option value="PENDING_CONFIRMATION">
+                  Menunggu Konfirmasi
+                </option>
+                <option value="IN_PROCESS">Dalam Proses</option>
+                <option value="COMPLETED">Selesai</option>
+                <option value="CANCELED">Dibatal</option>
+              </select>
+            </div>
 
-          {/* Date Range Filter */}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 dark:text-white"
-            >
-              <option value="7">7 Hari Terakhir</option>
-              <option value="30">30 Hari Terakhir</option>
-              <option value="90">3 Bulan Terakhir</option>
-              <option value="ALL">Semua Waktu</option>
-            </select>
+            {/* Date Range Filter */}
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="7">7 Hari Terakhir</option>
+                <option value="30">30 Hari Terakhir</option>
+                <option value="90">3 Bulan Terakhir</option>
+                <option value="ALL">Semua Waktu</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -332,21 +336,21 @@ export default function OrderHistoryPage() {
                 key={order.id}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700 overflow-hidden hover:shadow-lg dark:hover:shadow-gray-600 transition-shadow"
               >
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Order Header */}
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
                     <div className="flex items-center space-x-3">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                         {order.orderNumber}
                       </h3>
                       {getStatusBadge(order.status)}
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900 dark:text-white">
+                    <div className="flex items-center justify-between sm:justify-end space-x-3">
+                      <div className="text-left sm:text-right">
+                        <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                           {formatCurrency(order.totalAmount)}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex items-center">
                           <Calendar className="w-3 h-3 mr-1" />
                           {formatDate(order.orderDate)}
                         </div>
@@ -357,13 +361,13 @@ export default function OrderHistoryPage() {
                         onClick={() => toggleOrderExpansion(order.id)}
                         className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="mb-4">
+                  <div className="mb-3 sm:mb-4">
                     <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
                       <span>Progress Order</span>
                       <span>{progress.percent.toFixed(0)}%</span>
@@ -377,25 +381,25 @@ export default function OrderHistoryPage() {
                   </div>
 
                   {/* Order Summary */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <div>
-                        <p className="text-gray-500 dark:text-gray-400">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 text-sm">
+                    <div className="flex items-start space-x-2">
+                      <User className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                           Customer
                         </p>
-                        <p className="font-medium dark:text-white">
+                        <p className="font-medium dark:text-white text-sm sm:text-base break-words">
                           {order.customer.name}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <div>
-                        <p className="text-gray-500 dark:text-gray-400">
+                    <div className="flex items-start space-x-2">
+                      <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                           Alamat
                         </p>
-                        <p className="font-medium dark:text-white">
+                        <p className="font-medium dark:text-white text-sm sm:text-base break-words">
                           {order.customer.address}
                         </p>
                       </div>
@@ -404,40 +408,40 @@ export default function OrderHistoryPage() {
 
                   {/* Expanded Details */}
                   {isExpanded && (
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
                       {/* Order Tracking */}
-                      <div className="mb-6">
+                      <div className="mb-4 sm:mb-6">
                         <OrderTracking
                           status={order.status}
                           orderDate={new Date(order.orderDate)}
                         />
                       </div>
                       {/* Order Items */}
-                      <div className="mb-6">
+                      <div className="mb-4 sm:mb-6">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                           Items Order ({order.order_items.length} items)
                         </h4>
-                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4">
                           <div className="space-y-2">
                             {order.order_items.map((item, index) => (
                               <div
                                 key={item.id}
-                                className="flex justify-between items-center"
+                                className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0"
                               >
-                                <div className="flex-1">
-                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white block break-words">
                                     {index + 1}.{" "}
                                     {item.products?.name ||
                                       `Product ${item.productId}`}
                                   </span>
                                   {item.products?.code && (
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
                                       ({item.products.code})
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-right text-sm text-gray-600 dark:text-gray-300">
-                                  <span>
+                                <div className="text-left sm:text-right text-sm text-gray-600 dark:text-gray-300 flex-shrink-0">
+                                  <span className="break-all">
                                     {item.quantity} ×{" "}
                                     {formatCurrency(item.price)} ={" "}
                                     {formatCurrency(item.totalPrice)}
@@ -458,25 +462,25 @@ export default function OrderHistoryPage() {
                       </div>
 
                       {/* Customer Details */}
-                      <div className="grid grid-cols-1 gap-6 mb-6">
+                      <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-4 sm:mb-6">
                         <div>
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                             Detail Customer
                           </h4>
-                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm">
-                            <p className="dark:text-white">
+                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-sm space-y-2">
+                            <p className="dark:text-white break-words">
                               <strong>Nama:</strong> {order.customer.name}
                             </p>
-                            <p className="dark:text-white">
+                            <p className="dark:text-white break-words">
                               <strong>Alamat:</strong> {order.customer.address}
                             </p>
                             {order.customer.email && (
-                              <p className="dark:text-white">
+                              <p className="dark:text-white break-all">
                                 <strong>Email:</strong> {order.customer.email}
                               </p>
                             )}
                             {order.customer.phone && (
-                              <p className="dark:text-white">
+                              <p className="dark:text-white break-all">
                                 <strong>Telepon:</strong> {order.customer.phone}
                               </p>
                             )}
@@ -491,7 +495,7 @@ export default function OrderHistoryPage() {
                             Catatan
                           </h4>
                           <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3 mb-2">
-                            <p className="text-sm text-blue-900 dark:text-blue-300">
+                            <p className="text-sm text-blue-900 dark:text-blue-300 break-words">
                               <strong>Catatan Sales:</strong> {order.notes}
                             </p>
                           </div>
