@@ -12,6 +12,7 @@ import {
 import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
 import { getStores, getSalesReps } from "@/lib/actions/stores";
+import Loading from "@/components/ui/common/Loading";
 
 interface Store {
   id: string;
@@ -269,13 +270,7 @@ export default function SalesFieldPage() {
   };
 
   if (!currentSalesRep) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <p className="text-gray-900 dark:text-white">Loading...</p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

@@ -9,6 +9,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getOrders } from "@/lib/actions/orders";
 import { getFieldVisits } from "@/lib/actions/field-visits";
 import Link from "next/link";
+import Loading from "@/components/ui/common/Loading";
 
 // Types - Updated to match actual database structure
 interface Order {
@@ -283,18 +284,7 @@ const SalesDashboard = () => {
 
   // Loading state
   if (userLoading || loading) {
-    return (
-      <div className="w-full max-w-full overflow-x-hidden">
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">
-              Memuat dashboard...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   // Access control

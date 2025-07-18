@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Trash2, Users } from "lucide-react";
 import { createOrder } from "@/lib/actions/orders";
 import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import Loading from "@/components/ui/common/Loading";
 
 interface Store {
   id: string;
@@ -164,11 +165,7 @@ export default function OrdersPage() {
   };
 
   if (userLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!user || user.role !== "SALES") {

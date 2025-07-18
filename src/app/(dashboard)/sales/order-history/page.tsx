@@ -20,6 +20,7 @@ import {
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OrderTracking, OrderStatsCard } from "@/components/sales";
+import Loading from "@/components/ui/common/Loading";
 
 interface OrderItem {
   id: string;
@@ -227,11 +228,7 @@ export default function OrderHistoryPage() {
   };
 
   if (userLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!user || user.role !== "SALES") {

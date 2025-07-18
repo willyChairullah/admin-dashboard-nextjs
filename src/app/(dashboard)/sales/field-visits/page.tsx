@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapPin, Camera, Clock, User, Building } from "lucide-react";
 import { getFieldVisits } from "@/lib/actions/field-visits";
+import Loading from "@/components/ui/common/Loading";
 
 interface FieldVisit {
   id: string;
@@ -54,11 +55,7 @@ export default function FieldVisitsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
