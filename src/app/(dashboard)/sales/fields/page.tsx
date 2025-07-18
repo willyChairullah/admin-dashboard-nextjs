@@ -13,8 +13,6 @@ import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
 import { getStores, getSalesReps } from "@/lib/actions/stores";
 import Loading from "@/components/ui/common/Loading";
-import { Button } from "@/components/ui/common";
-import { Card } from "@/components/ui/common";
 
 interface Store {
   id: string;
