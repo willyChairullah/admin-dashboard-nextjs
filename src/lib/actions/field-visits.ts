@@ -75,9 +75,9 @@ export async function createFieldVisit({
     // Create field visit
     const fieldVisit = await db.fieldVisit.create({
       data: {
-        salesId,
+        salesId: salesId,
         storeId: finalStoreId,
-        visitPurpose,
+        visitPurpose: visitPurpose,
         notes: notes || null,
         latitude: latitude,
         longitude: longitude,

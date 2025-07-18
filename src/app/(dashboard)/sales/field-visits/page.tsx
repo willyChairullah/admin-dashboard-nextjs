@@ -42,7 +42,7 @@ export default function FieldVisitsPage() {
 
   const loadFieldVisits = async () => {
     if (!user) return;
-    
+
     try {
       const result = await getFieldVisits({ salesId: user.id });
       if (result.success) {
