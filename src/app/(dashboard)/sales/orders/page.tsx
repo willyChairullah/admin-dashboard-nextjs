@@ -6,6 +6,8 @@ import { createOrder } from "@/lib/actions/orders";
 import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Loading from "@/components/ui/common/Loading";
+import { Button } from "@/components/ui/common";
+import { Card } from "@/components/ui/common";
 
 interface Store {
   id: string;
@@ -184,305 +186,301 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Buat Order Baru
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Form pembuatan order untuk sales lapangan - {user.name}
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Sales Rep
-              </p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {user.email}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">
+                Buat Order Baru
+              </h1>
+              <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                Form pembuatan order untuk sales lapangan - {user.name}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Sales Rep
+                </p>
+                <p className="font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
+                  {user.email}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                <Users className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Order Form */}
-      <div className="max-w-3xl">
-        <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Detail Order
-            </h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              Isi detail order dan customer untuk diproses
-            </p>
-          </div>
+        {/* Order Form */}
+        <div className="w-full">
+          <Card title="Detail Order" className="shadow-lg">
+            <div className="space-y-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Isi detail order dan customer untuk diproses
+              </p>
+              {/* Store Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Pilih Toko *
+                </label>
 
-          <div className="p-6 space-y-6">
-            {/* Store Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pilih Toko *
-              </label>
-
-              {/* Toggle between existing and new store */}
-              <div className="mb-4">
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="storeType"
-                      checked={useExistingStore}
-                      onChange={() => setUseExistingStore(true)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Pilih dari daftar toko
-                    </span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="storeType"
-                      checked={!useExistingStore}
-                      onChange={() => setUseExistingStore(false)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Toko baru
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {useExistingStore ? (
-                <select
-                  value={selectedStore}
-                  onChange={(e) => setSelectedStore(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                >
-                  <option value="">Pilih toko</option>
-                  {stores.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.name} - {store.address}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Nama Toko *
+                {/* Toggle between existing and new store */}
+                <div className="mb-4">
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="storeType"
+                        checked={useExistingStore}
+                        onChange={() => setUseExistingStore(true)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Pilih dari daftar toko
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      placeholder="Masukkan nama toko"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Alamat Toko
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="storeType"
+                        checked={!useExistingStore}
+                        onChange={() => setUseExistingStore(false)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Toko baru
+                      </span>
                     </label>
-                    <input
-                      type="text"
-                      value={storeAddress}
-                      onChange={(e) => setStoreAddress(e.target.value)}
-                      placeholder="Masukkan alamat toko (opsional)"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                    />
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Customer Information */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-                Informasi Customer
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nama Customer *
-                  </label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Masukkan nama customer"
-                    className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Email Customer
-                  </label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="email@customer.com"
-                    className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Telepon Customer
-                  </label>
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="08xxxxxxxxxx"
-                    className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Order Items */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-md font-medium text-gray-900 dark:text-white">
-                  Item Order
-                </h4>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tambah Item
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-md"
+                {useExistingStore ? (
+                  <select
+                    value={selectedStore}
+                    onChange={(e) => setSelectedStore(e.target.value)}
+                    className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                   >
-                    <div className="flex-1">
+                    <option value="">Pilih toko</option>
+                    {stores.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name} - {store.address}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Nama Toko *
+                      </label>
                       <input
                         type="text"
-                        value={item.productName}
-                        onChange={(e) =>
-                          updateItem(index, "productName", e.target.value)
-                        }
-                        placeholder="Nama produk"
-                        className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        placeholder="Masukkan nama toko"
+                        className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                       />
                     </div>
-                    <div className="w-20">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Alamat Toko
+                      </label>
                       <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateItem(index, "quantity", e.target.value)
-                        }
-                        placeholder="Qty"
-                        min="1"
-                        className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                        type="text"
+                        value={storeAddress}
+                        onChange={(e) => setStoreAddress(e.target.value)}
+                        placeholder="Masukkan alamat toko (opsional)"
+                        className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                       />
                     </div>
-                    <div className="w-32">
-                      <input
-                        type="number"
-                        value={item.price}
-                        onChange={(e) =>
-                          updateItem(index, "price", e.target.value)
-                        }
-                        placeholder="Harga"
-                        min="0"
-                        step="0.01"
-                        className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                      />
-                    </div>
-                    <div className="w-32 text-sm font-medium text-gray-900 dark:text-white">
-                      Rp {(item.quantity * item.price).toLocaleString("id-ID")}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      disabled={items.length === 1}
-                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
                   </div>
-                ))}
+                )}
               </div>
 
-              {/* Total */}
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900 dark:text-white">
-                    Total:
-                  </span>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">
-                    Rp {calculateTotal().toLocaleString("id-ID")}
-                  </span>
+              {/* Customer Information */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                  Informasi Customer
+                </h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Nama Customer *
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Masukkan nama customer"
+                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Email Customer
+                    </label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="email@customer.com"
+                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    />
+                  </div>
+                  <div className="min-w-0 lg:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Telepon Customer
+                    </label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="08xxxxxxxxxx"
+                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Notes */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Catatan Order
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Catatan tambahan untuk order ini..."
-              />
-            </div>
+              {/* Order Items */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white">
+                    Item Order
+                  </h4>
+                  <Button variant="outline" size="medium" onClick={addItem}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah Item
+                  </Button>
+                </div>
 
-            {/* Confirmation Requirement */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={requiresConfirmation}
-                  onChange={(e) => setRequiresConfirmation(e.target.checked)}
-                  className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded"
+                <div className="space-y-3">
+                  {items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-md"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={item.productName}
+                          onChange={(e) =>
+                            updateItem(index, "productName", e.target.value)
+                          }
+                          placeholder="Nama produk"
+                          className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 sm:gap-2">
+                        <div className="w-20 flex-shrink-0">
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateItem(index, "quantity", e.target.value)
+                            }
+                            placeholder="Qty"
+                            min="1"
+                            className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                          />
+                        </div>
+                        <div className="w-24 sm:w-32 flex-shrink-0">
+                          <input
+                            type="number"
+                            value={item.price}
+                            onChange={(e) =>
+                              updateItem(index, "price", e.target.value)
+                            }
+                            placeholder="Harga"
+                            min="0"
+                            step="0.01"
+                            className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                          />
+                        </div>
+                        <div className="w-24 sm:w-32 text-sm font-medium text-gray-900 dark:text-white flex-shrink-0 text-right">
+                          Rp{" "}
+                          {(item.quantity * item.price).toLocaleString("id-ID")}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() => removeItem(index)}
+                          disabled={items.length === 1}
+                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 flex-shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-medium text-gray-900 dark:text-white">
+                      Total:
+                    </span>
+                    <span className="text-xl font-bold text-gray-900 dark:text-white">
+                      Rp {calculateTotal().toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Catatan Order
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  className="block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Catatan tambahan untuk order ini..."
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Order ini memerlukan konfirmasi admin sebelum diproses
-                </span>
-              </label>
-              {requiresConfirmation && (
-                <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
-                  💡 Order akan berstatus &quot;Menunggu Konfirmasi&quot; hingga
-                  admin menyetujui
-                </p>
-              )}
-            </div>
+              </div>
 
-            {/* Submit Button */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={handleSubmitOrder}
-                disabled={isSaving || calculateTotal() === 0}
-                className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {isSaving ? "Menyimpan..." : "Buat Order"}
-              </button>
+              {/* Confirmation Requirement */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={requiresConfirmation}
+                    onChange={(e) => setRequiresConfirmation(e.target.checked)}
+                    className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Order ini memerlukan konfirmasi admin sebelum diproses
+                  </span>
+                </label>
+                {requiresConfirmation && (
+                  <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                    💡 Order akan berstatus &quot;Menunggu Konfirmasi&quot;
+                    hingga admin menyetujui
+                  </p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={handleSubmitOrder}
+                  disabled={isSaving || calculateTotal() === 0}
+                  className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {isSaving ? "Menyimpan..." : "Buat Order"}
+                </button>
+              </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
