@@ -261,23 +261,6 @@ export default function OrderHistoryPage() {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="mb-8">
-        <OrderStatsCard
-          stats={stats}
-          loading={loading}
-          period={
-            dateRange === "7"
-              ? "7 hari terakhir"
-              : dateRange === "30"
-              ? "30 hari terakhir"
-              : dateRange === "90"
-              ? "3 bulan terakhir"
-              : "semua waktu"
-          }
-        />
-      </div>
-
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-700 p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
