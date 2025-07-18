@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { MapPin, Camera, Clock, User, Building } from "lucide-react";
 import { getFieldVisits } from "@/lib/actions/field-visits";
 import Loading from "@/components/ui/common/Loading";
+import { Card } from "@/components/ui/common";
+import { Badge } from "@/components/ui/common";
 
 interface FieldVisit {
   id: string;

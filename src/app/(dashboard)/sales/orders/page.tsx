@@ -6,6 +6,9 @@ import { createOrder } from "@/lib/actions/orders";
 import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Loading from "@/components/ui/common/Loading";
+import { Button } from "@/components/ui/common";
+import { Input } from "@/components/ui/common";
+import { Card } from "@/components/ui/common";
 
 interface Store {
   id: string;
@@ -215,17 +218,11 @@ export default function OrdersPage() {
 
         {/* Order Form */}
         <div className="w-full">
-          <div className="bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-700/10 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Detail Order
-              </h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          <Card title="Detail Order" className="shadow-lg">
+            <div className="space-y-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 Isi detail order dan customer untuk diproses
               </p>
-            </div>
-
-            <div className="p-6 space-y-6">
               {/* Store Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -356,14 +353,10 @@ export default function OrdersPage() {
                   <h4 className="text-md font-medium text-gray-900 dark:text-white">
                     Item Order
                   </h4>
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
+                  <Button variant="outline" size="medium" onClick={addItem}>
                     <Plus className="h-4 w-4 mr-2" />
                     Tambah Item
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="space-y-3">
@@ -413,14 +406,15 @@ export default function OrdersPage() {
                           Rp{" "}
                           {(item.quantity * item.price).toLocaleString("id-ID")}
                         </div>
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="small"
                           onClick={() => removeItem(index)}
                           disabled={items.length === 1}
-                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 flex-shrink-0"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -487,7 +481,7 @@ export default function OrdersPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

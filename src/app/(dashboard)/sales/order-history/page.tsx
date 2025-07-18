@@ -21,6 +21,10 @@ import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OrderTracking, OrderStatsCard } from "@/components/sales";
 import Loading from "@/components/ui/common/Loading";
+import { Card } from "@/components/ui/common";
+import { Badge } from "@/components/ui/common";
+import { Button } from "@/components/ui/common";
+import { SearchBar } from "@/components/ui/common";
 
 interface OrderItem {
   id: string;
@@ -350,12 +354,14 @@ export default function OrderHistoryPage() {
                           {formatDate(order.orderDate)}
                         </div>
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="small"
                         onClick={() => toggleOrderExpansion(order.id)}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none transition-colors"
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                       >
                         <Eye className="w-5 h-5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
