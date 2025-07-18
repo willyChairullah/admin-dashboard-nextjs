@@ -20,6 +20,7 @@ import {
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OrderTracking, OrderStatsCard } from "@/components/sales";
+import Loading from "@/components/ui/common/Loading";
 
 interface OrderItem {
   id: string;
@@ -227,11 +228,7 @@ export default function OrderHistoryPage() {
   };
 
   if (userLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 dark:border-blue-400"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (!user || user.role !== "SALES") {
@@ -259,23 +256,6 @@ export default function OrderHistoryPage() {
         <p className="mt-2 text-gray-600 dark:text-gray-300">
           Pantau semua order yang telah Anda buat dan status progressnya
         </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="mb-8">
-        <OrderStatsCard
-          stats={stats}
-          loading={loading}
-          period={
-            dateRange === "7"
-              ? "7 hari terakhir"
-              : dateRange === "30"
-              ? "30 hari terakhir"
-              : dateRange === "90"
-              ? "3 bulan terakhir"
-              : "semua waktu"
-          }
-        />
       </div>
 
       {/* Filters */}

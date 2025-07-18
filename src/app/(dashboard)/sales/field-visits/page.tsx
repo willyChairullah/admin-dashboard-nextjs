@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapPin, Camera, Clock, User, Building } from "lucide-react";
 import { getFieldVisits } from "@/lib/actions/field-visits";
+import Loading from "@/components/ui/common/Loading";
 
 interface FieldVisit {
   id: string;
@@ -54,15 +55,7 @@ export default function FieldVisitsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <p className="text-gray-900 dark:text-white">
-            Loading field visits...
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
