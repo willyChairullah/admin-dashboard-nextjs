@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
-import { getStores, getSalesReps } from "@/lib/actions/stores";
+import { getStores } from "@/lib/actions/stores";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Loading from "@/components/ui/common/Loading";
 
 interface Store {
@@ -23,18 +24,8 @@ interface Store {
   longitude: number | null;
 }
 
-interface SalesRep {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  employeeId: string;
-  territory: string[];
-  target: number;
-  achieved: number;
-}
-
 export default function SalesFieldPage() {
+  const { user, loading: userLoading } = useCurrentUser();
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [, startTransition] = useTransition();
@@ -50,14 +41,12 @@ export default function SalesFieldPage() {
   const [visitPurpose, setVisitPurpose] = useState("");
   const [notes, setNotes] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [currentSalesRep, setCurrentSalesRep] = useState<SalesRep | null>(null);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load data on component mount
   useEffect(() => {
     loadStores();
-    loadSalesReps();
   }, []);
 
   const loadStores = async () => {
@@ -68,17 +57,6 @@ export default function SalesFieldPage() {
       }
     } catch (error) {
       console.error("Error loading stores:", error);
-    }
-  };
-
-  const loadSalesReps = async () => {
-    try {
-      const result = await getSalesReps();
-      if (result.success && result.data.length > 0) {
-        setCurrentSalesRep(result.data[0]); // Use first sales rep as current user
-      }
-    } catch (error) {
-      console.error("Error loading sales reps:", error);
     }
   };
 
@@ -202,8 +180,8 @@ export default function SalesFieldPage() {
       return;
     }
 
-    if (!currentSalesRep) {
-      alert("Data sales representative tidak ditemukan.");
+    if (!user) {
+      alert("User not authenticated");
       return;
     }
 
@@ -213,7 +191,7 @@ export default function SalesFieldPage() {
       startTransition(async () => {
         try {
           const result = await createFieldVisit({
-            salesRepId: currentSalesRep.id,
+            salesId: user.id,
             storeId: useExistingStore ? selectedStore : undefined,
             storeName: useExistingStore ? undefined : storeName,
             storeAddress: useExistingStore ? undefined : storeAddress,
@@ -269,7 +247,7 @@ export default function SalesFieldPage() {
     return stores.find((store) => store.id === selectedStore);
   };
 
-  if (!currentSalesRep) {
+  if (userLoading || !user) {
     return <Loading />;
   }
 
@@ -283,7 +261,7 @@ export default function SalesFieldPage() {
               Check-in Kunjungan
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Form check-in untuk sales lapangan - {currentSalesRep.name}
+              Form check-in untuk sales lapangan - {user.name || user.email}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -292,7 +270,7 @@ export default function SalesFieldPage() {
                 ID Sales
               </p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {currentSalesRep.employeeId}
+                {user.id}
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">

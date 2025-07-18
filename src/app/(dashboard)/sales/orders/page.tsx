@@ -122,7 +122,7 @@ export default function OrdersPage() {
       startTransition(async () => {
         try {
           const result = await createOrder({
-            salesRepId: user.id, // Use current user ID
+            salesId: user.id, // Use current user ID
             storeId: useExistingStore ? selectedStore : undefined,
             storeName: useExistingStore ? undefined : storeName,
             storeAddress: useExistingStore ? undefined : storeAddress,

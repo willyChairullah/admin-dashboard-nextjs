@@ -10,7 +10,7 @@ interface OrderItem {
 }
 
 export async function createOrder({
-  salesRepId,
+  salesId,
   storeId,
   storeName,
   storeAddress,
@@ -21,7 +21,7 @@ export async function createOrder({
   notes,
   requiresConfirmation = false,
 }: {
-  salesRepId: string;
+  salesId: string;
   storeId?: string;
   storeName?: string;
   storeAddress?: string;
@@ -35,7 +35,7 @@ export async function createOrder({
   try {
     // Validate required fields
     if (
-      !salesRepId ||
+      !salesId ||
       (!storeId && !storeName) ||
       !customerName ||
       !items ||
@@ -49,7 +49,7 @@ export async function createOrder({
 
     // Validate that sales rep exists
     const salesRep = await db.users.findUnique({
-      where: { id: salesRepId },
+      where: { id: salesId },
       select: { id: true, role: true },
     });
 
@@ -133,7 +133,7 @@ export async function createOrder({
         id: `ord_${Date.now()}`, // Generate unique ID
         orderNumber: `ORD-${Date.now()}`,
         customerId: finalCustomerId,
-        salesId: salesRepId, // Using salesId as per schema
+        salesId: salesId, // Using salesId as per schema
         totalAmount,
         status: requiresConfirmation ? "PENDING_CONFIRMATION" : "NEW",
         requiresConfirmation,
@@ -172,19 +172,19 @@ export async function createOrder({
 }
 
 export async function getOrders({
-  salesRepId,
+  salesId,
   status,
   requiresConfirmation,
 }: {
-  salesRepId?: string;
+  salesId?: string;
   status?: string;
   requiresConfirmation?: boolean;
 } = {}) {
   try {
     const where: Record<string, unknown> = {};
 
-    if (salesRepId) {
-      where.salesId = salesRepId; // Using salesId as per schema
+    if (salesId) {
+      where.salesId = salesId; // Using salesId as per schema
     }
 
     if (status) {

@@ -33,41 +33,25 @@ model Store {
   @@map("stores")
 }
 
-model SalesRepresentative {
-  id          String       @id @default(cuid())
-  name        String
-  email       String       @unique
-  phone       String?
-  employeeId  String       @unique
-  territory   String[]     @default([])
-  target      Float        @default(0)
-  achieved    Float        @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  fieldVisits FieldVisit[]
-
-  @@map("sales_representatives")
-}
-
 model FieldVisit {
-  id           String              @id @default(cuid())
-  salesRepId   String
+  id           String    @id @default(cuid())
+  salesId      String
   storeId      String?
   storeName    String?
   storeAddress String?
-  visitDate    DateTime            @default(now())
-  checkInTime  DateTime            @default(now())
+  visitDate    DateTime  @default(now())
+  checkInTime  DateTime  @default(now())
   checkOutTime DateTime?
   latitude     Float
   longitude    Float
-  photos       String[]            @default([])
+  photos       String[]  @default([])
   notes        String?
   visitPurpose String
   result       String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  salesRep     SalesRepresentative @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
-  store        Store?              @relation(fields: [storeId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sales        Users     @relation(fields: [salesId], references: [id], onDelete: Cascade)
+  store        Store?    @relation(fields: [storeId], references: [id])
 
   @@map("field_visits")
 }
@@ -240,6 +224,7 @@ model Users {
   updatedAt         DateTime            @updatedAt
   customerVisits    CustomerVisits[]
   deliveryNotes     DeliveryNotes[]
+  fieldVisits       FieldVisit[]
   orders            Orders[]
   stockMovements    StockMovements[]
   transactions      Transactions[]

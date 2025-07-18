@@ -78,11 +78,11 @@ export default function OrderHistoryPage() {
       setLoading(true);
 
       const params: {
-        salesRepId?: string;
+        salesId?: string;
         status?: string;
         requiresConfirmation?: boolean;
       } = {
-        salesRepId: user.id, // Use the actual user ID from database
+        salesId: user.id, // Use the actual user ID from database
       };
 
       if (selectedStatus !== "ALL") {

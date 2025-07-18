@@ -25,27 +25,3 @@ export async function getStores() {
     };
   }
 }
-
-export async function getSalesReps() {
-  try {
-    console.log("👤 Getting sales reps from database...");
-    const salesReps = await db.salesRepresentative.findMany({
-      orderBy: {
-        name: "asc",
-      },
-    });
-    console.log("👤 Found sales reps:", salesReps.length);
-
-    return {
-      success: true,
-      data: salesReps,
-    };
-  } catch (error) {
-    console.error("❌ Error fetching sales representatives:", error);
-    return {
-      success: false,
-      error: "Internal server error",
-      data: [],
-    };
-  }
-}

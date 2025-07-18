@@ -4,7 +4,7 @@ import db from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 export async function createFieldVisit({
-  salesRepId,
+  salesId,
   storeId,
   storeName,
   storeAddress,
@@ -14,7 +14,7 @@ export async function createFieldVisit({
   longitude,
   photos,
 }: {
-  salesRepId: string;
+  salesId: string;
   storeId?: string;
   storeName?: string;
   storeAddress?: string;
@@ -27,7 +27,7 @@ export async function createFieldVisit({
   try {
     // Validate required fields
     if (
-      !salesRepId ||
+      !salesId ||
       (!storeId && !storeName) ||
       !visitPurpose ||
       !latitude ||
@@ -75,7 +75,7 @@ export async function createFieldVisit({
     // Create field visit
     const fieldVisit = await db.fieldVisit.create({
       data: {
-        salesRepId,
+        salesId,
         storeId: finalStoreId,
         visitPurpose,
         notes: notes || null,
@@ -86,7 +86,7 @@ export async function createFieldVisit({
         visitDate: new Date(),
       },
       include: {
-        salesRep: true,
+        sales: true,
         store: true,
       },
     });
@@ -112,15 +112,15 @@ export async function createFieldVisit({
 }
 
 export async function getFieldVisits({
-  salesRepId,
+  salesId,
 }: {
-  salesRepId?: string;
+  salesId?: string;
 } = {}) {
   try {
     const fieldVisits = await db.fieldVisit.findMany({
-      where: salesRepId ? { salesRepId } : {},
+      where: salesId ? { salesId } : {},
       include: {
-        salesRep: true,
+        sales: true,
         store: true,
       },
       orderBy: {

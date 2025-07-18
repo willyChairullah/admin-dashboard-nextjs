@@ -53,7 +53,7 @@ interface FieldVisit {
   id: string;
   storeId: string | null;
   storeName?: string | null;
-  salesRepId: string;
+  salesId: string;
   visitDate: string | Date;
   latitude: number;
   longitude: number;
@@ -63,7 +63,7 @@ interface FieldVisit {
   result?: string | null;
   checkInTime: string | Date;
   checkOutTime?: string | Date | null;
-  salesRep: {
+  sales: {
     name: string;
   };
   store?: {
@@ -118,13 +118,13 @@ const SalesDashboard = () => {
       setLoading(true);
 
       // Load orders for this sales rep
-      const ordersResult = await getOrders({ salesRepId: user.id });
+      const ordersResult = await getOrders({ salesId: user.id });
       if (ordersResult.success) {
         setOrders(ordersResult.data as Order[]);
       }
 
-      // Load field visits - for sales users, show all field visits
-      const visitsResult = await getFieldVisits();
+      // Load field visits for this sales user
+      const visitsResult = await getFieldVisits({ salesId: user.id });
       if (visitsResult.success) {
         setFieldVisits(visitsResult.data as FieldVisit[]);
       }
@@ -338,13 +338,13 @@ const SalesDashboard = () => {
         </div>{" "}
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <Card className="relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
-              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg flex-shrink-0">
+              <div className="p-2 sm:p-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg flex-shrink-0">
                 <span className="text-lg sm:text-xl lg:text-2xl">📋</span>
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300 mb-1 truncate">
+                <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">
                   Order Bulan Ini
                 </p>
                 <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-blue-900 dark:text-blue-100">
@@ -355,19 +355,19 @@ const SalesDashboard = () => {
             <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-400/20 to-blue-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <Card className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg flex-shrink-0">
                 <span className="text-lg sm:text-xl lg:text-2xl">💰</span>
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0 overflow-hidden">
-                <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300 mb-1 truncate">
+                <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300 mb-1 ">
                   Pencapaian
                 </p>
-                <p className="text-sm sm:text-base lg:text-lg font-bold text-green-900 dark:text-green-100 truncate">
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-green-900 dark:text-green-100 ">
                   {formatCurrency(dashboardStats.totalRevenue)}
                 </p>
-                <p className="text-xs text-green-600 dark:text-green-400 truncate hidden sm:block">
+                <p className="text-xs text-green-600 dark:text-green-400  hidden sm:block">
                   Target: {formatCurrency(dashboardStats.monthlyTarget)}
                 </p>
               </div>
@@ -375,13 +375,13 @@ const SalesDashboard = () => {
             <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <Card className="relative bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg flex-shrink-0">
                 <span className="text-lg sm:text-xl lg:text-2xl">⏳</span>
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-300 mb-1 truncate">
+                <p className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-300 mb-1 ">
                   Order Pending
                 </p>
                 <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-amber-900 dark:text-amber-100">
@@ -392,13 +392,13 @@ const SalesDashboard = () => {
             <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-amber-400/20 to-amber-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+          <Card className="relative bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg flex-shrink-0">
                 <span className="text-lg sm:text-xl lg:text-2xl">🚶</span>
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300 mb-1 truncate">
+                <p className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300 mb-1 ">
                   Kunjungan 7hr
                 </p>
                 <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-purple-900 dark:text-purple-100">
@@ -609,18 +609,18 @@ const SalesDashboard = () => {
                               >
                                 <td className="px-4 py-4">
                                   <div className="max-w-[110px]">
-                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full truncate block">
+                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full  block">
                                       {order.orderNumber}
                                     </span>
                                   </div>
                                 </td>
                                 <td className="px-4 py-4">
                                   <div className="max-w-[130px]">
-                                    <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                    <div className="text-sm font-bold text-gray-900 dark:text-white ">
                                       {order.customer.name}
                                     </div>
                                     {order.customer.email && (
-                                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 ">
                                         {order.customer.email}
                                       </div>
                                     )}
@@ -642,7 +642,7 @@ const SalesDashboard = () => {
                                   </Badge>
                                 </td>
                                 <td className="px-4 py-4">
-                                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium block truncate">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium block ">
                                     {formatDate(order.orderDate).split(" ")[0]}
                                   </span>
                                 </td>
@@ -728,12 +728,6 @@ const SalesDashboard = () => {
                             {visit.visitPurpose}
                           </p>
                         </div>
-                        <Badge
-                          colorScheme="green"
-                          className="ml-2 flex-shrink-0 shadow-sm"
-                        >
-                          {getDuration(visit.checkInTime, visit.checkOutTime)}
-                        </Badge>
                       </div>
 
                       <div className="mb-4 space-y-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
@@ -1119,7 +1113,7 @@ const SalesDashboard = () => {
                     Sales Representative
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedVisit.salesRep.name}
+                    {selectedVisit.sales.name}
                   </p>
                 </div>
                 <div>

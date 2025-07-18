@@ -14,10 +14,10 @@ interface FieldVisit {
   visitPurpose: string;
   notes?: string;
   photos: string[];
-  salesRep: {
+  sales: {
     id: string;
     name: string;
-    employeeId: string;
+    email: string;
   };
   store: {
     id: string;
@@ -96,10 +96,10 @@ export default function FieldVisitsPage() {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {visit.salesRep.name}
+                        {visit.sales.name}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        ID: {visit.salesRep.employeeId}
+                        {visit.sales.email}
                       </p>
                     </div>
                   </div>
