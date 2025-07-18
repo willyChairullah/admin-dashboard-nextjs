@@ -13,9 +13,6 @@ import {
   Filter,
   Eye,
   ShoppingCart,
-  TrendingUp,
-  DollarSign,
-  Users,
 } from "lucide-react";
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -67,7 +64,9 @@ export default function OrderHistoryPage() {
   const { user, loading: userLoading } = useCurrentUser();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<string>(
+    "PENDING_CONFIRMATION"
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<string>("30");
@@ -284,7 +283,6 @@ export default function OrderHistoryPage() {
                 className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white dark:bg-gray-700 dark:text-white"
               >
                 <option value="ALL">Semua Status</option>
-                <option value="NEW">Baru</option>
                 <option value="PENDING_CONFIRMATION">
                   Menunggu Konfirmasi
                 </option>
@@ -321,9 +319,11 @@ export default function OrderHistoryPage() {
               Tidak ada orders
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {searchTerm || selectedStatus !== "ALL" || dateRange !== "30"
+              {searchTerm ||
+              selectedStatus !== "PENDING_CONFIRMATION" ||
+              dateRange !== "30"
                 ? "Tidak ada orders yang cocok dengan filter yang dipilih."
-                : "Anda belum membuat order apapun."}
+                : "Anda belum memiliki order yang menunggu konfirmasi."}
             </p>
           </div>
         ) : (
@@ -355,14 +355,15 @@ export default function OrderHistoryPage() {
                           {formatDate(order.orderDate)}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="small"
+                      <button
                         onClick={() => toggleOrderExpansion(order.id)}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                        aria-label={
+                          isExpanded ? "Tutup detail" : "Lihat detail"
+                        }
                       >
                         <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
 
@@ -419,11 +420,11 @@ export default function OrderHistoryPage() {
                       {/* Order Items */}
                       <div className="mb-4 sm:mb-6">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                          Items Order ({order.order_items.length} items)
+                          Items Order ({order.order_items?.length || 0} items)
                         </h4>
                         <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4">
                           <div className="space-y-2">
-                            {order.order_items.map((item, index) => (
+                            {order.order_items?.map((item, index) => (
                               <div
                                 key={item.id}
                                 className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0"
@@ -448,7 +449,11 @@ export default function OrderHistoryPage() {
                                   </span>
                                 </div>
                               </div>
-                            ))}
+                            )) || (
+                              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                                Tidak ada item order
+                              </div>
+                            )}
                             <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                               <div className="flex justify-between items-center font-semibold">
                                 <span className="dark:text-white">Total:</span>

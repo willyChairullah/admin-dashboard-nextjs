@@ -123,8 +123,8 @@ const SalesDashboard = () => {
         setOrders(ordersResult.data as Order[]);
       }
 
-      // Load field visits for this sales rep
-      const visitsResult = await getFieldVisits({ salesRepId: user.id });
+      // Load field visits - for sales users, show all field visits
+      const visitsResult = await getFieldVisits();
       if (visitsResult.success) {
         setFieldVisits(visitsResult.data as FieldVisit[]);
       }
@@ -306,158 +306,188 @@ const SalesDashboard = () => {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+    <div className="w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 min-h-screen">
+      <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-2">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Sales Dashboard
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Kelola pesanan dan aktivitas sales lapangan
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+              Kelola pesanan dan aktivitas sales lapangan dengan mudah
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Link href="/sales/fields">
-              <Button variant="outline" className="w-full sm:w-auto">
-                � Kunjungan Lapangan
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto text-xs sm:text-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition-all duration-200"
+              >
+                <span className="mr-1 sm:mr-2">📋</span>
+                <span className="hidden sm:inline">Kunjungan </span>Lapangan
               </Button>
             </Link>
             <Link href="/sales/orders">
-              <Button className="w-full sm:w-auto">➕ Order Baru</Button>
+              <Button className="w-full sm:w-auto text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                <span className="mr-1 sm:mr-2">➕</span>
+                Order Baru
+              </Button>
             </Link>
           </div>
-        </div>
-
+        </div>{" "}
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <Card className="p-4 sm:p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
-              <div className="p-2 sm:p-3 rounded-full bg-blue-100 dark:bg-blue-900 flex-shrink-0">
-                <span className="text-lg sm:text-2xl">📋</span>
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg flex-shrink-0">
+                <span className="text-lg sm:text-xl lg:text-2xl">📋</span>
               </div>
-              <div className="ml-3 sm:ml-4 flex-1 overflow-hidden">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight">
+              <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300 mb-1 truncate">
                   Order Bulan Ini
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-blue-900 dark:text-blue-100">
                   {dashboardStats.totalOrders}
                 </p>
               </div>
             </div>
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-400/20 to-blue-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="p-4 sm:p-6">
+          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
-              <div className="p-2 sm:p-3 rounded-full bg-green-100 dark:bg-green-900 flex-shrink-0">
-                <span className="text-lg sm:text-2xl">💰</span>
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg flex-shrink-0">
+                <span className="text-lg sm:text-xl lg:text-2xl">💰</span>
               </div>
-              <div className="ml-3 sm:ml-4 flex-1 overflow-hidden">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight">
-                  Pencapaian Bulan Ini
+              <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0 overflow-hidden">
+                <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300 mb-1 truncate">
+                  Pencapaian
                 </p>
-                <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white break-words">
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-green-900 dark:text-green-100 truncate">
                   {formatCurrency(dashboardStats.totalRevenue)}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                <p className="text-xs text-green-600 dark:text-green-400 truncate hidden sm:block">
                   Target: {formatCurrency(dashboardStats.monthlyTarget)}
                 </p>
               </div>
             </div>
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-green-400/20 to-green-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="p-4 sm:p-6">
+          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
-              <div className="p-2 sm:p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 flex-shrink-0">
-                <span className="text-lg sm:text-2xl">⏳</span>
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg flex-shrink-0">
+                <span className="text-lg sm:text-xl lg:text-2xl">⏳</span>
               </div>
-              <div className="ml-3 sm:ml-4 flex-1 overflow-hidden">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight">
+              <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-300 mb-1 truncate">
                   Order Pending
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-amber-900 dark:text-amber-100">
                   {dashboardStats.pendingOrders}
                 </p>
               </div>
             </div>
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-amber-400/20 to-amber-600/20 rounded-full blur-xl"></div>
           </Card>
 
-          <Card className="p-4 sm:p-6">
+          <Card className="relative p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
-              <div className="p-2 sm:p-3 rounded-full bg-purple-100 dark:bg-purple-900 flex-shrink-0">
-                <span className="text-lg sm:text-2xl">🚶</span>
+              <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg flex-shrink-0">
+                <span className="text-lg sm:text-xl lg:text-2xl">🚶</span>
               </div>
-              <div className="ml-3 sm:ml-4 flex-1 overflow-hidden">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight">
-                  Kunjungan 7 Hari Terakhir
+              <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300 mb-1 truncate">
+                  Kunjungan 7hr
                 </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-purple-900 dark:text-purple-100">
                   {dashboardStats.recentVisits}
                 </p>
               </div>
             </div>
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-8 h-8 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded-full blur-xl"></div>
           </Card>
         </div>
-
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-1 overflow-x-auto">
+          <nav className="flex space-x-1 min-w-max">
             <button
               onClick={() => setActiveTab("orders")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 ${
                 activeTab === "orders"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
               }`}
             >
-              📋 Order Saya
+              <span className="mr-1 sm:mr-2">📋</span>
+              <span className="hidden sm:inline">Order </span>Saya
             </button>
             <button
               onClick={() => setActiveTab("visits")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 ${
                 activeTab === "visits"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
               }`}
             >
-              🚶 Aktivitas Lapangan
+              <span className="mr-1 sm:mr-2">🚶</span>
+              <span className="hidden sm:inline">Aktivitas </span>Lapangan
             </button>
             <button
               onClick={() => setActiveTab("performance")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`flex items-center px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 ${
                 activeTab === "performance"
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
               }`}
             >
-              🎯 Performa & Target
+              <span className="mr-1 sm:mr-2">🎯</span>
+              <span className="hidden sm:inline">Performa & </span>Target
             </button>
           </nav>
         </div>
-
         {/* Tab Content */}
         {activeTab === "orders" && (
-          <div className="space-y-4 sm:space-y-6">
-            <Card className="p-4 sm:p-6 w-full max-w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Daftar Order Saya
-                </h3>
+          <div className="space-y-6">
+            <Card className="p-6 bg-white dark:bg-gray-800 shadow-lg border-0 rounded-xl">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    Daftar Order Saya
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Kelola dan pantau progress order Anda
+                  </p>
+                </div>
                 <Link href="/sales/order-history">
-                  <Button variant="outline" size="small">
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300"
+                  >
+                    <span className="mr-1">👁️</span>
                     Lihat Semua
                   </Button>
                 </Link>
               </div>
 
               {orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Belum ada order untuk bulan ini
+                <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl">
+                  <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center">
+                    <span className="text-4xl">📋</span>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Belum Ada Order
+                  </h4>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">
+                    Mulai buat order pertama Anda untuk bulan ini
                   </p>
                   <Link href="/sales/orders">
-                    <Button className="mt-4">Buat Order Pertama</Button>
+                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+                      <span className="mr-2">➕</span>
+                      Buat Order Pertama
+                    </Button>
                   </Link>
                 </div>
               ) : (
@@ -467,38 +497,43 @@ const SalesDashboard = () => {
                     {orders.slice(0, 5).map((order) => (
                       <Card
                         key={order.id}
-                        className="p-4 border border-gray-200 dark:border-gray-700 w-full max-w-full"
+                        className="p-5 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 pr-2">
-                            <div className="flex items-center space-x-2 flex-wrap">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white break-words">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1 pr-3">
+                            <div className="flex items-center space-x-2 flex-wrap mb-2">
+                              <span className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg">
                                 {order.orderNumber}
                               </span>
-                              <Badge colorScheme={getStatusColor(order.status)}>
+                              <Badge
+                                colorScheme={getStatusColor(order.status)}
+                                className="shadow-sm"
+                              >
                                 {getStatusText(order.status)}
                               </Badge>
                             </div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white mt-1 break-words">
+                            <h4 className="font-bold text-lg text-gray-900 dark:text-white break-words">
                               {order.customer.name}
                             </h4>
                           </div>
                         </div>
 
-                        <div className="space-y-2 mb-3">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="space-y-3 mb-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                              <span className="mr-2">💰</span>
                               Total:
                             </span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
                               {formatCurrency(order.totalAmount)}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                              <span className="mr-2">📅</span>
                               Tanggal:
                             </span>
-                            <span className="text-sm text-gray-900 dark:text-white">
+                            <span className="text-sm text-gray-900 dark:text-white font-medium">
                               {formatDate(order.orderDate)}
                             </span>
                           </div>
@@ -507,9 +542,10 @@ const SalesDashboard = () => {
                         <Button
                           variant="outline"
                           size="small"
-                          className="w-full"
+                          className="w-full bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 dark:border-blue-700 dark:text-blue-300 font-semibold"
                           onClick={() => setSelectedOrder(order)}
                         >
+                          <span className="mr-2">👁️</span>
                           Lihat Detail
                         </Button>
                       </Card>
@@ -517,78 +553,114 @@ const SalesDashboard = () => {
                   </div>
 
                   {/* Desktop Table View */}
-                  <div className="hidden md:block w-full max-w-full">
-                    <div className="w-full overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                      <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-800">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Order
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Customer
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Total
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Status
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Tanggal
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              Aksi
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                          {orders.slice(0, 5).map((order) => (
-                            <tr
-                              key={order.id}
-                              className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                            >
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                <div className="max-w-[120px]">
-                                  {order.orderNumber}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white max-w-[150px] break-words">
-                                  {order.customer.name}
-                                </div>
-                                {order.customer.email && (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[150px] break-words">
-                                    {order.customer.email}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                {formatCurrency(order.totalAmount)}
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap">
-                                <Badge
-                                  colorScheme={getStatusColor(order.status)}
-                                >
-                                  {getStatusText(order.status)}
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {formatDate(order.orderDate)}
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <Button
-                                  variant="outline"
-                                  size="small"
-                                  onClick={() => setSelectedOrder(order)}
-                                >
-                                  Detail
-                                </Button>
-                              </td>
+                  <div className="hidden md:block w-full">
+                    <div className="w-full bg-white dark:bg-gray-800 border-0 rounded-xl shadow-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                          <thead className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[120px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">📋</span>
+                                  Order
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider min-w-[140px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">👤</span>
+                                  Customer
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[100px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">💰</span>
+                                  Total
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[100px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">🏷️</span>
+                                  Status
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[120px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">📅</span>
+                                  Tanggal
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[80px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">⚡</span>
+                                  Aksi
+                                </span>
+                              </th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+                            {orders.slice(0, 5).map((order, index) => (
+                              <tr
+                                key={order.id}
+                                className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 ${
+                                  index % 2 === 0
+                                    ? "bg-gray-50/50 dark:bg-gray-800/50"
+                                    : "bg-white dark:bg-gray-800"
+                                }`}
+                              >
+                                <td className="px-4 py-4">
+                                  <div className="max-w-[110px]">
+                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full truncate block">
+                                      {order.orderNumber}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="max-w-[130px]">
+                                    <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                      {order.customer.name}
+                                    </div>
+                                    {order.customer.email && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                        {order.customer.email}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full block text-center">
+                                    {formatCurrency(order.totalAmount)
+                                      .replace("Rp", "")
+                                      .trim()}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <Badge
+                                    colorScheme={getStatusColor(order.status)}
+                                    className="shadow-sm text-xs"
+                                  >
+                                    {getStatusText(order.status)}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium block truncate">
+                                    {formatDate(order.orderDate).split(" ")[0]}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4 text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="small"
+                                    className="text-xs bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 dark:border-blue-700 dark:text-blue-300 font-semibold px-2 py-1"
+                                    onClick={() => setSelectedOrder(order)}
+                                  >
+                                    👁️
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -596,71 +668,95 @@ const SalesDashboard = () => {
             </Card>
           </div>
         )}
-
         {activeTab === "visits" && (
-          <div className="space-y-4 sm:space-y-6">
-            <Card className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Riwayat Kunjungan Lapangan Saya
-                </h3>
+          <div className="space-y-6">
+            <Card className="p-6 bg-white dark:bg-gray-800 shadow-lg border-0 rounded-xl">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    Riwayat Kunjungan Lapangan
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Pantau aktivitas kunjungan dan hasil lapangan Anda
+                  </p>
+                </div>
                 <Link href="/sales/fields">
-                  <Button variant="outline" size="small">
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300"
+                  >
+                    <span className="mr-1">➕</span>
                     Kunjungan Baru
                   </Button>
                 </Link>
               </div>
 
               {fieldVisits.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Belum ada kunjungan lapangan
+                <div className="text-center py-12 bg-gradient-to-br from-gray-50 to-green-50 dark:from-gray-800 dark:to-gray-700 rounded-xl">
+                  <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 rounded-full flex items-center justify-center">
+                    <span className="text-4xl">🚶</span>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Belum Ada Kunjungan
+                  </h4>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">
+                    Mulai kunjungan lapangan pertama Anda
                   </p>
                   <Link href="/sales/fields">
-                    <Button className="mt-4">Mulai Kunjungan</Button>
+                    <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 shadow-lg">
+                      <span className="mr-2">🚀</span>
+                      Mulai Kunjungan
+                    </Button>
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                   {fieldVisits.slice(0, 6).map((visit) => (
                     <Card
                       key={visit.id}
-                      className="p-4 border border-gray-200 dark:border-gray-700"
+                      className="p-6 bg-gradient-to-br from-white to-green-50 dark:from-gray-800 dark:to-green-900/10 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 rounded-xl"
                     >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="min-w-0 flex-1 pr-2">
-                          <h4 className="font-semibold text-gray-900 dark:text-white break-words">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="min-w-0 flex-1 pr-3">
+                          <h4 className="font-bold text-lg text-gray-900 dark:text-white break-words mb-1">
                             {visit.store?.name ||
                               visit.storeName ||
                               "Toko Baru"}
                           </h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 break-words">
+                          <p className="text-sm text-green-600 dark:text-green-400 font-medium break-words bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-lg inline-block">
                             {visit.visitPurpose}
                           </p>
                         </div>
                         <Badge
                           colorScheme="green"
-                          className="ml-2 flex-shrink-0"
+                          className="ml-2 flex-shrink-0 shadow-sm"
                         >
                           {getDuration(visit.checkInTime, visit.checkOutTime)}
                         </Badge>
                       </div>
 
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 break-words">
-                          📍 {visit.store?.address || "Lokasi kunjungan"}
+                      <div className="mb-4 space-y-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 break-words flex items-center">
+                          <span className="mr-2 text-base">📍</span>
+                          <span className="font-medium">
+                            {visit.store?.address || "Lokasi kunjungan"}
+                          </span>
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          🕒 {formatDate(visit.visitDate)}
+                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                          <span className="mr-2 text-base">🕒</span>
+                          <span className="font-medium">
+                            {formatDate(visit.visitDate)}
+                          </span>
                         </p>
                       </div>
 
                       {visit.photos && visit.photos.length > 0 && (
-                        <div className="mb-3">
+                        <div className="mb-4">
                           <img
                             src={visit.photos[0]}
                             alt="Foto kunjungan"
-                            className="w-full h-32 object-cover rounded-lg"
+                            className="w-full h-32 object-cover rounded-xl shadow-md border border-gray-200 dark:border-gray-600"
                             onError={(e) => {
                               e.currentTarget.src =
                                 "https://via.placeholder.com/300x200?text=Foto+Kunjungan";
@@ -670,17 +766,20 @@ const SalesDashboard = () => {
                       )}
 
                       {visit.notes && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-                          {visit.notes}
-                        </p>
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 italic">
+                            "{visit.notes}"
+                          </p>
+                        </div>
                       )}
 
                       <Button
                         variant="outline"
                         size="small"
-                        className="w-full"
+                        className="w-full bg-gradient-to-r from-green-50 to-blue-50 border-green-200 text-green-700 hover:from-green-100 hover:to-blue-100 dark:from-green-900/20 dark:to-blue-900/20 dark:border-green-700 dark:text-green-300 font-semibold"
                         onClick={() => setSelectedVisit(visit)}
                       >
+                        <span className="mr-2">👁️</span>
                         Lihat Detail
                       </Button>
                     </Card>
@@ -690,26 +789,25 @@ const SalesDashboard = () => {
             </Card>
           </div>
         )}
-
         {activeTab === "performance" && (
           <div className="space-y-4 sm:space-y-6">
-            <Card className="p-4 sm:p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+            <Card className="p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border-0 rounded-xl">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                 Performa & Target Pencapaian Saya
               </h3>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                 {/* Sales Performance Card */}
-                <Card className="p-6 border border-gray-200 dark:border-gray-700">
+                <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg">
                   <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl">�</span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-lg">
+                      <span className="text-lg sm:text-xl">💰</span>
                     </div>
-                    <div className="ml-4 min-w-0 flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">
+                    <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
                         Pencapaian Penjualan
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         Bulan{" "}
                         {new Date().toLocaleDateString("id-ID", {
                           month: "long",
@@ -770,16 +868,16 @@ const SalesDashboard = () => {
                 </Card>
 
                 {/* Activity Performance Card */}
-                <Card className="p-6 border border-gray-200 dark:border-gray-700">
+                <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 shadow-lg">
                   <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl">🚶</span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-lg">
+                      <span className="text-lg sm:text-xl">🚶</span>
                     </div>
-                    <div className="ml-4 min-w-0 flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">
+                    <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
                         Aktivitas Lapangan
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         Kunjungan & Follow-up
                       </p>
                     </div>
@@ -833,44 +931,44 @@ const SalesDashboard = () => {
               </div>
 
               {/* Monthly Summary */}
-              <Card className="p-6 border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 shadow-lg">
+                <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-4">
                   Ringkasan Performa Bulan Ini
                 </h4>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg shadow-sm">
+                    <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {dashboardStats.totalOrders}
                     </p>
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                    <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-medium">
                       Total Order
                     </p>
                   </div>
 
-                  <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 rounded-lg shadow-sm">
+                    <p className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {dashboardStats.completedOrders}
                     </p>
-                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                    <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium">
                       Order Selesai
                     </p>
                   </div>
 
-                  <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-lg shadow-sm">
+                    <p className="text-lg sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                       {dashboardStats.pendingOrders}
                     </p>
-                    <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                    <p className="text-xs sm:text-sm text-yellow-600 dark:text-yellow-400 font-medium">
                       Order Pending
                     </p>
                   </div>
 
-                  <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg shadow-sm">
+                    <p className="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
                       {dashboardStats.totalVisits}
                     </p>
-                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                    <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 font-medium">
                       Total Kunjungan
                     </p>
                   </div>
@@ -879,7 +977,6 @@ const SalesDashboard = () => {
             </Card>
           </div>
         )}
-
         {/* Order Detail Modal */}
         {selectedOrder && (
           <Modal
@@ -1006,7 +1103,6 @@ const SalesDashboard = () => {
             </div>
           </Modal>
         )}
-
         {/* Visit Detail Modal */}
         {selectedVisit && (
           <Modal
