@@ -88,14 +88,14 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
   };
 
   return (
-    <nav className="navbar-transition bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-3 py-2 md:px-4 md:py-3">
+    <nav className="navbar-transition bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-2 py-2 md:px-3 md:py-2">
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-2 md:space-x-4">
           {/* Mobile Sidebar Toggle - Only visible on mobile */}
           <button
             onClick={onSidebarToggle}
-            className="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors md:hidden"
+            className="p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors md:hidden"
           >
             <span className="text-base md:text-lg dark:text-white">☰</span>
           </button>
@@ -104,7 +104,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
         {/* Right Section */}
         <div className="flex items-center space-x-2 md:space-x-4">
           {/* Notifications */}
-          <button className="cursor-pointer relative p-1.5 md:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <button className="cursor-pointer relative p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <span className="text-lg md:text-xl">🔔</span>
             {notificationCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 md:w-5 md:h-5 flex items-center justify-center">
@@ -116,7 +116,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="cursor-pointer p-1.5 md:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="cursor-pointer p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             title="Ubah Tema"
           >
             <span className="text-lg md:text-xl">
@@ -128,7 +128,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
           <div className="relative">
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="cursor-pointer flex items-center space-x-1 md:space-x-2 p-1.5 md:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="cursor-pointer flex items-center space-x-1 md:space-x-2 p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-xs md:text-sm">

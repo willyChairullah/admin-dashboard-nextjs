@@ -96,17 +96,6 @@ export async function getInvoices({
             phone: true,
           },
         },
-        invoiceItems: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              },
-            },
-          },
-        },
       },
       orderBy: {
         [sortBy]: sortOrder,
@@ -145,14 +134,14 @@ export async function getInvoiceById(id: string) {
           include: {
             orderItems: {
               include: {
-                product: true,
+                products: true,
               },
             },
           },
         },
         invoiceItems: {
           include: {
-            product: true,
+            products: true,
           },
         },
         payments: true,

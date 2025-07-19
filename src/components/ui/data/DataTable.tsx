@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from "react";
 import Button from "../common/Button";
 
@@ -20,6 +21,7 @@ interface FilterState {
 }
 
 interface TableProps {
+  linkPath?: (row: any) => string; // Menambahkan properti ini
   columns: Column[];
   data: any[];
   isLoading?: boolean;
@@ -180,10 +182,13 @@ const Pagination: React.FC<PaginationProps> = ({
   currentPage,
   totalPages,
   onPageChange,
-  pageSize = 10,
+  pageSize: propPageSize = 10,
   onPageSizeChange,
   totalItems = 0,
 }) => {
+  // Local state for page size with fallback to prop value
+  const [pageSize, setPageSize] = useState(propPageSize);
+
   const canGoPrevious = currentPage > 1;
   const canGoNext = currentPage < totalPages;
   const [jumpToPage, setJumpToPage] = useState<string>("");
@@ -198,7 +203,23 @@ const Pagination: React.FC<PaginationProps> = ({
     }
   };
 
-  // Calculate page numbers to show
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize: number) => {
+    // Update local state
+    setPageSize(newPageSize);
+
+    // If onPageSizeChange prop is provided, call it
+    if (onPageSizeChange) {
+      onPageSizeChange(newPageSize);
+    }
+
+    // Reset to page 1 when changing page size
+    if (currentPage > 1) {
+      onPageChange(1);
+    }
+  };
+
+  // Get page numbers logic remains the same...
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisiblePages = 5;
@@ -251,28 +272,22 @@ const Pagination: React.FC<PaginationProps> = ({
           <span className="font-medium">{totalItems}</span> results
         </p>
 
-        {onPageSizeChange && (
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <label className="text-sm text-gray-700 dark:text-gray-300">
-              Rows per page:
-            </label>
-            <select
-              value={pageSize}
-              onChange={e => {
-                onPageSizeChange(Number(e.target.value));
-                // Reset to page 1 when changing page size
-                if (currentPage > 1) onPageChange(1);
-              }}
-              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-        )}
+        <div className="flex items-center gap-2 mt-2 sm:mt-0">
+          <label className="text-sm text-gray-700 dark:text-gray-300">
+            Rows per page:
+          </label>
+          <select
+            value={pageSize}
+            onChange={e => handlePageSizeChange(Number(e.target.value))}
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
       </div>
 
       {/* Pagination controls */}
@@ -390,6 +405,7 @@ const DataTable: React.FC<TableProps> = ({
   enableFiltering = true,
   onSort,
   onFilter,
+  linkPath, // Menerima link dari luar
 }) => {
   // Local state for sorting and filtering
   const [sortState, setSortState] = useState<SortState>({
@@ -437,7 +453,7 @@ const DataTable: React.FC<TableProps> = ({
 
   // Apply local sorting and filtering if no external handlers provided
   const processedData = useMemo(() => {
-    let result = [...data];
+    let result = [...data].reverse(); // Balikkan urutan data
 
     // Apply filtering
     if (!onFilter && filterState.value) {
@@ -497,12 +513,17 @@ const DataTable: React.FC<TableProps> = ({
         <EmptyState message={emptyMessage} />
       ) : (
         <>
-          {/* Desktop Table View */}
-          <div className="hidden lg:block">
+          {/* Table View with horizontal scroll for all devices */}
+          <div className="block">
             <div className="overflow-x-auto max-w-full">
-              <table className="w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
+              <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
+                    {/* Add sequence number column */}
+                    <th className="w-[50px] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      #
+                    </th>
+
                     {columns.map((column, index) => (
                       <th
                         key={index}
@@ -535,10 +556,33 @@ const DataTable: React.FC<TableProps> = ({
                       key={rowIndex}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     >
-                      {columns.map((column, colIndex) => (
+                      {/* Add sequence number cell */}
+                      <td className="w-[50px] px-3 py-3 text-sm text-gray-900 dark:text-gray-100 text-center">
+                        {(currentPage - 1) * pageSize + rowIndex + 1}
+                      </td>
+
+                      {/* Link in first column */}
+                      {linkPath ? (
+                        <td className="px-3 py-3">
+                          <a
+                            href={linkPath(row)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {row[columns[0].accessor]}{" "}
+                            {/* Assuming first column value */}
+                          </a>
+                        </td>
+                      ) : (
+                        <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words">
+                          {row[columns[0].accessor]}{" "}
+                          {/* Other columns will render normally */}
+                        </td>
+                      )}
+
+                      {columns.slice(1).map((column, colIndex) => (
                         <td
                           key={colIndex}
-                          className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 break-words max-w-xs"
+                          className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words"
                         >
                           {column.render
                             ? column.render(row[column.accessor], row)
@@ -550,89 +594,6 @@ const DataTable: React.FC<TableProps> = ({
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Tablet View */}
-          <div className="hidden md:block lg:hidden">
-            <div className="overflow-x-auto max-w-full">
-              <table className="w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    {columns.map((column, index) => (
-                      <th
-                        key={index}
-                        className={`px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
-                          enableSorting && column.sortable !== false
-                            ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
-                            : ""
-                        }`}
-                        onClick={() => handleSort(column)}
-                      >
-                        <div className="flex items-center">
-                          {column.header}
-                          {enableSorting && column.sortable !== false && (
-                            <SortIcon
-                              direction={
-                                sortState.column === column.accessor
-                                  ? sortState.direction
-                                  : null
-                              }
-                            />
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {displayData.map((row, rowIndex) => (
-                    <tr
-                      key={rowIndex}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                    >
-                      {columns.map((column, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words max-w-xs"
-                        >
-                          <div className="truncate max-w-28">
-                            {column.render
-                              ? column.render(row[column.accessor], row)
-                              : row[column.accessor]}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="md:hidden">
-            {displayData.map((row, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="border-b border-gray-200 dark:border-gray-700 p-4 space-y-3 max-w-full"
-              >
-                {columns.map((column, colIndex) => (
-                  <div
-                    key={colIndex}
-                    className="flex justify-between items-start gap-2"
-                  >
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0 w-1/3 min-w-0">
-                      {column.header}:
-                    </span>
-                    <span className="text-sm text-gray-900 dark:text-gray-100 text-right flex-1 min-w-0 break-words">
-                      {column.render
-                        ? column.render(row[column.accessor], row)
-                        : row[column.accessor]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
           </div>
         </>
       )}

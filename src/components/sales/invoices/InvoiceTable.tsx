@@ -225,7 +225,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
         pageSize={data.pagination.limit}
         totalItems={data.pagination.total}
         enableSorting={true}
-        enableFiltering={true}
+        enableFiltering={false}
         onSort={handleSort}
         onFilter={handleSearch}
       />
