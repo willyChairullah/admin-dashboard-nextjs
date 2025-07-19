@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from "react";
 import Button from "../common/Button";
 
@@ -20,6 +21,7 @@ interface FilterState {
 }
 
 interface TableProps {
+  linkPath?: (row: any) => string; // Menambahkan properti ini
   columns: Column[];
   data: any[];
   isLoading?: boolean;
@@ -403,6 +405,7 @@ const DataTable: React.FC<TableProps> = ({
   enableFiltering = true,
   onSort,
   onFilter,
+  linkPath, // Menerima link dari luar
 }) => {
   // Local state for sorting and filtering
   const [sortState, setSortState] = useState<SortState>({
@@ -450,7 +453,7 @@ const DataTable: React.FC<TableProps> = ({
 
   // Apply local sorting and filtering if no external handlers provided
   const processedData = useMemo(() => {
-    let result = [...data];
+    let result = [...data].reverse(); // Balikkan urutan data
 
     // Apply filtering
     if (!onFilter && filterState.value) {
@@ -516,6 +519,11 @@ const DataTable: React.FC<TableProps> = ({
               <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
+                    {/* Add sequence number column */}
+                    <th className="w-[50px] px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      #
+                    </th>
+
                     {columns.map((column, index) => (
                       <th
                         key={index}
@@ -548,10 +556,33 @@ const DataTable: React.FC<TableProps> = ({
                       key={rowIndex}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     >
-                      {columns.map((column, colIndex) => (
+                      {/* Add sequence number cell */}
+                      <td className="w-[50px] px-3 py-3 text-sm text-gray-900 dark:text-gray-100 text-center">
+                        {(currentPage - 1) * pageSize + rowIndex + 1}
+                      </td>
+
+                      {/* Link in first column */}
+                      {linkPath ? (
+                        <td className="px-3 py-3">
+                          <a
+                            href={linkPath(row)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {row[columns[0].accessor]}{" "}
+                            {/* Assuming first column value */}
+                          </a>
+                        </td>
+                      ) : (
+                        <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words">
+                          {row[columns[0].accessor]}{" "}
+                          {/* Other columns will render normally */}
+                        </td>
+                      )}
+
+                      {columns.slice(1).map((column, colIndex) => (
                         <td
                           key={colIndex}
-                          className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 break-words"
+                          className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words"
                         >
                           {column.render
                             ? column.render(row[column.accessor], row)

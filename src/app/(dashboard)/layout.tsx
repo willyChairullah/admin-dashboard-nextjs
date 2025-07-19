@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,41 +5,29 @@ import { SessionProvider } from "next-auth/react";
 import Navbar from "@/components/layouts/Navbar";
 import SideBar from "@/components/layouts/SideBar";
 import { SessionHandler } from "@/components/auth/SessionHandler";
+import { useIsMobile } from "@/hooks/useIsMobile"; // Adjust path as necessary
 
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true); // Default to collapsed for mobile
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    const checkIsMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      
-      // Automatically handle sidebar state
-      if (mobile) {
-        setIsSidebarCollapsed(true);
-      } else {
-        const savedState = localStorage.getItem("sidebarCollapsed");
-        setIsSidebarCollapsed(savedState === "true");
-      }
-    };
-
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkIsMobile);
-    };
-  }, []);
+    if (isMobile) {
+      setIsSidebarCollapsed(true); // Always collapsed on mobile
+    } else {
+      const savedState = localStorage.getItem("sidebarCollapsed");
+      setIsSidebarCollapsed(savedState === "true");
+    }
+  }, [isMobile]); // Dependency array includes isMobile for re-triggering
 
   const toggleSidebar = () => {
     const newState = !isSidebarCollapsed;
     setIsSidebarCollapsed(newState);
-    
+
     // Save state only for desktop
     if (!isMobile) {
       localStorage.setItem("sidebarCollapsed", newState.toString());
@@ -49,8 +36,7 @@ export default function DashboardLayout({
 
   // Calculate main content margin based on sidebar state
   const getMainContentMargin = () => {
-    if (isMobile) return "ml-0";
-    return isSidebarCollapsed ? "ml-20" : "ml-64";
+    return isMobile ? "ml-0" : isSidebarCollapsed ? "ml-20" : "ml-64";
   };
 
   return (
@@ -60,19 +46,19 @@ export default function DashboardLayout({
         <div className="flex">
           {/* Mobile Overlay */}
           {isMobile && !isSidebarCollapsed && (
-            <div 
-              className="fixed inset-0 bg-black/50 z-40" 
-              onClick={toggleSidebar} 
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={toggleSidebar}
             />
           )}
 
           {/* Sidebar for Desktop */}
           {!isMobile && (
-            <div 
+            <div
               className={`
                 fixed left-0 top-0 bottom-0 z-30 
                 transition-all duration-300 
-                ${isSidebarCollapsed ? 'w-20' : 'w-64'}
+                ${isSidebarCollapsed ? "w-20" : "w-64"}
               `}
             >
               <SideBar
@@ -93,7 +79,7 @@ export default function DashboardLayout({
           )}
 
           {/* Main Content Area - Fully Responsive */}
-          <div 
+          <div
             className={`
               flex-1 transition-all duration-300 
               ${getMainContentMargin()} 
@@ -107,9 +93,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Main Content with Full Width */}
-            <main className="w-full max-w-full px-4 sm:px-6 lg:px-8">
-              {children}
-            </main>
+            <main className="">{children}</main>
           </div>
         </div>
       </div>

@@ -46,7 +46,7 @@ const Modal: React.FC<ModalProps> = ({
   // Handle click outside
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnOverlayClick && event.target === event.currentTarget) {
-      onClose();
+      onClose(); // Hanya menutup modal jika overlay yang diklik
     }
   };
 
@@ -65,7 +65,7 @@ const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
       <div
         className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity duration-300 ease-out"
-        onClick={handleOverlayClick}
+        onClick={handleOverlayClick} // Klik di luar modal akan memanggil fungsi ini
         aria-hidden="true"
       />
 
