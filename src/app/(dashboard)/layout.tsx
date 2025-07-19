@@ -42,7 +42,7 @@ export default function DashboardLayout({
   return (
     <SessionProvider>
       <SessionHandler />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="flex">
           {/* Mobile Overlay */}
           {isMobile && !isSidebarCollapsed && (
