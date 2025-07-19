@@ -14,7 +14,30 @@ import {
   Modal,
   Card,
   DataRangePicker,
+  InputCheckbox,
+  InputDate,
+  InputFileUpload,
+  InputTextArea,
 } from "@/components/ui";
+interface FormData {
+  name: string; // Full name (string)
+  email: string; // Email address (string)
+  category: string; // Selected category (string, could be an enum if there are predefined categories)
+  dateOfBirth: Date | null; // Date of birth (use Date type or null if not set)
+  description: string; // Description (string)
+  fileUpload: FileList | null; // File upload (FileList or null if no file uploaded)
+  termsAccepted: boolean; // Terms acceptance (boolean)
+}
+
+interface FormErrors {
+  name?: string; // Error message for name field (optional)
+  email?: string; // Error message for email field (optional)
+  category?: string; // Error message for category field (optional)
+  dateOfBirth?: string; // Error message for date of birth (optional)
+  description?: string; // Error message for description (optional)
+  fileUpload?: string; // Error message for file upload (optional)
+  termsAccepted?: string; // Error message for terms acceptance (optional)
+}
 
 const Category2And3Demo = () => {
   const selectOptions = [
@@ -39,15 +62,25 @@ const Category2And3Demo = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
     category: "",
+    dateOfBirth: null, // Set to null initially
+    description: "",
+    fileUpload: null, // Accepting file uploads, starts as null
+    termsAccepted: false, // Initialize to false unless terms are accepted
   });
-  const [formErrors, setFormErrors] = useState({
-    name: "",
+
+  const [formErrors, setFormErrors] = useState<FormErrors>({
+    name: "", // Start with empty error messages
     email: "",
     category: "",
+    dateOfBirth: "",
+    description: "",
+    fileUpload: "",
+    termsAccepted: "",
   });
 
   // Sample data for table
@@ -139,6 +172,17 @@ const Category2And3Demo = () => {
     // Implement search logic here
   };
 
+  const handleCategoryChange = (value: string) => {
+    setFormData({ ...formData, category: value });
+
+    // Optional: Validate or clear errors
+    if (value) {
+      setFormErrors({ ...formErrors, category: "" });
+    } else {
+      setFormErrors({ ...formErrors, category: "Please select a category." });
+    }
+  };
+
   const handleEdit = (row: any) => {
     console.log("Edit:", row);
     setIsModalOpen(true);
@@ -204,7 +248,6 @@ const Category2And3Demo = () => {
                     onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    errorMessage={formErrors.name}
                   />
                 </FormField>
 
@@ -222,10 +265,24 @@ const Category2And3Demo = () => {
                     onChange={e =>
                       setFormData({ ...formData, email: e.target.value })
                     }
-                    errorMessage={formErrors.email}
                   />
                 </FormField>
 
+                <FormField
+                  label="Date"
+                  htmlFor="date"
+                  required
+                  errorMessage={formErrors.category}
+                >
+                  <InputDate
+                    value={formData.dateOfBirth}
+                    onChange={date =>
+                      setFormData({ ...formData, dateOfBirth: date })
+                    }
+                    placeholder="Select a date"
+                    errorMessage={formErrors.dateOfBirth} // Display error if there is any
+                  />
+                </FormField>
                 <FormField
                   label="Category"
                   htmlFor="category"
@@ -233,16 +290,58 @@ const Category2And3Demo = () => {
                   errorMessage={formErrors.category}
                 >
                   <Select
-                    name="category"
-                    label="Category"
                     options={categoryOptions}
                     value={formData.category}
-                    onChange={e =>
-                      setFormData({ ...formData, category: e.target.value })
-                    }
-                    errorMessage={formErrors.category}
+                    onChange={handleCategoryChange}
+                    placeholder="— Select a Category —"
                   />
                 </FormField>
+
+                <FormField
+                  label="Description"
+                  htmlFor="description"
+                  errorMessage={formErrors.description}
+                >
+                  <InputTextArea
+                    name="description"
+                    value={formData.description}
+                    onChange={e =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  label="fileUpload"
+                  htmlFor="fileUpload"
+                  required
+                  errorMessage={formErrors.fileUpload}
+                >
+                  <InputFileUpload
+                    name="fileUpload"
+                    onChange={e => {
+                      // Handle the FileList or null in your form data state
+                      if (e) {
+                        setFormData({ ...formData, fileUpload: e });
+                      } else {
+                        setFormData({ ...formData, fileUpload: null });
+                      }
+                    }}
+                    errorMessage={formErrors.fileUpload}
+                  />
+                </FormField>
+
+                <InputCheckbox
+                  checked={formData.termsAccepted}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      termsAccepted: e.target.checked,
+                    })
+                  }
+                  label="I accept the terms and conditions"
+                  errorMessage={formErrors.termsAccepted}
+                />
 
                 <Button type="submit" className="w-full">
                   Submit Form
@@ -345,8 +444,6 @@ const Category2And3Demo = () => {
                 <div className="">
                   <Select
                     options={selectOptions}
-                    label="Choose an Option"
-                    name="option"
                     placeholder="— Select an Option —"
                   />
                 </div>
@@ -449,7 +546,7 @@ const Category2And3Demo = () => {
               />
             </FormField>
 
-            <FormField label="User Role" required>
+            {/* <FormField label="User Role" required>
               <Select
                 name="modalCategory"
                 label="User Role"
@@ -459,7 +556,7 @@ const Category2And3Demo = () => {
                   setFormData({ ...formData, category: e.target.value })
                 }
               />
-            </FormField>
+            </FormField> */}
           </div>
         </Modal>
 

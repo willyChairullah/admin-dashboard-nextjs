@@ -14,7 +14,7 @@ interface UserData {
 
 // Function to generate unique NIK
 const generateNIK = (index: number): string => {
-  const date = new Date("2023-01-15");
+  const date = new Date("2025-01-15");
   const formattedDate = date.toISOString().split("T")[0].replace(/-/g, "");
   const uniqueNumber = String(index + 1).padStart(4, "0");
   return `${formattedDate}-${uniqueNumber}`;
@@ -29,7 +29,7 @@ const sampleData: UserData[] = [
     email: "john@example.com",
     status: "Active",
     role: "Admin",
-    date: new Date("2023-01-15"),
+    date: new Date("2025-01-15"),
   },
   {
     id: 2,
@@ -38,7 +38,7 @@ const sampleData: UserData[] = [
     email: "jane@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-02-20"),
+    date: new Date("2025-02-20"),
   },
   {
     id: 3,
@@ -47,7 +47,7 @@ const sampleData: UserData[] = [
     email: "bob@example.com",
     status: "Inactive",
     role: "User",
-    date: new Date("2023-03-10"),
+    date: new Date("2025-03-10"),
   },
   {
     id: 4,
@@ -56,7 +56,7 @@ const sampleData: UserData[] = [
     email: "alice@example.com",
     status: "Active",
     role: "Moderator",
-    date: new Date("2023-04-05"),
+    date: new Date("2025-04-05"),
   },
   {
     id: 5,
@@ -65,7 +65,7 @@ const sampleData: UserData[] = [
     email: "charlie@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-05-22"),
+    date: new Date("2025-05-22"),
   },
   {
     id: 6,
@@ -74,7 +74,7 @@ const sampleData: UserData[] = [
     email: "eva@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-06-30"),
+    date: new Date("2025-06-30"),
   },
   {
     id: 7,
@@ -83,7 +83,7 @@ const sampleData: UserData[] = [
     email: "david@example.com",
     status: "Inactive",
     role: "User",
-    date: new Date("2023-07-15"),
+    date: new Date("2025-07-15"),
   },
   {
     id: 8,
@@ -92,7 +92,7 @@ const sampleData: UserData[] = [
     email: "charlie@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-05-22"),
+    date: new Date("2025-05-22"),
   },
   {
     id: 9,
@@ -101,7 +101,7 @@ const sampleData: UserData[] = [
     email: "elon@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-06-30"),
+    date: new Date("2025-06-30"),
   },
   {
     id: 10,
@@ -110,7 +110,7 @@ const sampleData: UserData[] = [
     email: "mark@example.com",
     status: "Active",
     role: "User",
-    date: new Date("2023-06-30"),
+    date: new Date("2025-06-30"),
   },
 ];
 
@@ -141,8 +141,8 @@ const excludedAccessors = ["date", "status"];
 
 export default function Page() {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <ManagementHeader allowedRoles={["ADMIN"]} />
+    <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <ManagementHeader mainPageName="/me" allowedRoles={["ADMIN"]} />
       <ManagementContent
         sampleData={sampleData}
         columns={columns}

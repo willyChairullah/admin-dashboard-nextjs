@@ -83,13 +83,13 @@ const SearchAndFilter: React.FC<{
             placeholder={`Search ${filterState.column}...`}
             value={filterState.value}
             onChange={e => onFilter(filterState.column, e.target.value)}
-            className="w-full pl-10 pr-36 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+            className="w-full pl-10 pr-36 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
           />
           <div className="absolute right-0 flex items-center">
             <select
               value={filterState.column}
               onChange={e => onFilter(e.target.value, filterState.value)}
-              className="w-32 pl-2 pr-8 py-2 border-y border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 text-sm rounded-r-md focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
+              className="w-32 pl-2 pr-8 py-2 border-y border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 dark:text-gray-400 text-sm rounded-r-md focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
             >
               {filterableColumns.map(column => (
                 <option key={column.accessor} value={column.accessor}>
@@ -263,7 +263,7 @@ const Pagination: React.FC<PaginationProps> = ({
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-6 gap-4">
+    <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 sm:px-6 gap-4">
       {/* Items info and page size selector */}
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
         <p className="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
@@ -279,7 +279,7 @@ const Pagination: React.FC<PaginationProps> = ({
           <select
             value={pageSize}
             onChange={e => handlePageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
@@ -351,7 +351,7 @@ const Pagination: React.FC<PaginationProps> = ({
               max={totalPages}
               value={jumpToPage}
               onChange={e => setJumpToPage(e.target.value)}
-              className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+              className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
               placeholder="Page"
             />
             <Button type="submit" variant="outline" size="small">
@@ -487,7 +487,7 @@ const DataTable: React.FC<TableProps> = ({
   if (isLoading) {
     return (
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
+        className={`bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
       >
         <TableSkeleton columns={columns} />
       </div>
@@ -498,7 +498,7 @@ const DataTable: React.FC<TableProps> = ({
 
   return (
     <div
-      className={`w-full max-w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
+      className={`w-full max-w-full bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}
     >
       {/* Search and Filter */}
       {enableFiltering && columns.some(col => col.filterable !== false) && (
@@ -550,11 +550,11 @@ const DataTable: React.FC<TableProps> = ({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {displayData.map((row, rowIndex) => (
                     <tr
                       key={rowIndex}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150"
                     >
                       {/* Add sequence number cell */}
                       <td className="w-[50px] px-3 py-3 text-sm text-gray-900 dark:text-gray-100 text-center">

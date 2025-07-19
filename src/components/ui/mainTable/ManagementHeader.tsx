@@ -1,23 +1,28 @@
 // ManagementHeader.tsx
 import React from "react";
 import { Button } from "@/components/ui";
-import { useCurrentUser } from "@/hooks/useCurrentUser"; 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePathname, useRouter } from "next/navigation";
 
 interface ManagementHeaderProps {
   allowedRoles: string[]; // List of roles allowed to see the "Add New" button
+  mainPageName: string; // The base path for the main page
 }
 
-const ManagementHeader: React.FC<ManagementHeaderProps> = ({ allowedRoles }) => {
+const ManagementHeader: React.FC<ManagementHeaderProps> = ({
+  allowedRoles,
+  mainPageName,
+}) => {
   const { user, loading } = useCurrentUser(); // Get user details
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Current route check
+  // Current route checks
   const isOnCreatePage = pathname.endsWith("/create");
-  const isOnMainPage = pathname.split("/").length === 3 && !isOnCreatePage;
+  const isOnMainPage = pathname === mainPageName && !isOnCreatePage; // Direct comparison with mainPageName
+  // console.log("Is on Main Page:", isOnMainPage);
 
   const handleListClick = () => {
     if (isOnCreatePage) {
@@ -27,10 +32,11 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({ allowedRoles }) => 
   };
 
   const handleAddNewClick = () => {
+    console.log("Add New button clicked");
     if (isOnMainPage) {
+      console.log("Navigating to:", `${pathname}/create`);
       router.push(`${pathname}/create`); // Navigate to '/me/create'
     }
-    // If already on the '/me/create' page, do nothing
   };
 
   // Check if the user's role is allowed to see the "Add New" button
@@ -45,12 +51,14 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({ allowedRoles }) => 
         <Button
           size={isMobile ? "small" : "medium"}
           variant={isOnCreatePage ? "primary" : "secondary"}
-          className={`text-xs md:text-sm ${isOnCreatePage ? "bg-blue-500" : ""}`}
+          className={`text-xs md:text-sm ${
+            isOnCreatePage ? "bg-blue-500" : ""
+          }`}
           onClick={handleListClick}
         >
           List
         </Button>
-        {canAddNewUser && ( // Render "Add New" button only if user role is allowed
+        {canAddNewUser && (
           <Button
             size={isMobile ? "small" : "medium"}
             variant={isOnCreatePage ? "secondary" : "primary"}
