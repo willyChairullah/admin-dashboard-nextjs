@@ -41,12 +41,33 @@ export default function SalesFieldPage() {
   const [visitPurpose, setVisitPurpose] = useState("");
   const [notes, setNotes] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
+  const [filteredStores, setFilteredStores] = useState<Store[]>([]);
+  const [storeSearchQuery, setStoreSearchQuery] = useState("");
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load data on component mount
   useEffect(() => {
     loadStores();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowStoreDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const loadStores = async () => {
@@ -54,6 +75,7 @@ export default function SalesFieldPage() {
       const result = await getStores();
       if (result.success) {
         setStores(result.data);
+        setFilteredStores(result.data);
       }
     } catch (error) {
       console.error("Error loading stores:", error);
@@ -120,6 +142,36 @@ export default function SalesFieldPage() {
     } finally {
       setIsUploadingPhotos(false);
     }
+  };
+
+  const handleStoreSearch = (query: string) => {
+    setStoreSearchQuery(query);
+    if (query.trim() === "") {
+      setFilteredStores(stores);
+      setShowStoreDropdown(false);
+    } else {
+      const filtered = stores.filter(
+        (store) =>
+          store.name.toLowerCase().includes(query.toLowerCase()) ||
+          store.address.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredStores(filtered);
+      setShowStoreDropdown(true);
+
+      // Clear selected store if it's not in the filtered results
+      if (
+        selectedStore &&
+        !filtered.find((store) => store.id === selectedStore)
+      ) {
+        setSelectedStore("");
+      }
+    }
+  };
+
+  const handleStoreSelect = (storeId: string, storeName: string) => {
+    setSelectedStore(storeId);
+    setStoreSearchQuery(storeName);
+    setShowStoreDropdown(false);
   };
 
   const deleteUploadedFile = async (filePath: string) => {
@@ -216,6 +268,9 @@ export default function SalesFieldPage() {
             setStoreAddress("");
             setVisitPurpose("");
             setNotes("");
+            setStoreSearchQuery("");
+            setShowStoreDropdown(false);
+            setFilteredStores(stores);
           } else {
             alert("Gagal menyimpan data: " + (result.error || "Unknown error"));
           }
@@ -331,18 +386,63 @@ export default function SalesFieldPage() {
 
               {useExistingStore ? (
                 <>
-                  <select
-                    value={selectedStore}
-                    onChange={(e) => setSelectedStore(e.target.value)}
-                    className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                  >
-                    <option value="">Pilih toko yang dikunjungi</option>
-                    {stores.map((store) => (
-                      <option key={store.id} value={store.id}>
-                        {store.name} - {store.address}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Searchable dropdown for existing stores */}
+                  <div className="relative" ref={dropdownRef}>
+                    <input
+                      type="text"
+                      value={storeSearchQuery}
+                      onChange={(e) => handleStoreSearch(e.target.value)}
+                      onFocus={() => {
+                        if (storeSearchQuery.trim() !== "") {
+                          setShowStoreDropdown(true);
+                        }
+                      }}
+                      placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
+                      className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    />
+
+                    {/* Custom Dropdown */}
+                    {showStoreDropdown && filteredStores.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {filteredStores.map((store) => (
+                          <button
+                            key={store.id}
+                            type="button"
+                            onClick={() =>
+                              handleStoreSelect(store.id, store.name)
+                            }
+                            className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-600 last:border-b-0 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20"
+                          >
+                            <div className="font-medium">{store.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {store.address}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Show "no results" message */}
+                    {showStoreDropdown &&
+                      filteredStores.length === 0 &&
+                      storeSearchQuery && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg p-3">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            Tidak ditemukan toko dengan kata kunci "
+                            {storeSearchQuery}"
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Search results info */}
+                    {storeSearchQuery && !showStoreDropdown && (
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {filteredStores.length > 0
+                          ? `Ditemukan ${filteredStores.length} dari ${stores.length} toko`
+                          : `Tidak ditemukan toko dengan kata kunci "${storeSearchQuery}"`}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Store location info */}
                   {selectedStore &&
@@ -392,13 +492,14 @@ export default function SalesFieldPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Alamat Toko
+                      Alamat Toko *
                     </label>
                     <input
                       type="text"
                       value={storeAddress}
+                      required
                       onChange={(e) => setStoreAddress(e.target.value)}
-                      placeholder="Masukkan alamat toko (opsional)"
+                      placeholder="Masukkan alamat toko (wajib)"
                       className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                     />
                   </div>
