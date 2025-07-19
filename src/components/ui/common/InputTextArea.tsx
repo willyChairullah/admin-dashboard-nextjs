@@ -39,11 +39,20 @@ const InputTextArea: React.FC<InputTextAreaProps> = ({
           ${hasError ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"}
           ${className}
         `}
+        placeholder="Enter your text here..." // Add your placeholder if not already set
         {...props}
       />
       {hasError && (
         <span className="text-xs text-red-500 mt-1">{errorMessage}</span>
       )}
+      <style jsx>{`
+        textarea::placeholder {
+          color: gray; // Default placeholder color
+        }
+        .dark textarea::placeholder {
+          color: #a0aec0; // Placeholder color in dark mode
+        }
+      `}</style>
     </div>
   );
 };
