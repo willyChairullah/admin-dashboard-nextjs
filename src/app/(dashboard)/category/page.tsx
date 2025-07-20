@@ -25,6 +25,7 @@ export default async function CategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
+        headerTittle="Category"
         mainPageName="/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
@@ -34,6 +35,7 @@ export default async function CategoryPage() {
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"
         emptyMessage="No categories found"
+        linkPath="/category"
       />
     </div>
   );

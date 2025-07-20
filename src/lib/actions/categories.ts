@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export type CategoryFormData = {
   name: string;
+  code?: string;
   description?: string;
   isActive: boolean;
 };
@@ -59,6 +60,7 @@ export async function createCategory(data: CategoryFormData) {
     const category = await db.categories.create({
       data: {
         name: data.name,
+        code: data.code || null ,
         description: data.description || null,
         isActive: data.isActive,
       },
