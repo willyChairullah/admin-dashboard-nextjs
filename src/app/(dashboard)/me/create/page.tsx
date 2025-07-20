@@ -1,5 +1,5 @@
 "use client";
-import { ManagementHeader, ManagementTableContent } from "@/components/ui";
+import { ManagementHeader } from "@/components/ui";
 import React, { useState } from "react";
 import {
   Button,
