@@ -24,32 +24,20 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
 
   // Current route checks
   const isOnCreatePage = pathname.endsWith("/create");
-  const isOnMainPage = pathname === mainPageName && !isOnCreatePage; // Direct comparison with mainPageName
+  const isOnMainPage = pathname === mainPageName && !isOnCreatePage; 
   const isOnEditPage = pathname.startsWith(`${mainPageName}/edit`);
-  // console.log("Is on Main Page:", isOnMainPage);
 
   const handleListClick = () => {
-    if (isOnCreatePage) {
-      router.back(); // Kembali jika berada di rute '/me/create'
-    } else if (isOnEditPage) {
-      console.log("Navigating back to the list");
-      router.push(`${mainPageName}`); // Ganti ini dengan rute yang sesuai jika di halaman edit
+    if (isOnCreatePage || isOnEditPage) {
+      router.push(`${mainPageName}`); 
     }
-    // Jika di halaman utama, tidak melakukan apa-apa
   };
 
   const handleAddNewClick = () => {
-    console.log("Add New button clicked");
-
     if (isOnMainPage || isOnEditPage) {
       console.log("Navigating to:", `${pathname}/create`);
       router.push(`${mainPageName}/create`); // Navigasi ke '/me/create'
     }
-
-    // if (isOnEditPage) {
-    //   console.log("Already on Edit Page, you may add other actions as needed.");
-    //   // Tambah logika spesifik di sini jika diperlukan saat berada di halaman edit
-    // }
   };
 
   // Check if the user's role is allowed to see the "Add New" button
