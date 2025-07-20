@@ -1,5 +1,5 @@
 "use client";
-import { ManagementHeader } from "@/components/ui";
+import { ManagementForm, ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
   Button,
@@ -216,129 +216,57 @@ export default function EditCategoryPage() {
         allowedRoles={["ADMIN", "OWNER"]}
       />
 
-      <div className="flex flex-col">
-        <div className="p-3 md:px-28 md:py-6">
-          {/* <div className="mb-6 flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Edit Category
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Update category information and settings.
-              </p>
-            </div>
+      <ManagementForm
+        moduleName="Category"
+        isSubmitting={isSubmitting}
+        handleFormSubmit={handleFormSubmit}
+      >
+        <FormField
+          label="Category Name"
+          htmlFor="name"
+          required
+          errorMessage={formErrors.name}
+        >
+          <Input
+            type="text"
+            name="name"
+            placeholder="Enter category name"
+            value={formData.name}
+            onChange={e => handleInputChange("name", e.target.value)}
+            maxLength={100}
+          />
+        </FormField>
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="small"
-                onClick={handleToggleStatus}
-                className={
-                  category.isActive ? "text-red-600" : "text-green-600"
-                }
-              >
-                {category.isActive ? "Deactivate" : "Activate"}
-              </Button>
+        <FormField
+          label="Description"
+          htmlFor="description"
+          errorMessage={formErrors.description}
+        >
+          <InputTextArea
+            name="description"
+            value={formData.description}
+            placeholder="Enter category description (optional)"
+            onChange={e => handleInputChange("description", e.target.value)}
+            maxLength={500}
+            rows={4}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.description.length}/500 characters
+          </p>
+        </FormField>
 
-              <Button
-                type="button"
-                variant="danger"
-                size="small"
-                onClick={handleDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div> */}
-
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <FormField
-              label="Category Name"
-              htmlFor="name"
-              required
-              errorMessage={formErrors.name}
-            >
-              <Input
-                type="text"
-                name="name"
-                placeholder="Enter category name"
-                value={formData.name}
-                onChange={e => handleInputChange("name", e.target.value)}
-                maxLength={100}
-              />
-            </FormField>
-
-            <FormField
-              label="Description"
-              htmlFor="description"
-              errorMessage={formErrors.description}
-            >
-              <InputTextArea
-                name="description"
-                value={formData.description}
-                placeholder="Enter category description (optional)"
-                onChange={e => handleInputChange("description", e.target.value)}
-                maxLength={500}
-                rows={4}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.description.length}/500 characters
-              </p>
-            </FormField>
-
-            <FormField
-              label="Status"
-              htmlFor="isActive"
-              errorMessage={formErrors.isActive}
-            >
-              <InputCheckbox
-                checked={formData.isActive}
-                onChange={e => handleInputChange("isActive", e.target.checked)}
-                label="Active (category will be available for use)"
-              />
-            </FormField>
-
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Category"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => router.push("/category")}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-          {/* Category Info */}
-          {/* <div className="mt-8 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  Created:
-                </span>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {new Date(category.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  Last Updated:
-                </span>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {new Date(category.updatedAt).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </div> */}
-        </div>
-      </div>
+        <FormField
+          label="Status"
+          htmlFor="isActive"
+          errorMessage={formErrors.isActive}
+        >
+          <InputCheckbox
+            checked={formData.isActive}
+            onChange={e => handleInputChange("isActive", e.target.checked)}
+            label="Active (category will be available for use)"
+          />
+        </FormField>
+      </ManagementForm>
     </div>
   );
 }

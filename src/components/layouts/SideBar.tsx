@@ -510,10 +510,12 @@ export default function SideBar({
             })}
           </ul>
         ) : (
-          <div className="px-3 py-6 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {shouldShowExpanded ? "No accessible modules" : "🚫"}
-            </p>
+          <div className="flex justify-center items-center h-screen pb-44">
+            <div className="px-3 py-6 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {shouldShowExpanded ? "No accessible modules" : "🚫"}
+              </p>
+            </div>
           </div>
         )}
       </nav>

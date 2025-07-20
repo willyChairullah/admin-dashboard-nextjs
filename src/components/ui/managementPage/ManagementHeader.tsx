@@ -44,7 +44,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
   const canAddNewUser = user && allowedRoles.includes(user.role || "");
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 md:px-6 md:py-3 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-3 border-b border-gray-200 dark:border-gray-700">
       <h3 className="text-base md:text-2xl font-semibold text-gray-900 dark:text-white">
         {headerTittle}
       </h3>

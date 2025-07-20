@@ -5,33 +5,31 @@ import {
   DataRangePicker,
   DataTable,
 } from "@/components/ui";
-
-interface UserData {
-  id: number;
-  nik: string;
-  name: string;
-  email: string;
-  status: string;
-  role: string;
-  date: Date;
-}
+import { formatDate } from "@/utils/formatDate";
 
 interface Column {
   header: string;
   accessor: string;
+  render?: (value: any, row: any) => React.ReactNode;
 }
 
-interface ManagementContentProps {
-  sampleData: UserData[];
+interface ManagementContentProps<T extends Record<string, any>> {
+  sampleData: T[];
   columns: Column[];
-  excludedAccessors: string[]; // Accept an array of excluded accessors
+  excludedAccessors: string[];
+  dateAccessor?: keyof T; // Use a key of T for date filtering (optional)
+  emptyMessage?: string;
+  linkPath: string; // Dynamic link path for editing the row
 }
 
-const ManagementContent: React.FC<ManagementContentProps> = ({
+const ManagementContent = <T extends Record<string, any>>({
   sampleData,
   columns,
-  excludedAccessors, // Get the excluded accessors
-}) => {
+  excludedAccessors,
+  dateAccessor = "createdAt", // Default date accessor
+  emptyMessage = "No data found",
+  linkPath,
+}: ManagementContentProps<T>) => {
   const initialDateRange = useMemo(() => {
     return {
       startDate: new Date(2025, 0, 1), // Start date: January 1, 2025
@@ -39,10 +37,33 @@ const ManagementContent: React.FC<ManagementContentProps> = ({
     };
   }, []);
 
+  const enhancedColumns = useMemo(() => {
+    return columns.map(column => {
+      // Here you can define custom render functions for certain columns
+      if (column.accessor === "isActive") {
+        return {
+          ...column,
+          render: (value: boolean) => (
+            <span className={value ? "text-green-500" : "text-red-500"}>
+              {value ? "Active" : "Inactive"}
+            </span>
+          ),
+        };
+      }
+      if (column.accessor === dateAccessor) {
+        return {
+          ...column,
+          render: (value: Date) => formatDate(value),
+        };
+      }
+      return column;
+    });
+  }, [columns, dateAccessor]);
+
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchOption, setSearchOption] = useState("all"); // Default to "all"
+  const [searchOption, setSearchOption] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -56,38 +77,47 @@ const ManagementContent: React.FC<ManagementContentProps> = ({
     setSearchOption(option);
   };
 
-  // Handler for changing page size
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to the first page
+    setCurrentPage(1); // Reset to the first page on page size change
   };
 
   const filteredData = useMemo(() => {
     return sampleData.filter(item => {
-      const isWithinDateRange = item.date >= startDate && item.date <= endDate;
+      // Date filtering (only if dateAccessor exists in the data)
+      let isWithinDateRange = true;
+      if (dateAccessor && item[dateAccessor]) {
+        const itemDate = new Date(item[dateAccessor]);
+        isWithinDateRange = itemDate >= startDate && itemDate <= endDate;
+      }
+
+      // Search filtering
       const searchMatch =
         !searchQuery ||
         (searchOption === "all"
           ? Object.values(item).some(value =>
               String(value).toLowerCase().includes(searchQuery.toLowerCase())
             )
-          : item[searchOption as keyof UserData]
+          : item[searchOption]
               ?.toString()
               .toLowerCase()
               .includes(searchQuery.toLowerCase()));
 
       return isWithinDateRange && searchMatch;
     });
-  }, [sampleData, searchQuery, searchOption, startDate, endDate]);
+  }, [sampleData, searchQuery, searchOption, startDate, endDate, dateAccessor]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredData.slice(startIndex, startIndex + pageSize);
   }, [filteredData, currentPage, pageSize]);
 
-  // Define the filter function for searchable columns
   const columnFilterFunction = (accessor: string) => {
-    return !excludedAccessors.includes(accessor); // Exclude specified columns
+    return !excludedAccessors.includes(accessor);
+  };
+
+  const defaultLinkPath = (row: T) => {
+    return `${linkPath}/edit/${row.id}`;
   };
 
   return (
@@ -101,23 +131,21 @@ const ManagementContent: React.FC<ManagementContentProps> = ({
           />
         </div>
         <CombinedSearchInput
-          columns={columns}
+          columns={enhancedColumns}
           value={searchQuery}
           onChange={handleSearch}
           placeholder="Search..."
-          filterColumnAccessor={columnFilterFunction} // Pass the filter function here
+          filterColumnAccessor={columnFilterFunction}
         />
       </div>
       <DataTable
         currentPage={currentPage}
-        columns={columns}
+        columns={enhancedColumns}
         data={paginatedData}
-        emptyMessage="No users found"
+        emptyMessage={emptyMessage}
         enableFiltering={false}
         pageSize={pageSize}
-        linkPath={row =>
-          `${window.location.origin}${window.location.pathname}/edit/${row.id}`
-        }
+        linkPath={defaultLinkPath}
         onPageChange={setCurrentPage}
         onPageSizeChange={handlePageSizeChange}
         totalPages={Math.ceil(filteredData.length / pageSize)}
