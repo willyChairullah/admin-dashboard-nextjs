@@ -38,16 +38,7 @@ const ManagementFormContent = () => {
     { value: "option3", label: "Option 3" },
   ];
 
-  const [startDate, setStartDate] = useState(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  );
-  const [endDate, setEndDate] = useState(new Date());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAlert, setShowAlert] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isTableLoading, setIsTableLoading] = useState(false);
-  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
@@ -100,7 +91,7 @@ const ManagementFormContent = () => {
 
   return (
     <div className="flex flex-col">
-      <div className="p-3 md:p-4">
+      <div className="p-3 md:px-28 md:py-6">
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <FormField
             label="Full Name"
@@ -170,6 +161,7 @@ const ManagementFormContent = () => {
             <InputTextArea
               name="description"
               value={formData.description}
+              placeholder="Description"
               onChange={e =>
                 setFormData({ ...formData, description: e.target.value })
               }
