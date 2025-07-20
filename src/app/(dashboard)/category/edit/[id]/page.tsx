@@ -182,6 +182,7 @@ export default function EditCategoryPage() {
     return (
       <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <ManagementHeader
+          headerTittle="Edit Categories"
           mainPageName="/category"
           allowedRoles={["ADMIN", "OWNER"]}
         />
@@ -196,6 +197,7 @@ export default function EditCategoryPage() {
     return (
       <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <ManagementHeader
+          headerTittle="Edit Categories"
           mainPageName="/category"
           allowedRoles={["ADMIN", "OWNER"]}
         />
@@ -209,13 +211,14 @@ export default function EditCategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
+        headerTittle="Edit Categories"
         mainPageName="/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
 
       <div className="flex flex-col">
         <div className="p-3 md:px-28 md:py-6">
-          <div className="mb-6 flex justify-between items-start">
+          {/* <div className="mb-6 flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Edit Category
@@ -248,29 +251,7 @@ export default function EditCategoryPage() {
                 {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             </div>
-          </div>
-
-          {/* Category Info */}
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  Created:
-                </span>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {new Date(category.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  Last Updated:
-                </span>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {new Date(category.updatedAt).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </div>
+          </div> */}
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <FormField
@@ -335,6 +316,27 @@ export default function EditCategoryPage() {
               </Button>
             </div>
           </form>
+          {/* Category Info */}
+          {/* <div className="mt-8 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  Created:
+                </span>
+                <div className="text-gray-600 dark:text-gray-400">
+                  {new Date(category.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  Last Updated:
+                </span>
+                <div className="text-gray-600 dark:text-gray-400">
+                  {new Date(category.updatedAt).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div> */}
         </div>
       </div>
     </div>

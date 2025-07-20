@@ -19,7 +19,7 @@ interface CategoryManagementContentProps<T = any> {
   excludedAccessors: string[];
   dateAccessor?: string; // Which field to use for date filtering (optional)
   emptyMessage?: string;
-  linkPath?: (row: T) => string;
+  linkPath: string;
 }
 
 const CategoryManagementContent = <T extends Record<string, any>>({
@@ -117,8 +117,8 @@ const CategoryManagementContent = <T extends Record<string, any>>({
   };
 
   const defaultLinkPath = (row: T) => {
-    const currentPath = window.location.pathname;
-    return `${currentPath}/edit/${row.id}`;
+    // const currentPath = window.location.pathname;
+    return `${linkPath}/edit/${row.id}`;
   };
 
   return (
@@ -146,7 +146,7 @@ const CategoryManagementContent = <T extends Record<string, any>>({
         emptyMessage={emptyMessage}
         enableFiltering={false}
         pageSize={pageSize}
-        linkPath={linkPath || defaultLinkPath}
+        linkPath={defaultLinkPath}
         onPageChange={setCurrentPage}
         onPageSizeChange={handlePageSizeChange}
         totalPages={Math.ceil(filteredData.length / pageSize)}

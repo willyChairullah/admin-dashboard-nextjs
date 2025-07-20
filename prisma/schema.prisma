@@ -9,7 +9,7 @@ datasource db {
 
 model Categories {
   id          String     @id @default(cuid())
-  code        String     @unique
+  code        String?    
   name        String
   description String?
   isActive    Boolean    @default(true)
