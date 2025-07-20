@@ -69,7 +69,12 @@ const ManagementContent = <T extends Record<string, any>>({
 
   const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
     setStartDate(dates.startDate);
-    setEndDate(dates.endDate);
+
+    // Adding one day to the selected endDate
+    const adjustedEndDate = new Date(dates.endDate);
+    adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
+
+    setEndDate(adjustedEndDate);
   };
 
   const handleSearch = (query: string, option: string) => {

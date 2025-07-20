@@ -45,7 +45,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
 
   return (
     <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-3 border-b border-gray-200 dark:border-gray-700">
-      <h3 className="text-base md:text-2xl font-semibold text-gray-900 dark:text-white">
+      <h3 className="text-xl md:text-3xl font-semibold text-gray-900 dark:text-white">
         {headerTittle}
       </h3>
       <div className="flex space-x-2">

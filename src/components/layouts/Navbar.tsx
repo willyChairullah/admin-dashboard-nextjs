@@ -1,16 +1,16 @@
 "use client";
 
 import { signOut } from "@/lib/auth";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import ThemeToggle from "@/contexts/ThemeToggle"; // Import komponen
 
 interface NavbarProps {
   onSidebarToggle: () => void;
 }
 
 export default function Navbar({ onSidebarToggle }: NavbarProps) {
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [notificationCount] = useState(3); // Mock notification count
@@ -18,36 +18,6 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
   // Get current user data
   const { userEmail, userRole } = useAuth();
   const { user } = useCurrentUser();
-
-  // Initialize theme from localStorage or system preference
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const systemDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-    const initialDark = savedTheme ? savedTheme === "dark" : systemDark;
-
-    setIsDarkMode(initialDark);
-    if (initialDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-
-    // Apply theme to document
-    if (newDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +27,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
 
   const handleSignOut = async () => {
     await fetch("/api/signout", { method: "POST" });
-    window.location.href = "/sign-in"; // redirect ke halaman login
+    window.location.href = "/sign-in"; // Redirect to sign-in page
   };
 
   // Get user display data
@@ -92,7 +62,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-2 md:space-x-4">
-          {/* Mobile Sidebar Toggle - Only visible on mobile */}
+          {/* Mobile Sidebar Toggle */}
           <button
             onClick={onSidebarToggle}
             className="p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors md:hidden"
@@ -113,16 +83,8 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
             )}
           </button>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="cursor-pointer p-1 md:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title="Ubah Tema"
-          >
-            <span className="text-lg md:text-xl">
-              {isDarkMode ? "🌙" : "☀️"}
-            </span>
-          </button>
+          {/* Theme Toggle Component */}
+          <ThemeToggle />
 
           {/* User Profile */}
           <div className="relative">
@@ -145,7 +107,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
               </div>
               <span className="text-gray-400 text-xs md:text-sm">▼</span>
             </button>
-
+            
             {/* Profile Dropdown */}
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
