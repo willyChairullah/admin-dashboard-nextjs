@@ -28,7 +28,7 @@ export default auth((req) => {
         "/dashboard/settings",
       ],
       ADMIN: [
-        "/dashboard",
+        "/management/category",
         "/dashboard/orders",
         "/dashboard/customers",
         "/dashboard/products",
