@@ -84,7 +84,11 @@ export default function page() {
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <ManagementHeader mainPageName="/me" allowedRoles={["ADMIN"]} />
+      <ManagementHeader
+        headerTittle="me"
+        mainPageName="/me"
+        allowedRoles={["ADMIN"]}
+      />
       {/* <ManagementTableContent /> */}
       <div className="flex flex-col">
         <div className="p-3 md:px-28 md:py-6">
@@ -100,7 +104,7 @@ export default function page() {
                 name="name"
                 placeholder="Enter your full name"
                 value={formData.name}
-                onChange={e =>
+                onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
@@ -117,7 +121,7 @@ export default function page() {
                 name="email"
                 placeholder="Enter your email"
                 value={formData.email}
-                onChange={e =>
+                onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
               />
@@ -131,7 +135,7 @@ export default function page() {
             >
               <InputDate
                 value={formData.dateOfBirth}
-                onChange={date =>
+                onChange={(date) =>
                   setFormData({ ...formData, dateOfBirth: date })
                 }
                 placeholder="Select a date"
@@ -162,7 +166,7 @@ export default function page() {
                 name="description"
                 value={formData.description}
                 placeholder="Description"
-                onChange={e =>
+                onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
               />
@@ -176,7 +180,7 @@ export default function page() {
             >
               <InputFileUpload
                 name="fileUpload"
-                onChange={e => {
+                onChange={(e) => {
                   if (e) {
                     setFormData({ ...formData, fileUpload: e });
                   } else {
@@ -189,7 +193,7 @@ export default function page() {
 
             <InputCheckbox
               checked={formData.termsAccepted}
-              onChange={e =>
+              onChange={(e) =>
                 setFormData({
                   ...formData,
                   termsAccepted: e.target.checked,
