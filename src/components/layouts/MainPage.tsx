@@ -242,7 +242,7 @@ export const MainPage = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
               <SearchBar
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 onSearch={handleSearch}
                 placeholder="Search..."
                 className="w-full sm:w-44" // Full width on mobile, constrained on larger screens
@@ -255,13 +255,13 @@ export const MainPage = () => {
               />
             </div>
             <div className="w-full md:w-auto md:ml-auto">
-              <Select
+              {/* <Select
                 options={selectOptions}
                 label="Choose an Option"
                 name="option"
                 placeholder="— Select an Option —"
                 className="w-full md:w-64" // Full width on mobile, constrained on larger screens
-              />
+              /> */}
             </div>
           </div>
           {/* Responsive data table with horizontal scroll on mobile */}

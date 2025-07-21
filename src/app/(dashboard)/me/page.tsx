@@ -142,8 +142,13 @@ const excludedAccessors = ["date", "status"];
 export default function Page() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <ManagementHeader mainPageName="/me" allowedRoles={["ADMIN"]} />
+      <ManagementHeader
+        headerTittle="me"
+        mainPageName="/me"
+        allowedRoles={["ADMIN"]}
+      />
       <ManagementContent
+        linkPath="/me"
         sampleData={sampleData}
         columns={columns}
         excludedAccessors={excludedAccessors}

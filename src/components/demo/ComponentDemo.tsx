@@ -161,23 +161,23 @@ const ComponentDemo = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Select
+                {/* <Select
                   options={selectOptions}
                   label="Choose an Option"
                   name="option"
                   placeholder="— Select an Option —"
                   value={selectValue}
                   onChange={handleSelectChange}
-                />
+                /> */}
               </div>
               <div>
-                <Select
+                {/* <Select
                   options={selectOptions}
                   label="Disabled Select"
                   name="disabledOption"
                   placeholder="— This is disabled —"
                   disabled
-                />
+                /> */}
               </div>
             </div>
           </div>
