@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import Button from "../common/Button";
-import { useRouter } from "next/navigation"; // Gunakan dari next/navigation  
+import { useRouter } from "next/navigation"; // Gunakan dari next/navigation
 
 interface Column {
   header: string;
@@ -454,7 +454,7 @@ const DataTable: React.FC<TableProps> = ({
 
   // Apply local sorting and filtering if no external handlers provided
   const processedData = useMemo(() => {
-    let result = [...data].reverse(); // Balikkan urutan data
+    let result = [...data]; // Balikkan urutan data
 
     // Apply filtering
     if (!onFilter && filterState.value) {

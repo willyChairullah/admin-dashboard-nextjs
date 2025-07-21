@@ -1,6 +1,6 @@
-import { ManagementHeader, CategoryManagementContent } from "@/components/ui";
+import { ManagementHeader, ManagementContent } from "@/components/ui"; // Ganti dengan DynamicManagementContent
 import { getCategories } from "@/lib/actions/categories";
-import { generateMonthlyCode } from "@/utils/generateCode";
+// import { generateMonthlyCode } from "@/utils/generateCode";
 
 // Columns Definition for Categories (without render functions for server component)
 const columns = [
@@ -18,8 +18,8 @@ export default async function CategoryPage() {
   // Fetch categories data from database
   const categoriesData = await getCategories();
 
-  const newCode = await generateMonthlyCode("INV", "invoice"); // 'INV' sebagai moduleName, 'invoice' sebagai modelTable
-  console.log("Generated Invoice Code:", newCode);
+  // const newCode = await generateMonthlyCode("INV", "invoice"); // 'INV' sebagai moduleName, 'invoice' sebagai modelTable
+  // console.log("Generated Invoice Code:", newCode);
   console.log("testing");
 
   return (
@@ -29,13 +29,13 @@ export default async function CategoryPage() {
         mainPageName="/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
-      <CategoryManagementContent
+      <ManagementContent
         sampleData={categoriesData}
         columns={columns}
         excludedAccessors={excludedAccessors}
-        dateAccessor="createdAt"
-        emptyMessage="No categories found"
-        linkPath="/category"
+        dateAccessor="createdAt" // Menentukan kolom tanggal
+        emptyMessage="No categories found" // Pesan kosong jika tidak ada data
+        linkPath="/category" // Jalur untuk tautan edit
       />
     </div>
   );
