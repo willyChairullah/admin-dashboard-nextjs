@@ -7,4 +7,4 @@ export * from "./data";
 // Form Components
 export * from "./forms";
 
-export * from "./mainTable";
+export * from "./managementPage";

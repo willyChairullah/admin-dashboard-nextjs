@@ -13,23 +13,23 @@ interface Column {
   render?: (value: any, row: any) => React.ReactNode;
 }
 
-interface CategoryManagementContentProps<T = any> {
+interface ManagementContentProps<T extends Record<string, any>> {
   sampleData: T[];
   columns: Column[];
   excludedAccessors: string[];
-  dateAccessor?: string; // Which field to use for date filtering (optional)
+  dateAccessor?: keyof T; // Use a key of T for date filtering (optional)
   emptyMessage?: string;
-  linkPath: string;
+  linkPath: string; // Dynamic link path for editing the row
 }
 
-const CategoryManagementContent = <T extends Record<string, any>>({
+const ManagementContent = <T extends Record<string, any>>({
   sampleData,
   columns,
   excludedAccessors,
-  dateAccessor = "createdAt",
+  dateAccessor = "createdAt", // Default date accessor
   emptyMessage = "No data found",
   linkPath,
-}: CategoryManagementContentProps<T>) => {
+}: ManagementContentProps<T>) => {
   const initialDateRange = useMemo(() => {
     return {
       startDate: new Date(2025, 0, 1), // Start date: January 1, 2025
@@ -37,9 +37,9 @@ const CategoryManagementContent = <T extends Record<string, any>>({
     };
   }, []);
 
-  // Add render functions for category-specific columns
   const enhancedColumns = useMemo(() => {
     return columns.map(column => {
+      // Here you can define custom render functions for certain columns
       if (column.accessor === "isActive") {
         return {
           ...column,
@@ -50,7 +50,7 @@ const CategoryManagementContent = <T extends Record<string, any>>({
           ),
         };
       }
-      if (column.accessor === "createdAt") {
+      if (column.accessor === dateAccessor) {
         return {
           ...column,
           render: (value: Date) => formatDate(value),
@@ -58,7 +58,7 @@ const CategoryManagementContent = <T extends Record<string, any>>({
       }
       return column;
     });
-  }, [columns]);
+  }, [columns, dateAccessor]);
 
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
@@ -69,7 +69,12 @@ const CategoryManagementContent = <T extends Record<string, any>>({
 
   const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
     setStartDate(dates.startDate);
-    setEndDate(dates.endDate);
+
+    // Adding one day to the selected endDate
+    const adjustedEndDate = new Date(dates.endDate);
+    adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
+
+    setEndDate(adjustedEndDate);
   };
 
   const handleSearch = (query: string, option: string) => {
@@ -79,7 +84,7 @@ const CategoryManagementContent = <T extends Record<string, any>>({
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to the first page on page size change
   };
 
   const filteredData = useMemo(() => {
@@ -117,7 +122,6 @@ const CategoryManagementContent = <T extends Record<string, any>>({
   };
 
   const defaultLinkPath = (row: T) => {
-    // const currentPath = window.location.pathname;
     return `${linkPath}/edit/${row.id}`;
   };
 
@@ -156,4 +160,4 @@ const CategoryManagementContent = <T extends Record<string, any>>({
   );
 };
 
-export default CategoryManagementContent;
+export default ManagementContent;
