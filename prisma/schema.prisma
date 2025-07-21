@@ -9,6 +9,7 @@ datasource db {
 
 model Categories {
   id          String     @id @default(cuid())
+  code        String?    
   name        String
   description String?
   isActive    Boolean    @default(true)
@@ -172,11 +173,11 @@ model Products {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   categoryId     String
-  supplierId     String
+  // supplierId     String
   invoiceItems   InvoiceItems[]
   orderItems     OrderItems[]
   category       Categories       @relation(fields: [categoryId], references: [id])
-  suppliers      Suppliers        @relation(fields: [supplierId], references: [id])
+  // suppliers      Suppliers        @relation(fields: [supplierId], references: [id])
   stockMovements StockMovements[]
 
   @@map("products")
@@ -204,8 +205,8 @@ model Transactions {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   userId          String?
-  supplierId      String?
-  suppliers       Suppliers?      @relation(fields: [supplierId], references: [id])
+  // supplierId      String?
+  // suppliers       Suppliers?      @relation(fields: [supplierId], references: [id])
   user            Users?          @relation(fields: [userId], references: [id])
 
   @@map("transactions")
@@ -319,22 +320,22 @@ model StockMovements {
   @@map("stock_movements")
 }
 
-model Suppliers {
-  id           String         @id
-  code         String         @unique
-  name         String
-  email        String?
-  phone        String?
-  address      String
-  city         String
-  isActive     Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime
-  products     Products[]
-  transactions Transactions[]
+// model Suppliers {
+//   id           String         @id
+//   code         String         @unique
+//   name         String
+//   email        String?
+//   phone        String?
+//   address      String
+//   city         String
+//   isActive     Boolean        @default(true)
+//   createdAt    DateTime       @default(now())
+//   updatedAt    DateTime
+//   products     Products[]
+//   transactions Transactions[]
 
-  @@map("suppliers")
-}
+//   @@map("suppliers")
+// }
 
 model UserNotifications {
   id             String        @id

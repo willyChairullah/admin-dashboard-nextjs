@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import Button from "../common/Button";
+import { useRouter } from "next/navigation"; // Gunakan dari next/navigation  
 
 interface Column {
   header: string;
@@ -484,6 +485,8 @@ const DataTable: React.FC<TableProps> = ({
     return result;
   }, [data, sortState, filterState, onSort, onFilter]);
 
+  console.log(linkPath);
+
   if (isLoading) {
     return (
       <div
@@ -495,6 +498,7 @@ const DataTable: React.FC<TableProps> = ({
   }
 
   const displayData = processedData;
+  const router = useRouter();
 
   return (
     <div
@@ -565,11 +569,14 @@ const DataTable: React.FC<TableProps> = ({
                       {linkPath ? (
                         <td className="px-3 py-3">
                           <a
-                            href={linkPath(row)}
+                            href={linkPath(row)} // Menjaga aksesibilitas
+                            onClick={e => {
+                              e.preventDefault(); // Mencegah refresh halaman
+                              router.push(linkPath(row)); // Navigasi menggunakan router
+                            }}
                             className="text-blue-600 hover:underline"
                           >
-                            {row[columns[0].accessor]}{" "}
-                            {/* Assuming first column value */}
+                            {row[columns[0].accessor]}
                           </a>
                         </td>
                       ) : (

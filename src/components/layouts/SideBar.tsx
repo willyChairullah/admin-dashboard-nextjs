@@ -338,6 +338,31 @@ export default function SideBar({
           },
         ],
       },
+      {
+        id: "management",
+        label: "Management",
+        icon: "📊",
+        href: "#",
+        roles: ["ADMIN", "OWNER"],
+        children: [
+          {
+            id: "categories",
+            label: "Categories",
+            icon: "🏷️",
+            href: "/category",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
+            id: "me",
+            label: "Me (Demo)",
+            icon: "👤",
+            href: "/me",
+            children: [],
+            roles: ["ADMIN"],
+          },
+        ],
+      },
     ];
   }, []);
 
