@@ -1,33 +1,42 @@
-Saya ingin membuat sebuah CRUD dari database ini:
+Saya ingin membuat sebuah halaman CRUD dari database ini:
 
-model Categories {
-id String @id @default(cuid())
-name String
-description String?
-isActive Boolean @default(true)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-products Products[]
+model Products {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  unit           String
+  price          Float
+  cost           Float
+  minStock       Int              @default(0)
+  currentStock   Int              @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  categoryId     String
+  invoiceItems   InvoiceItems[]
+  orderItems     OrderItems[]
+  category       Categories       @relation(fields: [categoryId], references: [id])
+  stockMovements StockMovements[]
 
-@@map("categories")
+  @@map("products")
 }
 
-Akan mencontoh dari folder halaman "me"
+Akan mencontoh dari folder halaman "/management/category"
 Pada path root akan memiliki komponen ini, lengkapnya baca Page.tsx nya:
-<ManagementHeader mainPageName="/me" allowedRoles={["ADMIN"]} />
+<ManagementHeader mainPageName="/management/category" allowedRoles={["ADMIN"]} />
 <ManagementContent
 sampleData={sampleData}
 columns={columns}
 excludedAccessors={excludedAccessors}
 
-dimana untuk mainPageName akan menjadi kategory 
+dimana untuk mainPageName akan menjadi "/management/product" 
 allowedRoles akan berisi ["ADMIN", "OWNER"]
 
-sampleData akan diambil dari fetch data dari database model category
+sampleData akan diambil dari fetch data dari database model product
 columns yang akan berisi name, description, isActive
 exlcudeAccessors berisi name, description, isActive
 
-pada folder me akan ada folder create berisi sebuah form untuk memasukkan data
+pada folder /management/category akan ada folder create berisi sebuah form untuk memasukkan data
 Disitu terdapat form dan semua komponen input yang dibutuhkan sesuaikan agar bisa create di halaman tersebut
 dan tolong buatkan folder edit untuk halaman edit,
 

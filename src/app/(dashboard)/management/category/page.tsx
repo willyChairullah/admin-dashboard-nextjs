@@ -17,16 +17,13 @@ const excludedAccessors = ["name", "description", "isActive"];
 export default async function CategoryPage() {
   // Fetch categories data from database
   const categoriesData = await getCategories();
-
-  // const newCode = await generateMonthlyCode("INV", "invoice"); // 'INV' sebagai moduleName, 'invoice' sebagai modelTable
-  // console.log("Generated Invoice Code:", newCode);
   console.log("testing");
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle="Category"
-        mainPageName="/category"
+        mainPageName="/management/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
       <ManagementContent
@@ -35,7 +32,7 @@ export default async function CategoryPage() {
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt" // Menentukan kolom tanggal
         emptyMessage="No categories found" // Pesan kosong jika tidak ada data
-        linkPath="/category" // Jalur untuk tautan edit
+        linkPath="/management/category" // Jalur untuk tautan edit
       />
     </div>
   );

@@ -82,7 +82,7 @@ export default function CreateCategoryPage() {
 
       if (result.success) {
         // Redirect to category list page
-        router.push("/category");
+        router.push("/management/category");
       } else {
         // Handle server error
         setFormErrors({ name: result.error || "Failed to create category" });
@@ -99,7 +99,7 @@ export default function CreateCategoryPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle="Create Category"
-        mainPageName="/category"
+        mainPageName="/management/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
 

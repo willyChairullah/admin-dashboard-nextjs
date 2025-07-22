@@ -60,11 +60,11 @@ export default function EditCategoryPage() {
           });
         } else {
           // Category not found, redirect to category list
-          router.push("/category");
+          router.push("/management/category");
         }
       } catch (error) {
         console.error("Error loading category:", error);
-        router.push("/category");
+        router.push("/management/category");
       } finally {
         setIsLoading(false);
       }
@@ -122,7 +122,7 @@ export default function EditCategoryPage() {
 
       if (result.success) {
         // Redirect to category list page
-        router.push("/category");
+        router.push("/management/category");
       } else {
         // Handle server error
         setFormErrors({ name: result.error || "Failed to update category" });
@@ -150,7 +150,7 @@ export default function EditCategoryPage() {
       const result = await deleteCategory(categoryId);
 
       if (result.success) {
-        router.push("/category");
+        router.push("/management/category");
       } else {
         alert(result.error || "Failed to delete category");
       }
@@ -183,7 +183,7 @@ export default function EditCategoryPage() {
       <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <ManagementHeader
           headerTittle="Edit Categories"
-          mainPageName="/category"
+          mainPageName="/management/category"
           allowedRoles={["ADMIN", "OWNER"]}
         />
         <div className="flex justify-center items-center h-64">
@@ -198,7 +198,7 @@ export default function EditCategoryPage() {
       <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <ManagementHeader
           headerTittle="Edit Categories"
-          mainPageName="/category"
+          mainPageName="/management/category"
           allowedRoles={["ADMIN", "OWNER"]}
         />
         <div className="flex justify-center items-center h-64">
@@ -212,7 +212,7 @@ export default function EditCategoryPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle="Edit Categories"
-        mainPageName="/category"
+        mainPageName="/management/category"
         allowedRoles={["ADMIN", "OWNER"]}
       />
 

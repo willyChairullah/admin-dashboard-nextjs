@@ -161,7 +161,6 @@ model Payments {
 
 model Products {
   id             String           @id @default(cuid())
-  code           String           @unique
   name           String
   description    String?
   unit           String
@@ -173,11 +172,9 @@ model Products {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   categoryId     String
-  // supplierId     String
   invoiceItems   InvoiceItems[]
   orderItems     OrderItems[]
   category       Categories       @relation(fields: [categoryId], references: [id])
-  // suppliers      Suppliers        @relation(fields: [supplierId], references: [id])
   stockMovements StockMovements[]
 
   @@map("products")
