@@ -1,76 +1,68 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface AuthContextType {
   userEmail: string | null;
-  setUserEmail: (email: string | null) => void;
   userRole: string | null;
-  refreshUserRole: () => Promise<void>;
+  userId: string | null;
+  userName: string | null;
+  isLoading: boolean;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   userEmail: null,
-  setUserEmail: () => {},
   userRole: null,
-  refreshUserRole: async () => {},
+  userId: null,
+  userName: null,
+  isLoading: true,
+  refreshUserData: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [userEmail, setUserEmailState] = useState<string | null>(null);
+  const { data: session, status, update } = useSession();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
-  const fetchUserRole = async (email: string) => {
-    try {
-      const response = await fetch("/api/user/role", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
 
-      if (response.ok) {
-        const data = await response.json();
-        setUserRole(data.role);
-      } else {
-        // Fallback to email-based detection if API fails
-        setUserRole(getEmailBasedRole(email));
-      }
-    } catch (error) {
-      console.error("Failed to fetch user role:", error);
-      // Fallback to email-based detection
-      setUserRole(getEmailBasedRole(email));
-    }
-  };
-
-  const getEmailBasedRole = (email: string | null) => {
-    if (!email) return null;
-    if (email.includes("owner@")) return "OWNER";
-    if (email.includes("admin@")) return "ADMIN";
-    if (email.includes("warehouse@")) return "WAREHOUSE";
-    if (email.includes("sales@")) return "SALES";
-    return "SALES"; // Default role
-  };
-
-  const setUserEmail = (email: string | null) => {
-    setUserEmailState(email);
-    if (email) {
-      fetchUserRole(email);
+    if (session?.user) {
+      // Update state from NextAuth session
+      setUserEmail(session.user.email || null);
+      setUserRole(session.user.role || null);
+      setUserId(session.user.id || null);
+      setUserName(session.user.name || null);
     } else {
+      // Clear state when no session
+      setUserEmail(null);
       setUserRole(null);
+      setUserId(null);
+      setUserName(null);
     }
+  }, [session, status]);
+
+  const refreshUserData = async () => {
+    // Force refresh the session from NextAuth
+    await update();
   };
 
-  const refreshUserRole = async () => {
-    if (userEmail) {
-      await fetchUserRole(userEmail);
-    }
-  };
+  const isLoading = status === "loading";
 
   return (
     <AuthContext.Provider
-      value={{ userEmail, setUserEmail, userRole, refreshUserRole }}
+      value={{
+        userEmail,
+        userRole,
+        userId,
+        userName,
+        isLoading,
+        refreshUserData,
+      }}
     >
       {children}
     </AuthContext.Provider>

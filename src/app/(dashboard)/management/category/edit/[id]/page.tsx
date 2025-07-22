@@ -217,9 +217,12 @@ export default function EditCategoryPage() {
       />
 
       <ManagementForm
-        moduleName="Category"
+        subModuleName="Category"
+        moduleName="management"
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        handleDelete={handleDelete}
+        hideDeleteButton={false}
       >
         <FormField
           label="Category Name"
@@ -232,7 +235,7 @@ export default function EditCategoryPage() {
             name="name"
             placeholder="Enter category name"
             value={formData.name}
-            onChange={(e) => handleInputChange("name", e.target.value)}
+            onChange={e => handleInputChange("name", e.target.value)}
             maxLength={100}
           />
         </FormField>
@@ -246,7 +249,7 @@ export default function EditCategoryPage() {
             name="description"
             value={formData.description}
             placeholder="Enter category description (optional)"
-            onChange={(e) => handleInputChange("description", e.target.value)}
+            onChange={e => handleInputChange("description", e.target.value)}
             maxLength={500}
             rows={4}
           />
@@ -262,7 +265,7 @@ export default function EditCategoryPage() {
         >
           <InputCheckbox
             checked={formData.isActive}
-            onChange={(e) => handleInputChange("isActive", e.target.checked)}
+            onChange={e => handleInputChange("isActive", e.target.checked)}
             label="Active (category will be available for use)"
           />
         </FormField>

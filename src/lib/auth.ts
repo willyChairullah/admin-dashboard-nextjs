@@ -3,7 +3,6 @@ import db from "./db";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { schema } from "./schema"; // Your validation schema
-import { UserRole } from "@prisma/client"; // Import your Prisma UserRole enum
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
@@ -25,9 +24,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user || user.password !== validatedCredentials.password) {
-          // Always use secure password hashing (e.g., bcrypt) in production!
           throw new Error("Invalid credentials.");
         }
+
+        console.log(user);
 
         // User object from Prisma query
         return {
@@ -45,7 +45,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // 'user' is the object returned from 'authorize'
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -55,7 +54,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (token) {
-        // 'token' now has the properties (id, email, name, role) based on your augmented JWT type
         session.user.id = token.id;
         session.user.email = token.email;
         session.user.name = token.name;

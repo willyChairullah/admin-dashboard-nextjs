@@ -1,8 +1,7 @@
 "use client";
 
-import { signOut } from "@/lib/auth";
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSession, signOut } from "next-auth/react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import ThemeToggle from "@/contexts/ThemeToggle"; // Import komponen
 
@@ -15,8 +14,8 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [notificationCount] = useState(3); // Mock notification count
 
-  // Get current user data
-  const { userEmail, userRole } = useAuth();
+  // Get current user data from session
+  const { data: session } = useSession();
   const { user } = useCurrentUser();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -26,14 +25,13 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
   };
 
   const handleSignOut = async () => {
-    await fetch("/api/signout", { method: "POST" });
-    window.location.href = "/sign-in"; // Redirect to sign-in page
+    await signOut({ callbackUrl: "/sign-in" });
   };
 
   // Get user display data
   const getUserDisplayName = () => {
-    if (user?.name) return user.name;
-    if (userEmail) return userEmail.split("@")[0];
+    if (session?.user?.name) return session.user.name;
+    if (session?.user?.email) return session.user.email.split("@")[0];
     return "User";
   };
 
@@ -43,7 +41,8 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
   };
 
   const getRoleDisplayName = () => {
-    switch (userRole) {
+    const role = session?.user?.role;
+    switch (role) {
       case "OWNER":
         return "Owner";
       case "ADMIN":
@@ -107,7 +106,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
               </div>
               <span className="text-gray-400 text-xs md:text-sm">▼</span>
             </button>
-            
+
             {/* Profile Dropdown */}
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
@@ -118,7 +117,7 @@ export default function Navbar({ onSidebarToggle }: NavbarProps) {
                       {getUserDisplayName()}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {userEmail}
+                      {session?.user?.email}
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                       {getRoleDisplayName()}

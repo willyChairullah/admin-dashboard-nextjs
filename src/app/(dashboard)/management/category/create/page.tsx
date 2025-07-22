@@ -104,7 +104,8 @@ export default function CreateCategoryPage() {
       />
 
       <ManagementForm
-        moduleName="Category"
+        subModuleName="Category"
+        moduleName="management"
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >

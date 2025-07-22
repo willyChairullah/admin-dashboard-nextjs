@@ -2,20 +2,23 @@
 
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useAuth } from "@/contexts/AuthContext";
 
 export function SessionHandler() {
   const { data: session, status } = useSession();
-  const { setUserEmail } = useAuth();
+
+  
 
   useEffect(() => {
-    // Update email from NextAuth session
-    if (session?.user?.email) {
-      setUserEmail(session.user.email);
-    } else if (status === "unauthenticated") {
-      setUserEmail(null);
+    console.log("Session status:", status);
+    if (session?.user) {
+      console.log("Session user:", {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role,
+      });
     }
-  }, [session, status, setUserEmail]);
+  }, [session, status]);
 
-  return null; // This component doesn't render anything
+  return null;
 }
