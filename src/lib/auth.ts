@@ -1,7 +1,9 @@
+// lib/auth.ts
 import db from "./db";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { schema } from "./schema";
+import { schema } from "./schema"; // Your validation schema
+import { UserRole } from "@prisma/client"; // Import your Prisma UserRole enum
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
@@ -13,12 +15,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: {},
         password: {},
       },
-      authorize: async (credentials) => {
-        console.log("Auth attempt with credentials:", {
-          email: credentials?.email,
-          password: credentials?.password ? "***" : "missing",
-        });
-
+      authorize: async credentials => {
         const validatedCredentials = schema.parse(credentials);
 
         const user = await db.users.findFirst({
@@ -27,37 +24,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         });
 
-        console.log(
-          "User found:",
-          user
-            ? {
-                id: user.id,
-                email: user.email,
-                storedPassword: user.password ? "***" : "no password",
-                inputPassword: validatedCredentials.password
-                  ? "***"
-                  : "no password",
-              }
-            : "No user found"
-        );
-
-        if (!user) {
-          console.log("User not found - throwing error");
+        if (!user || user.password !== validatedCredentials.password) {
+          // Always use secure password hashing (e.g., bcrypt) in production!
           throw new Error("Invalid credentials.");
         }
 
-        // Compare passwords directly (since they're stored as plain text)
-        if (user.password !== validatedCredentials.password) {
-          console.log("Password mismatch - throwing error");
-          throw new Error("Invalid credentials.");
-        }
-
-        console.log("Authentication successful for user:", user.email);
-
+        // User object from Prisma query
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role, // Prisma provides this directly
         };
       },
     }),
@@ -68,19 +45,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // 'user' is the object returned from 'authorize'
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
+        // 'token' now has the properties (id, email, name, role) based on your augmented JWT type
+        session.user.id = token.id;
+        session.user.email = token.email;
+        session.user.name = token.name;
+        session.user.role = token.role;
       }
       return session;
     },
   },
+  secret: process.env.NEXTAUTH_SECRET,
 });
