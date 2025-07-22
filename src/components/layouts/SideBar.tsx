@@ -103,7 +103,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map(child => (
+          {item.children?.map((child) => (
             <MenuItemComponent
               key={child.id}
               item={child}
@@ -415,7 +415,7 @@ export default function SideBar({
   return (
     <div
       className={`
-        sidebar-transition bg-white dark:bg-gray-900 shadow-md 
+        sidebar-transition bg-white dark:bg-gray-900 shadow-md overflow-y-scroll overflow-x-clip no-scrollbar 
         ${
           isMobile
             ? `mobile-sidebar w-[30vw] min-w-[240px] ${
