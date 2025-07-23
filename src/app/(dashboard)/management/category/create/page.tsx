@@ -87,7 +87,9 @@ export default function CreateCategoryPage() {
         router.push(`/${data.module}/${data.subModule}`);
       } else {
         // Handle server error
-        setFormErrors({ name: result.error || `Failed to create ${data.subModule}` });
+        setFormErrors({
+          name: result.error || `Failed to create ${data.subModule}`,
+        });
       }
     } catch (error) {
       console.error(`Error creating ${data.subModule}:`, error);
@@ -107,7 +109,7 @@ export default function CreateCategoryPage() {
 
       <ManagementForm
         subModuleName={data.subModule}
-        moduleName={data.subModule}
+        moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >

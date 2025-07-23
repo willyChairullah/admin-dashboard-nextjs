@@ -1,26 +1,26 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation"; 
-import { Button } from "@/components/ui"; 
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
 interface ManagementFormProps {
   children: React.ReactNode;
-  subModuleName: string; 
-  moduleName: string; 
-  isSubmitting?: boolean; 
-  handleFormSubmit: (event: React.FormEvent) => void; 
-  handleDelete?: () => Promise<void>; 
-  hideDeleteButton?: boolean; 
+  subModuleName: string;
+  moduleName: string;
+  isSubmitting?: boolean;
+  handleFormSubmit: (event: React.FormEvent) => void;
+  handleDelete?: () => Promise<void>;
+  hideDeleteButton?: boolean;
 }
 
 export default function ManagementForm({
   children,
   subModuleName,
-  moduleName, 
+  moduleName,
   isSubmitting = false,
   handleFormSubmit,
   handleDelete,
-  hideDeleteButton = false, 
+  hideDeleteButton = true,
 }: ManagementFormProps) {
   const router = useRouter();
 
@@ -44,19 +44,19 @@ export default function ManagementForm({
               variant="outline"
               className="flex-1"
               onClick={() =>
-                router.push(`/${subModuleName.toLowerCase()}/${moduleName}`)
+                router.push(`/${moduleName}/${subModuleName.toLowerCase()}`)
               }
               disabled={isSubmitting}
             >
               Cancel
             </Button>
 
-            {!hideDeleteButton && ( 
+            {!hideDeleteButton && (
               <Button
                 type="button"
                 variant="danger"
                 className="flex-1"
-                onClick={handleDelete} 
+                onClick={handleDelete}
                 disabled={isSubmitting}
               >
                 Delete {subModuleName}

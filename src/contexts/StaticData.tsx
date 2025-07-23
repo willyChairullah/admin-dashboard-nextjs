@@ -8,7 +8,7 @@ interface MySharedData {
   module: string;
   subModule: string;
   allowedRole: string[];
-  categoriesData: any[]; // Use a more specific type if you know the structure of categoriesData
+  data: any[]; // Use a more specific type if you know the structure of categoriesData
 }
 
 // 2. Create the Context with the defined type

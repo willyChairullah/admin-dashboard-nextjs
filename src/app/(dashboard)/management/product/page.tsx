@@ -1,4 +1,4 @@
-// app/category/page.tsx
+// app/product/page.tsx
 "use client"; // This component MUST be a Client Component
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
@@ -7,15 +7,18 @@ import React from "react"; // Essential for JSX
 
 const columns = [
   { header: "Name", accessor: "name" },
-  { header: "Description", accessor: "description" },
+  { header: "Price", accessor: "price" },
+  { header: "Min Stock", accessor: "minStock" },
+  { header: "Current Stock", accessor: "currentStock" },
+  { header: "Unit", accessor: "unit" },
+  { header: "Category", accessor: "category.name" },
   { header: "Status", accessor: "isActive" },
-  { header: "Products Count", accessor: "_count.products" },
   { header: "Created Date", accessor: "createdAt" },
 ];
 
-const excludedAccessors = ["name", "description", "isActive"];
+const excludedAccessors = ["name", "price", "minStock"];
 
-export default function CategoryPage() {
+export default function ProductPage() {
   const data = useSharedData();
 
   return (
@@ -30,7 +33,7 @@ export default function CategoryPage() {
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"
-        emptyMessage="No categories found"
+        emptyMessage="No products found"
         linkPath={`/${data.module}/${data.subModule}`}
       />
     </div>
