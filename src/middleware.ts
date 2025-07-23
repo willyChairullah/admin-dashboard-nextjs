@@ -7,7 +7,7 @@ export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // FORCE LOG untuk memastikan middleware berjalan
-  console.log("🔥🔥🔥 MIDDLEWARE RUNNING for:", pathname);
+  // console.log("🔥🔥🔥 MIDDLEWARE RUNNING for:", pathname);
 
   // Get session menggunakan auth function
   const session = await auth();
@@ -39,31 +39,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/management/category", request.url));
   }
 
-  // --- 3. Handle root redirect ---
-  if (session && pathname === "/") {
-    console.log("🔥 REDIRECT: Root path to default dashboard");
-    const userRole = session.user.role;
-    let redirectPath = "/management/category";
-
-    switch (userRole) {
-      case "OWNER":
-      case "ADMIN":
-        redirectPath = "/management/category";
-        break;
-      case "SALES":
-        redirectPath = "/sales";
-        break;
-      case "WAREHOUSE":
-        redirectPath = "/inventory/dashboard";
-        break;
-      default:
-        redirectPath = "/management/category";
-    }
-
-    return NextResponse.redirect(new URL(redirectPath, request.url));
-  }
-
-  // --- 4. Role-Based Access Control ---
+  // --- 3. Role-Based Access Control ---
   const protectedPrefixes = [
     "/management",
     "/sales",
@@ -90,7 +66,7 @@ export default async function middleware(request: NextRequest) {
       console.log(
         `🚫 BLOCKED: ${userRole} tried to access management module: ${pathname}`
       );
-      return NextResponse.redirect(new URL("/sales", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     // EXPLICIT BLOCKING untuk /settings jika bukan OWNER atau ADMIN
@@ -101,7 +77,7 @@ export default async function middleware(request: NextRequest) {
       console.log(
         `🚫 BLOCKED: ${userRole} tried to access settings module: ${pathname}`
       );
-      return NextResponse.redirect(new URL("/sales", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     // EXPLICIT BLOCKING untuk /inventory jika bukan OWNER, ADMIN, atau WAREHOUSE
@@ -112,7 +88,7 @@ export default async function middleware(request: NextRequest) {
       console.log(
         `🚫 BLOCKED: ${userRole} tried to access inventory module: ${pathname}`
       );
-      return NextResponse.redirect(new URL("/sales", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     console.log(`✅ ALLOWED: ${userRole} can access ${pathname}`);

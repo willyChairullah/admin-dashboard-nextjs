@@ -1,8 +1,10 @@
-import { ManagementHeader, ManagementContent } from "@/components/ui"; // Ganti dengan DynamicManagementContent
-import { getCategories } from "@/lib/actions/categories";
-// import { generateMonthlyCode } from "@/utils/generateCode";
+// app/category/page.tsx
+"use client"; // This component MUST be a Client Component
 
-// Columns Definition for Categories (without render functions for server component)
+import { ManagementHeader, ManagementContent } from "@/components/ui";
+import { useSharedData } from "@/contexts/StaticData";
+import React from "react"; // Essential for JSX
+
 const columns = [
   { header: "Name", accessor: "name" },
   { header: "Description", accessor: "description" },
@@ -11,28 +13,25 @@ const columns = [
   { header: "Created Date", accessor: "createdAt" },
 ];
 
-// Define the excluded accessors as an array (these fields won't be shown in forms)
 const excludedAccessors = ["name", "description", "isActive"];
 
-export default async function CategoryPage() {
-  // Fetch categories data from database
-  const categoriesData = await getCategories();
-  console.log("testing");
+export default function CategoryPage() {
+  const data = useSharedData();
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Category"
-        mainPageName="/management/category"
-        allowedRoles={["ADMIN", "OWNER"]}
+        headerTittle={data.subModule}
+        mainPageName={`/${data.module}/${data.subModule}`}
+        allowedRoles={data.allowedRole}
       />
       <ManagementContent
-        sampleData={categoriesData}
+        sampleData={data.categoriesData}
         columns={columns}
         excludedAccessors={excludedAccessors}
-        dateAccessor="createdAt" // Menentukan kolom tanggal
-        emptyMessage="No categories found" // Pesan kosong jika tidak ada data
-        linkPath="/management/category" // Jalur untuk tautan edit
+        dateAccessor="createdAt"
+        emptyMessage="No categories found"
+        linkPath={`/${data.module}/${data.subModule}`}
       />
     </div>
   );

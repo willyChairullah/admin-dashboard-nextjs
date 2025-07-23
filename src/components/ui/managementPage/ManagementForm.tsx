@@ -1,26 +1,26 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation"; // Ensure to import your router if you are using Next.js
-import { Button } from "@/components/ui"; // Ensure you import your Button component
+import { useRouter } from "next/navigation"; 
+import { Button } from "@/components/ui"; 
 
 interface ManagementFormProps {
   children: React.ReactNode;
-  subModuleName: string; // Prop for module name
-  moduleName: string; // Prop for module name
-  isSubmitting?: boolean; // Prop for handling form submission state
-  handleFormSubmit: (event: React.FormEvent) => void; // Prop for the submit handler
-  handleDelete?: () => Promise<void>; // Prop for the delete handler
-  hideDeleteButton?: boolean; // New prop to control the visibility of the delete button
+  subModuleName: string; 
+  moduleName: string; 
+  isSubmitting?: boolean; 
+  handleFormSubmit: (event: React.FormEvent) => void; 
+  handleDelete?: () => Promise<void>; 
+  hideDeleteButton?: boolean; 
 }
 
 export default function ManagementForm({
   children,
   subModuleName,
-  moduleName, // Prop for module name
+  moduleName, 
   isSubmitting = false,
   handleFormSubmit,
   handleDelete,
-  hideDeleteButton = false, // Default to false
+  hideDeleteButton = false, 
 }: ManagementFormProps) {
   const router = useRouter();
 
@@ -43,18 +43,20 @@ export default function ManagementForm({
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => router.push(`/${moduleName}/${subModuleName.toLowerCase()}`)}
+              onClick={() =>
+                router.push(`/${subModuleName.toLowerCase()}/${moduleName}`)
+              }
               disabled={isSubmitting}
             >
               Cancel
             </Button>
 
-            {!hideDeleteButton && ( // Conditionally render the delete button
+            {!hideDeleteButton && ( 
               <Button
                 type="button"
                 variant="danger"
                 className="flex-1"
-                onClick={handleDelete} // Call the delete handler
+                onClick={handleDelete} 
                 disabled={isSubmitting}
               >
                 Delete {subModuleName}

@@ -2,7 +2,6 @@
 import { ManagementHeader } from "@/components/ui";
 import React, { useState } from "react";
 import {
-  Button,
   Input,
   FormField,
   InputCheckbox,
@@ -11,6 +10,8 @@ import {
 } from "@/components/ui";
 import { createCategory } from "@/lib/actions/categories";
 import { useRouter } from "next/navigation";
+
+import { useSharedData } from "@/contexts/StaticData";
 
 interface CategoryFormData {
   name: string;
@@ -25,6 +26,7 @@ interface CategoryFormErrors {
 }
 
 export default function CreateCategoryPage() {
+  const data = useSharedData();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<CategoryFormData>({
@@ -82,13 +84,13 @@ export default function CreateCategoryPage() {
 
       if (result.success) {
         // Redirect to category list page
-        router.push("/management/category");
+        router.push(`/${data.module}/${data.subModule}`);
       } else {
         // Handle server error
-        setFormErrors({ name: result.error || "Failed to create category" });
+        setFormErrors({ name: result.error || `Failed to create ${data.subModule}` });
       }
     } catch (error) {
-      console.error("Error creating category:", error);
+      console.error(`Error creating ${data.subModule}:`, error);
       setFormErrors({ name: "An unexpected error occurred" });
     } finally {
       setIsSubmitting(false);
@@ -98,14 +100,14 @@ export default function CreateCategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Create Category"
-        mainPageName="/management/category"
-        allowedRoles={["ADMIN", "OWNER"]}
+        headerTittle={data.subModule}
+        mainPageName={`/${data.module}/${data.subModule}`}
+        allowedRoles={data.allowedRole}
       />
 
       <ManagementForm
-        subModuleName="Category"
-        moduleName="management"
+        subModuleName={data.subModule}
+        moduleName={data.subModule}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >

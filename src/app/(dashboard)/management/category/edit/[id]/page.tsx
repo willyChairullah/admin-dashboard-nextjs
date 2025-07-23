@@ -16,6 +16,7 @@ import {
 } from "@/lib/actions/categories";
 import { useRouter, useParams } from "next/navigation";
 import { Categories } from "@prisma/client";
+import { useSharedData } from "@/contexts/StaticData";
 
 interface CategoryFormData {
   name: string;
@@ -43,6 +44,8 @@ export default function EditCategoryPage() {
     description: "",
     isActive: true,
   });
+
+  const data = useSharedData();
 
   const [formErrors, setFormErrors] = useState<CategoryFormErrors>({});
 
@@ -211,14 +214,14 @@ export default function EditCategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Edit Categories"
-        mainPageName="/management/category"
-        allowedRoles={["ADMIN", "OWNER"]}
+        headerTittle={data.subModule}
+        mainPageName={`/${data.module}/${data.subModule}`}
+        allowedRoles={data.allowedRole}
       />
 
       <ManagementForm
-        subModuleName="Category"
-        moduleName="management"
+        subModuleName={data.module}
+        moduleName={data.subModule}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
         handleDelete={handleDelete}
