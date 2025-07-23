@@ -268,14 +268,15 @@ const Pagination: React.FC<PaginationProps> = ({
       {/* Items info and page size selector */}
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
         <p className="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-          Showing <span className="font-medium">{startItem}</span> to{" "}
-          <span className="font-medium">{endItem}</span> of{" "}
-          <span className="font-medium">{totalItems}</span> results
+          Menampilkan <span className="font-medium">{startItem}</span>{" "}
+          <span className="font-extrabold">-</span>{" "}
+          <span className="font-medium">{endItem}</span> dari{" "}
+          <span className="font-medium">{totalItems}</span> hasil
         </p>
 
         <div className="flex items-center gap-2 mt-2 sm:mt-0">
           <label className="text-sm text-gray-700 dark:text-gray-300">
-            Rows per page:
+            Baris Halaman:
           </label>
           <select
             value={pageSize}
@@ -300,7 +301,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => onPageChange(currentPage - 1)}
           className="whitespace-nowrap"
         >
-          Previous
+          Sebelumnya
         </Button>
 
         <div className="hidden sm:flex items-center space-x-1">
@@ -324,7 +325,8 @@ const Pagination: React.FC<PaginationProps> = ({
 
         {/* Mobile page indicator */}
         <div className="sm:hidden px-2 py-1 text-sm text-gray-700 dark:text-gray-300">
-          Page {currentPage} of {totalPages}
+          Halaman {currentPage} <span className="font-extrabold">-</span>{" "}
+          {totalPages}
         </div>
 
         <Button
@@ -334,7 +336,7 @@ const Pagination: React.FC<PaginationProps> = ({
           onClick={() => onPageChange(currentPage + 1)}
           className="whitespace-nowrap"
         >
-          Next
+          Selanjutnya
         </Button>
 
         {/* Jump to page form - visible on larger screens */}
@@ -344,7 +346,7 @@ const Pagination: React.FC<PaginationProps> = ({
             className="hidden sm:flex items-center ml-4 space-x-2"
           >
             <span className="text-sm text-gray-600 dark:text-gray-300">
-              Go to:
+              Menuju ke:
             </span>
             <input
               type="number"

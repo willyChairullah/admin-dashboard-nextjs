@@ -2,6 +2,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
+import { FaArrowLeft, FaSave, FaTrash } from "react-icons/fa";
 
 interface ManagementFormProps {
   children: React.ReactNode;
@@ -9,7 +10,8 @@ interface ManagementFormProps {
   moduleName: string;
   isSubmitting?: boolean;
   handleFormSubmit: (event: React.FormEvent) => void;
-  handleDelete?: () => Promise<void>;
+  // --- [PERBAIKAN] Ubah tipe data di sini ---
+  handleDelete?: () => void;
   hideDeleteButton?: boolean;
 }
 
@@ -23,45 +25,50 @@ export default function ManagementForm({
   hideDeleteButton = true,
 }: ManagementFormProps) {
   const router = useRouter();
+  const subModule = subModuleName.split(" ");
 
   return (
     <div className="flex flex-col">
       <div className="p-3 md:px-28 md:py-6">
-        {/* Dynamic title */}
-        <h2 className="text-lg font-semibold">Manage {subModuleName}</h2>
         <form onSubmit={handleFormSubmit} className="space-y-4">
           {children}
 
           <div className="flex gap-4 pt-4">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting
-                ? `Creating ${subModuleName}...`
-                : `Create ${subModuleName}`}
-            </Button>
-
+            {/* Tombol "Kembali" di kiri */}
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
+              className="w-full max-w-[100px] flex items-center justify-center gap-2"
               onClick={() =>
-                router.push(`/${moduleName}/${subModuleName.toLowerCase()}`)
+                router.push(`/${moduleName}/${subModuleName}`)
               }
               disabled={isSubmitting}
             >
-              Cancel
+              <FaArrowLeft /> Kembali
             </Button>
 
-            {!hideDeleteButton && (
+            <div className="flex gap-4 ml-auto">
+              {/* Kontainer untuk Hapus dan Simpan, didorong ke kanan */}
+              {!hideDeleteButton && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  className="w-full max-w-[100px] flex items-center justify-center gap-2"
+                  onClick={handleDelete}
+                  disabled={isSubmitting}
+                >
+                  <FaTrash /> Hapus
+                </Button>
+              )}
+              {/* Tombol "Simpan" di kanan */}
               <Button
-                type="button"
-                variant="danger"
-                className="flex-1"
-                onClick={handleDelete}
+                type="submit"
+                className="w-full max-w-[100px] flex items-center justify-center gap-2"
                 disabled={isSubmitting}
               >
-                Delete {subModuleName}
+                <FaSave /> Simpan
               </Button>
-            )}
+            </div>
           </div>
         </form>
       </div>

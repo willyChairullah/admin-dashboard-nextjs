@@ -18,7 +18,7 @@ interface ManagementContentProps<T extends Record<string, any>> {
   columns: Column[];
   excludedAccessors: string[];
   dateAccessor?: keyof T; // Use a key of T for date filtering (optional)
-  emptyMessage?: string;
+  emptyMessage?: string | "Tidak ada data ditemukan";
   linkPath: string; // Dynamic link path for editing the row
 }
 
@@ -66,6 +66,7 @@ const ManagementContent = <T extends Record<string, any>>({
   const [searchOption, setSearchOption] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const path = linkPath.toLowerCase();
 
   const handleDateChange = (dates: { startDate: Date; endDate: Date }) => {
     setStartDate(dates.startDate);
@@ -122,7 +123,7 @@ const ManagementContent = <T extends Record<string, any>>({
   };
 
   const defaultLinkPath = (row: T) => {
-    return `${linkPath}/edit/${row.id}`;
+    return `${path}/edit/${row.id}`;
   };
 
   return (
@@ -139,7 +140,7 @@ const ManagementContent = <T extends Record<string, any>>({
           columns={enhancedColumns}
           value={searchQuery}
           onChange={handleSearch}
-          placeholder="Search..."
+          placeholder="Cari..."
           filterColumnAccessor={columnFilterFunction}
         />
       </div>
