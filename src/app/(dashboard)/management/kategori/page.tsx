@@ -6,11 +6,10 @@ import { useSharedData } from "@/contexts/StaticData";
 import React from "react"; // Essential for JSX
 
 const columns = [
-  { header: "Name", accessor: "name" },
-  { header: "Description", accessor: "description" },
+  { header: "Nama", accessor: "name" },
+  { header: "Deskripsi", accessor: "description" },
   { header: "Status", accessor: "isActive" },
-  { header: "Products Count", accessor: "_count.products" },
-  { header: "Created Date", accessor: "createdAt" },
+  { header: "Jumlah Produk", accessor: "_count.products" },
 ];
 
 const excludedAccessors = ["name", "description", "isActive"];
@@ -21,7 +20,7 @@ export default function CategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={data.subModule}
+        headerTittle={`Daftar ${data.subModule}`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />

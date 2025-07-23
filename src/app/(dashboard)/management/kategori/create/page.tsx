@@ -10,8 +10,9 @@ import {
 } from "@/components/ui";
 import { createCategory } from "@/lib/actions/categories";
 import { useRouter } from "next/navigation";
-
 import { useSharedData } from "@/contexts/StaticData";
+// --- [PERUBAHAN 1] Impor toast ---
+import { toast } from "sonner";
 
 interface CategoryFormData {
   name: string;
@@ -41,13 +42,13 @@ export default function CreateCategoryPage() {
     const errors: CategoryFormErrors = {};
 
     if (!formData.name.trim()) {
-      errors.name = "Category name is required";
+      errors.name = "Nama kategori wajib diisi";
     } else if (formData.name.trim().length < 2) {
-      errors.name = "Category name must be at least 2 characters";
+      errors.name = "Nama kategori minimal 2 karakter";
     }
 
     if (formData.description && formData.description.length > 500) {
-      errors.description = "Description must not exceed 500 characters";
+      errors.description = "Deskripsi tidak boleh melebihi 500 karakter";
     }
 
     setFormErrors(errors);
@@ -60,7 +61,6 @@ export default function CreateCategoryPage() {
   ) => {
     setFormData({ ...formData, [field]: value });
 
-    // Clear error for this field when user starts typing
     if (formErrors[field as keyof CategoryFormErrors]) {
       setFormErrors({ ...formErrors, [field]: undefined });
     }
@@ -70,6 +70,8 @@ export default function CreateCategoryPage() {
     e.preventDefault();
 
     if (!validateForm()) {
+      // Menampilkan toast jika validasi gagal
+      toast.warning("Harap periksa kembali data yang Anda masukkan.");
       return;
     }
 
@@ -83,17 +85,23 @@ export default function CreateCategoryPage() {
       });
 
       if (result.success) {
-        // Redirect to category list page
-        router.push(`/${data.module}/${data.subModule}`);
+        // --- [PERUBAHAN 2] Tambahkan toast sukses ---
+        toast.success(`Kategori "${formData.name.trim()}" berhasil dibuat.`);
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
-        // Handle server error
+        // --- [PERUBAHAN 3] Tambahkan toast error ---
+        const errorMessage = result.error || `Gagal membuat ${data.subModule}`;
+        toast.error(errorMessage);
         setFormErrors({
-          name: result.error || `Failed to create ${data.subModule}`,
+          name: errorMessage,
         });
       }
     } catch (error) {
-      console.error(`Error creating ${data.subModule}:`, error);
-      setFormErrors({ name: "An unexpected error occurred" });
+      console.error(`Terjadi kesalahan saat membuat ${data.subModule}:`, error);
+      // --- [PERUBAHAN 4] Tambahkan toast untuk error tak terduga ---
+      const errorMessage = "Terjadi kesalahan yang tidak terduga";
+      toast.error(errorMessage);
+      setFormErrors({ name: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -102,19 +110,19 @@ export default function CreateCategoryPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={data.subModule}
+        headerTittle={`Buat ${data.subModule}`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
 
       <ManagementForm
-        subModuleName={data.subModule}
+        subModuleName={`Buat ${data.subModule}`}
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >
         <FormField
-          label="Category Name"
+          label="Nama Kategori"
           htmlFor="name"
           required
           errorMessage={formErrors.name}
@@ -122,7 +130,7 @@ export default function CreateCategoryPage() {
           <Input
             type="text"
             name="name"
-            placeholder="Enter category name"
+            placeholder="Masukkan nama kategori"
             value={formData.name}
             onChange={e => handleInputChange("name", e.target.value)}
             maxLength={100}
@@ -130,20 +138,20 @@ export default function CreateCategoryPage() {
         </FormField>
 
         <FormField
-          label="Description"
+          label="Deskripsi"
           htmlFor="description"
           errorMessage={formErrors.description}
         >
           <InputTextArea
             name="description"
             value={formData.description}
-            placeholder="Enter category description (optional)"
+            placeholder="Masukkan deskripsi kategori (opsional)"
             onChange={e => handleInputChange("description", e.target.value)}
             maxLength={500}
             rows={4}
           />
           <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/500 characters
+            {formData.description.length}/500 karakter
           </p>
         </FormField>
 
@@ -155,7 +163,7 @@ export default function CreateCategoryPage() {
           <InputCheckbox
             checked={formData.isActive}
             onChange={e => handleInputChange("isActive", e.target.checked)}
-            label="Active (category will be available for use)"
+            label="Aktif (kategori akan tersedia untuk digunakan)"
           />
         </FormField>
       </ManagementForm>

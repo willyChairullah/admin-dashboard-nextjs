@@ -21,22 +21,24 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const router = useRouter();
+  const mainPage = mainPageName.toLocaleLowerCase();
+  const Tittle = headerTittle.split(" ");
 
   // Current route checks
   const isOnCreatePage = pathname.endsWith("/create");
-  const isOnMainPage = pathname === mainPageName && !isOnCreatePage; 
-  const isOnEditPage = pathname.startsWith(`${mainPageName}/edit`);
+  const isOnMainPage = pathname === mainPage && !isOnCreatePage;
+  const isOnEditPage = pathname.startsWith(`${mainPage}/edit`);
 
   const handleListClick = () => {
     if (isOnCreatePage || isOnEditPage) {
-      router.push(`${mainPageName}`); 
+      router.push(`${mainPage}`);
     }
   };
 
   const handleAddNewClick = () => {
     if (isOnMainPage || isOnEditPage) {
       console.log("Navigating to:", `${pathname}/create`);
-      router.push(`${mainPageName}/create`); // Navigasi ke '/me/create'
+      router.push(`${mainPage}/create`); // Navigasi ke '/me/create'
     }
   };
 
@@ -57,7 +59,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
           }`}
           onClick={handleListClick}
         >
-          List
+          Daftar
         </Button>
         {canAddNewUser && (
           <Button
@@ -66,7 +68,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
             className="text-xs md:text-sm"
             onClick={handleAddNewClick}
           >
-            Add New
+            Tambah {Tittle[1]}
           </Button>
         )}
       </div>

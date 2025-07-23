@@ -346,10 +346,10 @@ export default function SideBar({
         roles: ["ADMIN", "OWNER"],
         children: [
           {
-            id: "categories",
-            label: "Categories",
+            id: "kategori",
+            label: "Kategori",
             icon: "🏷️",
-            href: "/management/category",
+            href: "/management/kategori",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },

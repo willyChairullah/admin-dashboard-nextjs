@@ -26,7 +26,7 @@ const CombinedSearchInput: React.FC<CombinedSearchInputProps> = ({
 
   // Adding the "All" option to searchable columns
   const extendedColumns = [
-    { header: "All", accessor: "all" },
+    { header: "Semua", accessor: "all" },
     ...searchableColumns,
   ];
 
