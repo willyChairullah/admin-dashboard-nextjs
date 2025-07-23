@@ -23,6 +23,8 @@ async function main() {
     await prisma.stockMovements.deleteMany({});
     await prisma.transactions.deleteMany({});
     await prisma.store.deleteMany({});
+    await prisma.products.deleteMany({}); // Tambahkan ini untuk membersihkan produk
+    await prisma.categories.deleteMany({}); // Tambahkan ini untuk membersihkan kategori
     const deletedUsers = await prisma.users.deleteMany({});
     console.log(`✅ Cleared ${deletedUsers.count} users and related data`);
 
@@ -121,6 +123,110 @@ async function main() {
       console.log(`✅ Created store: ${store.name}`);
     }
 
+    // --- Penambahan Kategori dan Produk Minyak ---
+    console.log("📦 Creating categories and products...");
+
+    const oilCategory = await prisma.categories.create({
+      data: {
+        id: uuid(),
+        code: "OIL",
+        name: "Minyak",
+        description: "Berbagai jenis minyak goreng",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`✅ Created category: ${oilCategory.name}`);
+
+    const productsToCreate = [
+      {
+        id: uuid(),
+        name: "Minyak Indana 250 ml",
+        description: "Minyak goreng Indana kemasan 250 ml",
+        unit: "Pcs",
+        price: 7000,
+        cost: 5000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Minyak Indana 500 ml",
+        description: "Minyak goreng Indana kemasan 500 ml",
+        unit: "Pcs",
+        price: 13000,
+        cost: 10000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Minyak Indana 800 ml",
+        description: "Minyak goreng Indana kemasan 800 ml",
+        unit: "Pcs",
+        price: 18000,
+        cost: 14000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Minyak Indana 900 ml",
+        description: "Minyak goreng Indana kemasan 900 ml",
+        unit: "Pcs",
+        price: 20000,
+        cost: 16000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Minyak Indana 1 Liter",
+        description: "Minyak goreng Indana kemasan 1 liter",
+        unit: "Pcs",
+        price: 22000,
+        cost: 18000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Minyak Kita 1 Liter",
+        description: "Minyak goreng merek Minyak Kita kemasan 1 liter",
+        unit: "Pcs",
+        price: 15000,
+        cost: 12000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+    ];
+
+    for (const productData of productsToCreate) {
+      const product = await prisma.products.create({
+        data: productData,
+      });
+      console.log(`✅ Created product: ${product.name}`);
+    }
+    // --- Akhir Penambahan Kategori dan Produk Minyak ---
+
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
     console.log("👑 OWNER: owner@indana.com / password123");
@@ -136,7 +242,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
+main().catch(e => {
   console.error(e);
   process.exit(1);
 });

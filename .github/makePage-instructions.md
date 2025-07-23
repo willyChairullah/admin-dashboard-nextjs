@@ -22,22 +22,18 @@ model Products {
 }
 
 Akan mencontoh dari folder halaman "/management/category"
-Pada path root akan memiliki komponen ini, lengkapnya baca Page.tsx nya:
-<ManagementHeader mainPageName="/management/category" allowedRoles={["ADMIN"]} />
-<ManagementContent
-sampleData={sampleData}
-columns={columns}
-excludedAccessors={excludedAccessors}
+Dimana halaman ini akan ditempatkan di path "management/product"
+Dan baca pada layout.tsx akan memiliki data ini:
+  const myStaticData = {
+    module: "management",
+    subModule: "product",
+    allowedRole: ["OWNER", "ADMIN"],
+    data: await getCategories(), // Await the async function
+  };
 
-dimana untuk mainPageName akan menjadi "/management/product" 
-allowedRoles akan berisi ["ADMIN", "OWNER"]
+Dihalaman product/page.tsx :
+columns yang akan berisi name, price, minStock
+exlcudeAccessors berisi nname, price, minStock
 
-sampleData akan diambil dari fetch data dari database model product
-columns yang akan berisi name, description, isActive
-exlcudeAccessors berisi name, description, isActive
-
-pada folder /management/category akan ada folder create berisi sebuah form untuk memasukkan data
-Disitu terdapat form dan semua komponen input yang dibutuhkan sesuaikan agar bisa create di halaman tersebut
-dan tolong buatkan folder edit untuk halaman edit,
-
+Pada halaman create pada management form itu tombol delete dihapus
 buatkan semuanya lengkap sampai bisa CRUD Data

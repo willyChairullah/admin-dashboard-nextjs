@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getCategories } from "@/lib/actions/categories";
+import { getProducts } from "@/lib/actions/products";
 import { DataProvider } from "@/contexts/StaticData"; // <-- Corrected import path
 
 export default async function RootLayout({
@@ -13,9 +13,9 @@ export default async function RootLayout({
   // Data defined or fetched on the server side
   const myStaticData = {
     module: "management",
-    subModule: "category",
+    subModule: "product",
     allowedRole: ["OWNER", "ADMIN"],
-    data: await getCategories(), // Await the async function
+    data: await getProducts(), // Await the async function
   };
 
   return (
