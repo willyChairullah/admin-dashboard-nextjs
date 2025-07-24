@@ -40,7 +40,7 @@ export default function ManagementForm({
               variant="outline"
               className="w-full max-w-[100px] flex items-center justify-center gap-2"
               onClick={() =>
-                router.push(`/${moduleName}/${subModuleName}`)
+                router.push(`/${moduleName}/${subModuleName.toLowerCase()}`)
               }
               disabled={isSubmitting}
             >

@@ -487,7 +487,7 @@ const DataTable: React.FC<TableProps> = ({
     return result;
   }, [data, sortState, filterState, onSort, onFilter]);
 
-  console.log(linkPath);
+  // console.log(linkPath);
 
   if (isLoading) {
     return (

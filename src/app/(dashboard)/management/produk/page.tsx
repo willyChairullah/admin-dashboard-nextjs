@@ -1,13 +1,32 @@
-// app/category/page.tsx
+// app/product/page.tsx
 "use client"; // This component MUST be a Client Component
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
+import { getCategoryById } from "@/lib/actions/categories";
+import { formatRupiah } from "@/utils/formatRupiah";
 import React from "react"; // Essential for JSX
 
 const columns = [
   { header: "Nama", accessor: "name" },
-  { header: "Deskripsi", accessor: "description" },
+  {
+    header: "Harga",
+    accessor: "price",
+    // Tambahkan fungsi cell untuk memformat harga
+    cell: (info: { getValue: () => number }) => formatRupiah(info.getValue()),
+  },
+  { header: "Min Stok", accessor: "minStock" },
+  { header: "Stok", accessor: "currentStock" },
+  {
+    header: "Kategori",
+    accessor: "category.name", // Tetap bisa mempertahankan accessor untuk keperluan lain (misal: sorting/filtering di luar DataTable)
+    // Gunakan properti 'render' untuk menampilkan nama kategori
+    render: (value: any, row: any) => {
+      // row adalah objek data lengkap untuk baris ini
+      // console.log(row.category?.name); // Anda bisa console.log di sini
+      return row.category ? row.category.name : "N/A";
+    },
+  },
   {
     header: "Status",
     accessor: "isActive",
@@ -21,20 +40,13 @@ const columns = [
       );
     },
   },
-  { header: "Jumlah Produk", accessor: "_count.products" },
-  // Anda juga bisa memindahkan logikanya ke 'render' atau 'cell' di sini.
-  // Contoh:
-  // {
-  //   header: "Tanggal Dibuat",
-  //   accessor: "createdAt",
-  //   render: (value: Date) => formatDate(value),
-  // },
 ];
 
-const excludedAccessors = ["name", "description", "isActive"];
+const excludedAccessors = [""];
 
-export default function CategoryPage() {
+export default function ProductPage() {
   const data = useSharedData();
+  console.log(data.data[0].category.name);
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -48,7 +60,7 @@ export default function CategoryPage() {
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"
-        emptyMessage="No categories found"
+        emptyMessage="No products found"
         linkPath={`/${data.module}/${data.subModule}`}
       />
     </div>

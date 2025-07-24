@@ -116,7 +116,7 @@ export default function CreateCategoryPage() {
       />
 
       <ManagementForm
-        subModuleName={`Buat ${data.subModule}`}
+        subModuleName={data.subModule.toLowerCase()}
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
