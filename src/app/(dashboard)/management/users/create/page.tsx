@@ -2,6 +2,8 @@
 import { ManagementHeader } from "@/components/ui";
 import React, { useState } from "react";
 import { Button, Input, Select, FormField, InputDate } from "@/components/ui";
+import { createUser } from "@/lib/actions/user";
+import { UserRole } from "@prisma/client";
 
 interface FormData {
   name: string;
@@ -18,6 +20,7 @@ interface FormErrors {
 }
 
 export default function page() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
@@ -39,6 +42,14 @@ export default function page() {
     { value: "SALES", label: "SALES" },
   ];
 
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData({ ...formData, [field]: value });
+    // Clear error when user starts typing
+    if (value.trim()) {
+      setFormErrors({ ...formErrors, [field]: "" });
+    }
+  };
+
   const handleRoleChange = (value: string) => {
     setFormData({ ...formData, role: value });
     if (value) {
@@ -48,19 +59,62 @@ export default function page() {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const errors = {
-      name: formData.name ? "" : "Name is required",
-    };
+    setIsSubmitting(true);
+
+    // Basic validation
+    const errors: FormErrors = {};
+    if (!formData.name.trim()) errors.name = "Name is required";
+    if (!formData.email.trim()) errors.email = "Email is required";
+    if (!formData.password.trim()) errors.password = "Password is required";
+    if (!formData.role) errors.role = "Role is required";
+    if (formData.password.length < 6)
+      errors.password = "Password must be at least 6 characters";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const result = await createUser({
+        name: formData.name,
+        email: formData.email,
+        role: formData.role as UserRole,
+        password: formData.password,
+      });
+
+      if (result.success) {
+        // Handle successful user creation
+        alert("User created successfully!");
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          role: "",
+          password: "",
+        });
+        setFormErrors({});
+      } else {
+        // Handle errors
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      // Handle unexpected errors
+      alert("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="me"
-        mainPageName="/me"
-        allowedRoles={["ADMIN"]}
+        headerTittle="User Management"
+        mainPageName="/management/users"
+        allowedRoles={["ADMIN", "OWNER"]}
       />
       {/* <ManagementTableContent /> */}
       <div className="flex flex-col">
@@ -77,9 +131,7 @@ export default function page() {
                 name="name"
                 placeholder="Enter your full name"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => handleInputChange("name", e.target.value)}
               />
             </FormField>
 
@@ -94,9 +146,7 @@ export default function page() {
                 name="email"
                 placeholder="Enter your email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => handleInputChange("email", e.target.value)}
               />
             </FormField>
 
@@ -111,9 +161,7 @@ export default function page() {
                 name="password"
                 placeholder="Enter your password"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => handleInputChange("password", e.target.value)}
               />
             </FormField>
 
@@ -130,8 +178,8 @@ export default function page() {
                 placeholder="— Select a Role —"
               />
             </FormField>
-            <Button type="submit" className="w-full">
-              Submit Form
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? "Creating..." : "Buat user"}
             </Button>
           </form>
         </div>
