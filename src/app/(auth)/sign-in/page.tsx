@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/common";
-import { Input } from "@/components/ui/common";
+// Hapus import Input: import { Input } from "@/components/ui/common";
 import { auth, signIn } from "@/lib/auth";
 import { executeAction } from "@/lib/executeAction";
 import Link from "next/link";
@@ -14,17 +14,6 @@ const Page = async () => {
     <div className="min-h-screen flex items-center justify-center w-full">
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-bold text-center mb-6">Sign In</h1>
-
-        {/* <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with email
-          </span>
-        </div>
-      </div> */}
 
         {/* Email/Password Sign In */}
         <form
@@ -64,19 +53,22 @@ const Page = async () => {
             }
           }}
         >
-          <Input
+          {/* Mengganti komponen Input dengan elemen <input> HTML biasa */}
+          <input
             name="email"
             placeholder="Email"
             type="email"
             required
             autoComplete="email"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" // Tambahkan kelas styling agar mirip dengan komponen Input
           />
-          <Input
+          <input
             name="password"
             placeholder="Password"
             type="password"
             required
             autoComplete="current-password"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" // Tambahkan kelas styling agar mirip dengan komponen Input
           />
           <Button className="w-full" variant="outline" type="submit">
             Sign In

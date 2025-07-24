@@ -1,24 +1,19 @@
 "use client";
-import { ManagementForm, ManagementHeader } from "@/components/ui";
+import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
-  Button,
   Input,
   FormField,
   InputCheckbox,
   InputTextArea,
+  ManagementForm,
   Select,
 } from "@/components/ui";
-import {
-  getProductById,
-  updateProduct,
-  deleteProduct,
-  toggleProductStatus,
-} from "@/lib/actions/products";
+import { createProduct } from "@/lib/actions/products";
 import { getCategories } from "@/lib/actions/categories";
-import { useRouter, useParams } from "next/navigation";
-import { Products } from "@prisma/client";
+import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
+import { toast } from "sonner";
 
 interface ProductFormData {
   name: string;
@@ -49,15 +44,10 @@ interface Category {
   name: string;
 }
 
-export default function EditProductPage() {
+export default function CreateProductPage() {
+  const data = useSharedData();
   const router = useRouter();
-  const params = useParams();
-  const productId = params.id as string;
-
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [product, setProduct] = useState<Products | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -71,85 +61,59 @@ export default function EditProductPage() {
     categoryId: "",
   });
 
-  const data = useSharedData();
-
   const [formErrors, setFormErrors] = useState<ProductFormErrors>({});
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCategories = async () => {
       try {
-        // Fetch categories
         const categoriesData = await getCategories();
         const activeCategories = categoriesData
           .filter(cat => cat.isActive)
           .map(cat => ({ id: cat.id, name: cat.name }));
         setCategories(activeCategories);
-
-        // Fetch product data
-        const productData = await getProductById(productId);
-        if (productData) {
-          setProduct(productData);
-          setFormData({
-            name: productData.name,
-            description: productData.description || "",
-            unit: productData.unit,
-            price: productData.price,
-            cost: productData.cost,
-            minStock: productData.minStock,
-            currentStock: productData.currentStock,
-            isActive: productData.isActive,
-            categoryId: productData.categoryId,
-          });
-        } else {
-          // Product not found, redirect to product list
-          router.push(`/${data.module}/${data.subModule}`);
-        }
       } catch (error) {
-        console.error("Error fetching data:", error);
-        // Handle error - maybe show a toast notification
-      } finally {
-        setIsLoading(false);
+        console.error("Error fetching categories:", error);
       }
     };
 
-    fetchData();
-  }, [productId, router, data.module, data.subModule]);
+    fetchCategories();
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: ProductFormErrors = {};
 
     if (!formData.name.trim()) {
-      errors.name = "Product name is required";
+      errors.name = "Nama produk wajib diisi";
     } else if (formData.name.trim().length < 2) {
-      errors.name = "Product name must be at least 2 characters";
+      errors.name = "Nama produk minimal 2 karakter";
     }
 
     if (!formData.unit.trim()) {
-      errors.unit = "Unit is required";
+      errors.unit = "Satuan wajib diisi";
     }
 
     if (formData.price <= 0) {
-      errors.price = "Price must be greater than 0";
+      errors.price = "Harga jual harus lebih dari 0";
     }
 
     if (formData.cost < 0) {
-      errors.cost = "Cost cannot be negative";
+      errors.cost = "Harga modal tidak boleh negatif";
     }
 
     if (formData.minStock < 0) {
-      errors.minStock = "Minimum stock cannot be negative";
+      errors.minStock = "Stok minimum tidak boleh negatif";
     }
 
     if (formData.currentStock < 0) {
-      errors.currentStock = "Current stock cannot be negative";
+      errors.currentStock = "Stok saat ini tidak boleh negatif";
     }
 
     if (!formData.categoryId) {
-      errors.categoryId = "Category is required";
+      errors.categoryId = "Kategori wajib dipilih";
     }
 
     if (formData.description && formData.description.length > 500) {
-      errors.description = "Description must not exceed 500 characters";
+      errors.description = "Deskripsi tidak boleh lebih dari 500 karakter";
     }
 
     setFormErrors(errors);
@@ -172,13 +136,14 @@ export default function EditProductPage() {
     e.preventDefault();
 
     if (!validateForm()) {
+      toast.warning("Harap periksa kembali data yang Anda masukkan.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const result = await updateProduct(productId, {
+      const result = await createProduct({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         unit: formData.unit.trim(),
@@ -191,62 +156,22 @@ export default function EditProductPage() {
       });
 
       if (result.success) {
-        // Redirect to product list page
-        router.push(`/${data.module}/${data.subModule}`);
+        toast.success(`Kategori "${formData.name.trim()}" berhasil dibuat.`);
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
-        // Handle server error
+        const errorMessage = result.error || `Gagal membuat ${data.subModule}`;
+        toast.error(errorMessage);
         setFormErrors({
-          name: result.error || `Failed to update ${data.subModule}`,
+          name: result.error || `Gagal membuat ${data.subModule}`,
         });
       }
     } catch (error) {
-      console.error(`Error updating ${data.subModule}:`, error);
-      setFormErrors({ name: "An unexpected error occurred" });
+      const errorMessage = "Terjadi kesalahan yang tidak terduga";
+      toast.error(errorMessage);
+      console.error(`Gagal membuat ${data.subModule}:`, error);
+      setFormErrors({ name: "Terjadi kesalahan yang tidak terduga" });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete this ${data.subModule}?`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const result = await deleteProduct(productId);
-
-      if (result.success) {
-        // Redirect to product list page
-        router.push(`/${data.module}/${data.subModule}`);
-      } else {
-        // Handle server error
-        alert(result.error || `Failed to delete ${data.subModule}`);
-      }
-    } catch (error) {
-      console.error(`Error deleting ${data.subModule}:`, error);
-      alert("An unexpected error occurred");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleToggleStatus = async () => {
-    if (!product) return;
-
-    try {
-      const result = await toggleProductStatus(productId);
-
-      if (result.success) {
-        setProduct({ ...product, isActive: !product.isActive });
-        setFormData({ ...formData, isActive: !product.isActive });
-      } else {
-        alert(result.error || "Failed to toggle product status");
-      }
-    } catch (error) {
-      console.error("Error toggling product status:", error);
-      alert("An unexpected error occurred");
     }
   };
 
@@ -255,47 +180,21 @@ export default function EditProductPage() {
     label: cat.name,
   }));
 
-  if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-6">
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-6">
-          <p className="text-red-600">Product not found.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={data.subModule}
+        headerTittle={`Buat ${data.subModule}`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
-
       <ManagementForm
         subModuleName={data.subModule}
         moduleName={data.module}
-        handleFormSubmit={handleFormSubmit}
         isSubmitting={isSubmitting}
-        handleDelete={handleDelete}
-        hideDeleteButton={false}
+        handleFormSubmit={handleFormSubmit}
       >
         <FormField
-          label="Product Name"
+          label="Nama Produk"
           htmlFor="name"
           required
           errorMessage={formErrors.name}
@@ -303,34 +202,32 @@ export default function EditProductPage() {
           <Input
             type="text"
             name="name"
-            placeholder="Enter product name"
+            placeholder="Masukkan nama produk"
             value={formData.name}
             onChange={e => handleInputChange("name", e.target.value)}
             maxLength={100}
           />
         </FormField>
-
         <FormField
-          label="Description"
+          label="Deskripsi"
           htmlFor="description"
           errorMessage={formErrors.description}
         >
           <InputTextArea
             name="description"
             value={formData.description}
-            placeholder="Enter product description (optional)"
+            placeholder="Masukkan deskripsi produk (opsional)"
             onChange={e => handleInputChange("description", e.target.value)}
             maxLength={500}
             rows={4}
           />
           <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/500 characters
+            {formData.description.length}/500 karakter
           </p>
         </FormField>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Unit"
+            label="Satuan"
             htmlFor="unit"
             required
             errorMessage={formErrors.unit}
@@ -338,15 +235,14 @@ export default function EditProductPage() {
             <Input
               type="text"
               name="unit"
-              placeholder="e.g., pcs, kg, liter"
+              placeholder="contoh: pcs, kg, liter"
               value={formData.unit}
               onChange={e => handleInputChange("unit", e.target.value)}
               maxLength={20}
             />
           </FormField>
-
           <FormField
-            label="Category"
+            label="Kategori"
             htmlFor="categoryId"
             required
             errorMessage={formErrors.categoryId}
@@ -355,23 +251,22 @@ export default function EditProductPage() {
               options={categoryOptions}
               value={formData.categoryId}
               onChange={value => handleInputChange("categoryId", value)}
-              placeholder="— Select a Category —"
+              placeholder="— Pilih Kategori —"
               errorMessage={formErrors.categoryId}
             />
           </FormField>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Price"
+            label="Harga Jual"
             htmlFor="price"
             required
             errorMessage={formErrors.price}
           >
             <Input
+              format="rupiah"
               type="number"
               name="price"
-              placeholder="0.00"
               value={formData.price.toString()}
               onChange={e =>
                 handleInputChange("price", parseFloat(e.target.value) || 0)
@@ -380,17 +275,16 @@ export default function EditProductPage() {
               step="0.01"
             />
           </FormField>
-
           <FormField
-            label="Cost"
+            label="Harga Modal"
             htmlFor="cost"
             required
             errorMessage={formErrors.cost}
           >
             <Input
-              type="number"
+              format="rupiah"
+              type="text"
               name="cost"
-              placeholder="0.00"
               value={formData.cost.toString()}
               onChange={e =>
                 handleInputChange("cost", parseFloat(e.target.value) || 0)
@@ -400,10 +294,9 @@ export default function EditProductPage() {
             />
           </FormField>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Minimum Stock"
+            label="Stok Minimum"
             htmlFor="minStock"
             required
             errorMessage={formErrors.minStock}
@@ -419,9 +312,8 @@ export default function EditProductPage() {
               min="0"
             />
           </FormField>
-
           <FormField
-            label="Current Stock"
+            label="Stok Saat Ini"
             htmlFor="currentStock"
             required
             errorMessage={formErrors.currentStock}
@@ -438,7 +330,6 @@ export default function EditProductPage() {
             />
           </FormField>
         </div>
-
         <FormField
           label="Status"
           htmlFor="isActive"
@@ -447,7 +338,7 @@ export default function EditProductPage() {
           <InputCheckbox
             checked={formData.isActive}
             onChange={e => handleInputChange("isActive", e.target.checked)}
-            label="Active (product will be available for use)"
+            label="Aktif (produk akan tersedia untuk digunakan)"
           />
         </FormField>
       </ManagementForm>
