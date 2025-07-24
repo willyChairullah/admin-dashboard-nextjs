@@ -24,7 +24,15 @@ export default async function RootLayout({
     <DataProvider data={myStaticData}>
       <div>
         {children}
-        <Toaster richColors position="bottom-right" />
+        <Toaster
+          duration={2300}
+          theme="system"
+          position="top-right"
+          offset={{ top: "135px" }}
+          swipeDirections={["right"]}
+          closeButton
+          richColors
+        />
       </div>{" "}
       {/* <-- Removed extra semicolon here */}
     </DataProvider>

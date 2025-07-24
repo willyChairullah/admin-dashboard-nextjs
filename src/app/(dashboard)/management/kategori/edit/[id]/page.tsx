@@ -70,10 +70,10 @@ export default function EditCategoryPage() {
           });
         } else {
           toast.error("Kategori tidak ditemukan.");
-          router.push("/management/category");
+          router.push(`/${data.module}/${data.subModule}`);
         }
       } catch (error) {
-        console.error("Error loading category:", error);
+        console.error("Error loading Kategori:", error);
         toast.error("Gagal memuat data kategori.");
         router.push(`/${data.module}/${data.subModule}`);
       } finally {
@@ -195,6 +195,8 @@ export default function EditCategoryPage() {
     return <div>Kategori tidak ditemukan</div>;
   }
 
+  console.log("sub" + data.subModule);
+
   return (
     <>
       <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -205,11 +207,10 @@ export default function EditCategoryPage() {
         />
 
         <ManagementForm
-          subModuleName={`Ubah ${data.subModule}`}
+          subModuleName={data.subModule.toLowerCase()}
           moduleName={data.module}
           isSubmitting={isSubmitting || isDeleting} // Gabungkan state loading
           handleFormSubmit={handleFormSubmit}
-          // --- [PERUBAHAN 4] handleDelete kini hanya membuka modal ---
           handleDelete={() => setIsDeleteModalOpen(true)}
           hideDeleteButton={false}
         >

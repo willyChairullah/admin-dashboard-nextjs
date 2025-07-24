@@ -354,10 +354,10 @@ export default function SideBar({
             roles: ["ADMIN", "OWNER"],
           },
           {
-            id: "products",
-            label: "Products",
+            id: "produk",
+            label: "Produk",
             icon: "📦",
-            href: "/management/product",
+            href: "/management/produk",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },

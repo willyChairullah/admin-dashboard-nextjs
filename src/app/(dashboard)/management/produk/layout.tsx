@@ -3,7 +3,8 @@
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
 import { getProducts } from "@/lib/actions/products";
-import { DataProvider } from "@/contexts/StaticData"; // <-- Corrected import path
+import { DataProvider } from "@/contexts/StaticData"; // <-- Corrected import
+import { Toaster } from "sonner";
 
 export default async function RootLayout({
   children,
@@ -13,7 +14,7 @@ export default async function RootLayout({
   // Data defined or fetched on the server side
   const myStaticData = {
     module: "management",
-    subModule: "product",
+    subModule: "Produk",
     allowedRole: ["OWNER", "ADMIN"],
     data: await getProducts(), // Await the async function
   };
@@ -21,7 +22,18 @@ export default async function RootLayout({
   return (
     // Wrap children with your DataProvider
     <DataProvider data={myStaticData}>
-      <div>{children}</div> {/* <-- Removed extra semicolon here */}
+      <div>
+        {children}{" "}
+        <Toaster
+          duration={2300}
+          theme="system"
+          position="top-right"
+          offset={{ top: "135px" }}
+          swipeDirections={["right"]}
+          closeButton
+          richColors
+        />
+      </div>
     </DataProvider>
   );
 }

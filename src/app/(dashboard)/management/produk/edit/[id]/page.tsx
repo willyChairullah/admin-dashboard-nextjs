@@ -1,19 +1,26 @@
 "use client";
-import { ManagementHeader } from "@/components/ui";
+import { ManagementForm, ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
+  Button,
   Input,
   FormField,
   InputCheckbox,
   InputTextArea,
-  ManagementForm,
   Select,
 } from "@/components/ui";
-import { createProduct } from "@/lib/actions/products";
+import {
+  getProductById,
+  updateProduct,
+  deleteProduct,
+  toggleProductStatus,
+} from "@/lib/actions/products";
 import { getCategories } from "@/lib/actions/categories";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import { Products } from "@prisma/client";
 import { useSharedData } from "@/contexts/StaticData";
-import { log } from "console";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
+import { toast } from "sonner";
 
 interface ProductFormData {
   name: string;
@@ -44,11 +51,17 @@ interface Category {
   name: string;
 }
 
-export default function CreateProductPage() {
-  const data = useSharedData();
+export default function EditProductPage() {
   const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
+
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [product, setProduct] = useState<Products | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     description: "",
@@ -61,23 +74,50 @@ export default function CreateProductPage() {
     categoryId: "",
   });
 
+  const data = useSharedData();
+
   const [formErrors, setFormErrors] = useState<ProductFormErrors>({});
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch categories
         const categoriesData = await getCategories();
         const activeCategories = categoriesData
           .filter(cat => cat.isActive)
           .map(cat => ({ id: cat.id, name: cat.name }));
         setCategories(activeCategories);
+
+        // Fetch product data
+        const productData = await getProductById(productId);
+        if (productData) {
+          setProduct(productData);
+          setFormData({
+            name: productData.name,
+            description: productData.description || "",
+            unit: productData.unit,
+            price: productData.price,
+            cost: productData.cost,
+            minStock: productData.minStock,
+            currentStock: productData.currentStock,
+            isActive: productData.isActive,
+            categoryId: productData.categoryId,
+          });
+        } else {
+          toast.error("Produk tidak ditemukan.");
+          router.push(`/${data.module}/${data.subModule}`);
+        }
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Error loading Produk:", error);
+        toast.error("Gagal memuat data Produk.");
+        router.push(`/${data.module}/${data.subModule}`);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchCategories();
-  }, []);
+    fetchData();
+  }, [productId, router, data.module, data.subModule]);
 
   const validateForm = (): boolean => {
     const errors: ProductFormErrors = {};
@@ -142,7 +182,7 @@ export default function CreateProductPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await createProduct({
+      const result = await updateProduct(productId, {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         unit: formData.unit.trim(),
@@ -156,18 +196,38 @@ export default function CreateProductPage() {
 
       if (result.success) {
         // Redirect to product list page
-        router.push(`/${data.module}/${data.subModule}`);
+
+        toast.success("Produk berhasil diperbarui.");
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
         // Handle server error
         setFormErrors({
-          name: result.error || `Failed to create ${data.subModule}`,
+          name: result.error || `Failed to update ${data.subModule}`,
         });
       }
     } catch (error) {
-      console.error(`Error creating ${data.subModule}:`, error);
+      console.error(`Error updating ${data.subModule}:`, error);
       setFormErrors({ name: "An unexpected error occurred" });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!product) return;
+
+    try {
+      const result = await toggleProductStatus(productId);
+
+      if (result.success) {
+        setProduct({ ...product, isActive: !product.isActive });
+        setFormData({ ...formData, isActive: !product.isActive });
+      } else {
+        alert(result.error || "Failed to toggle product status");
+      }
+    } catch (error) {
+      console.error("Error toggling product status:", error);
+      alert("An unexpected error occurred");
     }
   };
 
@@ -176,10 +236,54 @@ export default function CreateProductPage() {
     label: cat.name,
   }));
 
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="p-6">
+          <p className="text-red-600">Product not found.</p>
+        </div>
+      </div>
+    );
+  }
+  // --- [PERUBAHAN 3] Fungsi ini sekarang untuk Aksi Konfirmasi Hapus ---
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteProduct(productId);
+
+      if (result.success) {
+        toast.success("Produk berhasil dihapus.");
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
+      } else {
+        toast.error(result.error || "Gagal menghapus Produk");
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast.error("Terjadi kesalahan yang tidak terduga saat menghapus.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false); // Selalu tutup modal setelah aksi selesai
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={data.subModule}
+        headerTittle={`Ubah ${data.subModule}`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
@@ -189,9 +293,11 @@ export default function CreateProductPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        hideDeleteButton={false}
+        handleDelete={() => setIsDeleteModalOpen(true)}
       >
         <FormField
-          label="Product Name"
+          label="Nama Produk"
           htmlFor="name"
           required
           errorMessage={formErrors.name}
@@ -199,34 +305,32 @@ export default function CreateProductPage() {
           <Input
             type="text"
             name="name"
-            placeholder="Enter product name"
+            placeholder="Masukkan nama produk"
             value={formData.name}
             onChange={e => handleInputChange("name", e.target.value)}
             maxLength={100}
           />
         </FormField>
-
         <FormField
-          label="Description"
+          label="Deskripsi"
           htmlFor="description"
           errorMessage={formErrors.description}
         >
           <InputTextArea
             name="description"
             value={formData.description}
-            placeholder="Enter product description (optional)"
+            placeholder="Masukkan deskripsi produk (opsional)"
             onChange={e => handleInputChange("description", e.target.value)}
             maxLength={500}
             rows={4}
           />
           <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/500 characters
+            {formData.description.length}/500 karakter
           </p>
         </FormField>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Unit"
+            label="Satuan"
             htmlFor="unit"
             required
             errorMessage={formErrors.unit}
@@ -234,15 +338,14 @@ export default function CreateProductPage() {
             <Input
               type="text"
               name="unit"
-              placeholder="e.g., pcs, kg, liter"
+              placeholder="contoh: pcs, kg, liter"
               value={formData.unit}
               onChange={e => handleInputChange("unit", e.target.value)}
               maxLength={20}
             />
           </FormField>
-
           <FormField
-            label="Category"
+            label="Kategori"
             htmlFor="categoryId"
             required
             errorMessage={formErrors.categoryId}
@@ -251,23 +354,22 @@ export default function CreateProductPage() {
               options={categoryOptions}
               value={formData.categoryId}
               onChange={value => handleInputChange("categoryId", value)}
-              placeholder="— Select a Category —"
+              placeholder="— Pilih Kategori —"
               errorMessage={formErrors.categoryId}
             />
           </FormField>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Price"
+            label="Harga Jual"
             htmlFor="price"
             required
             errorMessage={formErrors.price}
           >
             <Input
+              format="rupiah"
               type="number"
               name="price"
-              placeholder="0.00"
               value={formData.price.toString()}
               onChange={e =>
                 handleInputChange("price", parseFloat(e.target.value) || 0)
@@ -276,17 +378,16 @@ export default function CreateProductPage() {
               step="0.01"
             />
           </FormField>
-
           <FormField
-            label="Cost"
+            label="Harga Modal"
             htmlFor="cost"
             required
             errorMessage={formErrors.cost}
           >
             <Input
-              type="number"
+              format="rupiah"
+              type="text"
               name="cost"
-              placeholder="0.00"
               value={formData.cost.toString()}
               onChange={e =>
                 handleInputChange("cost", parseFloat(e.target.value) || 0)
@@ -296,10 +397,9 @@ export default function CreateProductPage() {
             />
           </FormField>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
-            label="Minimum Stock"
+            label="Stok Minimum"
             htmlFor="minStock"
             required
             errorMessage={formErrors.minStock}
@@ -315,9 +415,8 @@ export default function CreateProductPage() {
               min="0"
             />
           </FormField>
-
           <FormField
-            label="Current Stock"
+            label="Stok Saat Ini"
             htmlFor="currentStock"
             required
             errorMessage={formErrors.currentStock}
@@ -334,7 +433,6 @@ export default function CreateProductPage() {
             />
           </FormField>
         </div>
-
         <FormField
           label="Status"
           htmlFor="isActive"
@@ -343,10 +441,24 @@ export default function CreateProductPage() {
           <InputCheckbox
             checked={formData.isActive}
             onChange={e => handleInputChange("isActive", e.target.checked)}
-            label="Active (product will be available for use)"
+            label="Aktif (produk akan tersedia untuk digunakan)"
           />
         </FormField>
       </ManagementForm>
+
+      {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="Konfirmasi Hapus Produk"
+      >
+        <p>
+          Apakah Anda yakin ingin menghapus Produk{" "}
+          <strong>{formData.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 }
