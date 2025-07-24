@@ -103,7 +103,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map(child => (
+          {item.children?.map((child) => (
             <MenuItemComponent
               key={child.id}
               item={child}
@@ -138,7 +138,7 @@ export default function SideBar({
         icon: "🏠",
         href: "/",
         children: [],
-        roles: ["ADMIN", "SALES", "WAREHOUSE", "OWNER"], // Added roles
+        roles: ["OWNER"], // Added roles
       },
       {
         id: "sales",
@@ -369,6 +369,14 @@ export default function SideBar({
             children: [],
             roles: ["ADMIN"],
           },
+          {
+            id: "users",
+            label: "Users",
+            icon: "👥",
+            href: "/management/users",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
         ],
       },
     ];
@@ -530,7 +538,7 @@ export default function SideBar({
 
       {/* Footer */}
       {shouldShowExpanded && (
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="mt-4 px-3 pb-3">
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
             <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
               © 2025 Indana ERP
