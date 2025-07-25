@@ -41,3 +41,85 @@ export async function createUser({
     };
   }
 }
+
+export async function getUsers() {
+  try {
+    const users = await db.users.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return users;
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    return [];
+  }
+}
+
+export async function getUserById(id: string) {
+  try {
+    const user = await db.users.findUnique({
+      where: {
+        id,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.error("Failed to fetch user:", error);
+    return null;
+  }
+}
+
+export async function updateUser({
+  id,
+  name,
+  email,
+  role,
+  password,
+  isActive,
+}: {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  password?: string;
+  isActive: boolean;
+}) {
+  // validate required fields
+  if (!id || !name || !email || !role) {
+    return {
+      success: false,
+      error: "Missing required fields",
+    };
+  }
+
+  try {
+    const updateData: any = {
+      name,
+      email,
+      role: role as UserRole,
+      isActive,
+    };
+
+    // Only update password if provided
+    if (password && password.trim()) {
+      updateData.password = password;
+    }
+
+    await db.users.update({
+      where: { id },
+      data: updateData,
+    });
+
+    revalidatePath("/management/users");
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("Failed to update user:", error);
+    return {
+      success: false,
+      error: "Failed to update user",
+    };
+  }
+}
