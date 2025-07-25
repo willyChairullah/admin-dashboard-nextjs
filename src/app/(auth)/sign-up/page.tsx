@@ -1,48 +1,24 @@
 "use client";
 
 import { Button } from "@/components/ui/common";
-import { handleSignIn } from "@/lib/actions/signin";
+import { signUp } from "@/lib/action";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 const Page = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [fieldErrors, setFieldErrors] = useState<{
-    email?: string;
-    password?: string;
-  }>({});
-
-  const validateForm = (formData: FormData) => {
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const errors: { email?: string; password?: string } = {};
-
-    if (!email) {
-      errors.email = "Email is required";
-    } else if (!email.includes("@")) {
-      errors.email = "Please enter a valid email address";
-    }
-
-    if (!password) {
-      errors.password = "Password is required";
-    } else if (password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  const [success, setSuccess] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
       {/* Animated Oil & Energy Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Oil Drop Animations */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-amber-500/20 to-orange-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-32 left-32 w-80 h-80 bg-gradient-to-tr from-yellow-500/15 to-amber-600/25 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 right-1/3 w-96 h-96 bg-gradient-to-r from-orange-400/10 to-red-500/15 rounded-full blur-3xl animate-slow-spin"></div>
+        <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-br from-amber-500/20 to-orange-600/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-32 right-32 w-80 h-80 bg-gradient-to-tr from-yellow-500/15 to-amber-600/25 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/3 w-96 h-96 bg-gradient-to-r from-orange-400/10 to-red-500/15 rounded-full blur-3xl animate-slow-spin"></div>
 
         {/* Grid Pattern Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
@@ -69,21 +45,41 @@ const Page = () => {
                 </h1>
                 <div className="w-24 h-1 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto rounded-full"></div>
                 <h2 className="text-xl font-semibold text-white/90">
-                  Enterprise Dashboard
+                  Enterprise Resource Planning
                 </h2>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
-                  Access your centralized business operations. Secure. Reliable.
-                  Efficient.
+                  Join our integrated business management system. Streamline
+                  operations, maximize efficiency.
                 </p>
               </div>
             </div>
 
-            {/* Enhanced Error Message */}
+            {/* Success Message */}
+            {success && (
+              <div className="animate-in slide-in-from-top-5 duration-300 bg-green-500/20 border border-green-500/30 rounded-xl p-4 text-green-400 text-sm">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Account created successfully! Redirecting to sign in...
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
             {error && (
               <div className="animate-in slide-in-from-top-5 duration-300 bg-red-500/20 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 flex-shrink-0 mt-0.5"
+                    className="w-4 h-4 flex-shrink-0"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -93,10 +89,7 @@ const Page = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <div>
-                    <p className="font-medium">Authentication Failed</p>
-                    <p className="text-red-300 mt-1">{error}</p>
-                  </div>
+                  {error}
                 </div>
               </div>
             )}
@@ -104,27 +97,52 @@ const Page = () => {
             {/* Premium Form Section */}
             <form
               className="relative space-y-6"
-              action={async (formData: FormData) => {
-                // Clear previous errors
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
                 setError(null);
-                setFieldErrors({});
+                setSuccess(false);
 
-                // Validate form on client side first
-                if (!validateForm(formData)) {
-                  return;
-                }
+                const formData = new FormData(e.currentTarget);
 
-                startTransition(async () => {
-                  const result = await handleSignIn(formData);
-
-                  if (result.success) {
-                    window.location.href = "/";
+                try {
+                  const res = await signUp(formData);
+                  if (res.success) {
+                    setSuccess(true);
+                    setTimeout(() => {
+                      window.location.href = "/sign-in";
+                    }, 2000);
                   } else {
-                    setError(result.message);
+                    setError(
+                      res.message || "Sign up failed. Please try again."
+                    );
                   }
-                });
+                } catch (error) {
+                  setError("An unexpected error occurred. Please try again.");
+                } finally {
+                  setIsLoading(false);
+                }
               }}
             >
+              {/* Full Name Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-300 block">
+                  Full Name
+                </label>
+                <div className="relative group">
+                  <input
+                    name="name"
+                    placeholder="Enter your full name"
+                    type="text"
+                    required
+                    autoComplete="name"
+                    disabled={isLoading}
+                    className="w-full h-12 px-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                </div>
+              </div>
+
               {/* Email Input */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300 block">
@@ -137,71 +155,32 @@ const Page = () => {
                     type="email"
                     required
                     autoComplete="email"
-                    disabled={isPending}
-                    className={`w-full h-12 px-4 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      fieldErrors.email
-                        ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                        : "border-white/20 focus:ring-amber-500/50 focus:border-amber-500/50"
-                    }`}
-                    onChange={() =>
-                      setFieldErrors((prev) => ({ ...prev, email: undefined }))
-                    }
+                    disabled={isLoading}
+                    className="w-full h-12 px-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  <div
-                    className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none ${
-                      fieldErrors.email
-                        ? "bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0"
-                        : "bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0"
-                    }`}
-                  ></div>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                 </div>
-                {fieldErrors.email && (
-                  <p className="text-red-400 text-xs flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {fieldErrors.email}
-                  </p>
-                )}
               </div>
 
               {/* Password Input */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300 block">
-                  Password
+                  Secure Password
                 </label>
                 <div className="relative group">
                   <input
                     name="password"
-                    placeholder="Enter your secure password"
+                    placeholder="Create a strong password"
                     type={showPassword ? "text" : "password"}
                     required
-                    autoComplete="current-password"
-                    disabled={isPending}
-                    className={`w-full h-12 px-4 pr-12 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      fieldErrors.password
-                        ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                        : "border-white/20 focus:ring-amber-500/50 focus:border-amber-500/50"
-                    }`}
-                    onChange={() =>
-                      setFieldErrors((prev) => ({
-                        ...prev,
-                        password: undefined,
-                      }))
-                    }
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    className="w-full h-12 px-4 pr-12 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isPending}
+                    disabled={isLoading}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-400 transition-colors duration-200 disabled:opacity-50"
                   >
                     {showPassword ? (
@@ -240,41 +219,19 @@ const Page = () => {
                       </svg>
                     )}
                   </button>
-                  <div
-                    className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none ${
-                      fieldErrors.password
-                        ? "bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0"
-                        : "bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0"
-                    }`}
-                  ></div>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                 </div>
-                {fieldErrors.password && (
-                  <p className="text-red-400 text-xs flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {fieldErrors.password}
-                  </p>
-                )}
               </div>
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isLoading}
                 className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-2xl shadow-amber-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-amber-500/40 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isPending ? (
+                  {isLoading ? (
                     <>
                       <svg
                         className="w-5 h-5 animate-spin"
@@ -289,7 +246,7 @@ const Page = () => {
                           d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                         />
                       </svg>
-                      Signing In...
+                      Creating Account...
                     </>
                   ) : (
                     <>
@@ -303,19 +260,45 @@ const Page = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
                         />
                       </svg>
-                      Access ERP Dashboard
+                      Create ERP Account
                     </>
                   )}
                 </span>
               </button>
             </form>
 
+            {/* Footer */}
+            <div className="relative text-center pt-6 border-t border-white/10">
+              <p className="text-gray-400 text-sm mb-4">
+                Already managing operations with us?
+              </p>
+              <Link
+                href="/sign-in"
+                className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 font-medium transition-colors duration-300 group"
+              >
+                <svg
+                  className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Sign In to Dashboard
+              </Link>
+            </div>
+
             {/* Security Badge */}
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-400 text-xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full text-green-400 text-xs">
                 <svg
                   className="w-3 h-3"
                   fill="currentColor"
@@ -323,11 +306,11 @@ const Page = () => {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    d="M10 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-7-4zM8.01 11.07L7 10.05 5.58 11.46 8.01 13.9 15.43 6.48 14.01 5.07l-6 6z"
                     clipRule="evenodd"
                   />
                 </svg>
-                SSL Encrypted Connection
+                Enterprise Security Enabled
               </div>
             </div>
           </div>
