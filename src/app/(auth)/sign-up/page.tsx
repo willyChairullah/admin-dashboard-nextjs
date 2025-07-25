@@ -2,9 +2,7 @@
 
 import { Button } from "@/components/ui/common";
 import { signUp } from "@/lib/action";
-import { auth } from "@/lib/auth";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { useState } from "react";
 
 const Page = () => {
@@ -12,10 +10,6 @@ const Page = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-
-  // Temporarily disable session check to avoid JWT errors
-  // const session = await auth();
-  // if (session) redirect("/");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">

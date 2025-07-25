@@ -1,20 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/common";
-import { auth, signIn } from "@/lib/auth";
-import { executeAction } from "@/lib/executeAction";
+import { handleSignIn } from "@/lib/actions/signin";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 const Page = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Temporarily disable session check to avoid JWT errors
-  // const session = await auth();
-  // if (session) redirect("/");
+  const [isPending, startTransition] = useTransition();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
@@ -82,43 +76,18 @@ const Page = () => {
             {/* Premium Form Section */}
             <form
               className="relative space-y-6"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setIsLoading(true);
-                setError(null);
-
-                const formData = new FormData(e.currentTarget);
-
-                try {
-                  const result = await executeAction({
-                    actionFn: async () => {
-                      const email = formData.get("email") as string;
-                      const password = formData.get("password") as string;
-
-                      const signInResult = await signIn("credentials", {
-                        email,
-                        password,
-                        redirect: false,
-                      });
-
-                      if (signInResult?.error) {
-                        throw new Error("Invalid email or password");
-                      }
-
-                      return signInResult;
-                    },
-                  });
-
+              action={async (formData: FormData) => {
+                startTransition(async () => {
+                  setError(null);
+                  
+                  const result = await handleSignIn(formData);
+                  
                   if (result.success) {
                     window.location.href = "/";
                   } else {
-                    setError("Sign in failed. Please try again.");
+                    setError(result.message);
                   }
-                } catch (error) {
-                  setError("Invalid email or password");
-                } finally {
-                  setIsLoading(false);
-                }
+                });
               }}
             >
               {/* Email Input */}
@@ -133,7 +102,7 @@ const Page = () => {
                     type="email"
                     required
                     autoComplete="email"
-                    disabled={isLoading}
+                    disabled={isPending}
                     className="w-full h-12 px-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0 opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
@@ -152,13 +121,13 @@ const Page = () => {
                     type={showPassword ? "text" : "password"}
                     required
                     autoComplete="current-password"
-                    disabled={isLoading}
+                    disabled={isPending}
                     className="w-full h-12 px-4 pr-12 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}
+                    disabled={isPending}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-400 transition-colors duration-200 disabled:opacity-50"
                   >
                     {showPassword ? (
@@ -204,12 +173,12 @@ const Page = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isPending}
                 className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-2xl shadow-amber-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-amber-500/40 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isLoading ? (
+                  {isPending ? (
                     <>
                       <svg
                         className="w-5 h-5 animate-spin"
