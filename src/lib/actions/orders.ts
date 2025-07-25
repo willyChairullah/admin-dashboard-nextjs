@@ -141,23 +141,96 @@ export async function createOrder({
         orderDate: new Date(),
         updatedAt: new Date(),
       },
+    });
+
+    // Create order items by looking up products by name
+    const orderItems = [];
+    const notFoundProducts = [];
+    const insufficientStockProducts = [];
+
+    for (const item of items) {
+      // Find product by name
+      const product = await db.products.findFirst({
+        where: {
+          name: {
+            equals: item.productName,
+            mode: "insensitive",
+          },
+          isActive: true,
+        },
+      });
+
+      if (!product) {
+        notFoundProducts.push(item.productName);
+        continue;
+      }
+
+      // Check if there's enough stock
+      if (product.currentStock < item.quantity) {
+        insufficientStockProducts.push({
+          productName: item.productName,
+          available: product.currentStock,
+          required: item.quantity,
+        });
+        // Continue creating the order item but log the issue
+      }
+
+      // Create order item
+      const orderItem = await db.orderItems.create({
+        data: {
+          orderId: order.id,
+          productId: product.id,
+          quantity: item.quantity,
+          price: item.price,
+          totalPrice: item.quantity * item.price,
+        },
+      });
+
+      orderItems.push(orderItem);
+
+      // Update product stock only if order doesn't require confirmation
+      if (!requiresConfirmation) {
+        await db.products.update({
+          where: { id: product.id },
+          data: {
+            currentStock: Math.max(0, product.currentStock - item.quantity),
+          },
+        });
+      }
+    }
+
+    // Check if any critical errors occurred
+    if (notFoundProducts.length > 0) {
+      console.warn(`Products not found: ${notFoundProducts.join(", ")}`);
+    }
+
+    if (insufficientStockProducts.length > 0) {
+      console.warn(
+        `Insufficient stock for products:`,
+        insufficientStockProducts
+      );
+    }
+
+    // Fetch the complete order with all relations
+    const completeOrder = await db.orders.findUnique({
+      where: { id: order.id },
       include: {
         customer: true,
         sales: true, // This is the sales rep relation
-        orderItems: true,
+        orderItems: {
+          include: {
+            products: true, // Include product details
+          },
+        },
       },
     });
-
-    // Note: Order items creation is currently not implemented due to schema mismatch
-    // The order_items table requires productId, but we're receiving productName
-    // This would need to be handled separately by looking up products or modifying the schema
 
     revalidatePath("/orders");
     revalidatePath("/admin/orders");
 
     return {
       success: true,
-      data: order,
+      data: completeOrder,
       message: requiresConfirmation
         ? "Order berhasil dibuat dan menunggu konfirmasi admin!"
         : "Order berhasil dibuat!",
@@ -239,6 +312,13 @@ export async function confirmOrder({
   try {
     const order = await db.orders.findUnique({
       where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
     });
 
     if (!order) {
@@ -246,6 +326,22 @@ export async function confirmOrder({
         success: false,
         error: "Order not found",
       };
+    }
+
+    // If approving the order, update product stock
+    if (approve) {
+      for (const orderItem of order.orderItems) {
+        const product = orderItem.products;
+        await db.products.update({
+          where: { id: product.id },
+          data: {
+            currentStock: Math.max(
+              0,
+              product.currentStock - orderItem.quantity
+            ),
+          },
+        });
+      }
     }
 
     const updatedOrder = await db.orders.update({
@@ -259,7 +355,11 @@ export async function confirmOrder({
       include: {
         customer: true,
         sales: true, // This is the sales rep relation
-        orderItems: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
       },
     });
 
