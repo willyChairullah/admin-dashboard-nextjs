@@ -2,17 +2,6 @@ import { ManagementContent, ManagementHeader } from "@/components/ui";
 import { UserRole } from "@prisma/client";
 import { getUsers } from "@/lib/actions/user";
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  password?: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 // Columns Definition
 const columns = [
   { header: "Name", accessor: "name" },
