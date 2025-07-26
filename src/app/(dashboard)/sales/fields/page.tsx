@@ -113,15 +113,37 @@ export default function SalesFieldPage() {
 
       // Add all selected files to FormData
       Array.from(files).forEach((file) => {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          alert(`File ${file.name} bukan gambar yang valid`);
+          return;
+        }
+
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          alert(`File ${file.name} terlalu besar. Maksimal 5MB`);
+          return;
+        }
+
         formData.append("files", file);
       });
+
+      console.log("Uploading files to server...");
 
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
+      console.log("Upload response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
+      console.log("Upload result:", result);
 
       if (result.success) {
         // Add uploaded file paths to photos state
@@ -132,13 +154,19 @@ export default function SalesFieldPage() {
           fileInputRef.current.value = "";
         }
 
+        alert(`${result.files.length} foto berhasil diupload!`);
         console.log(`${result.files.length} foto berhasil diupload ke server`);
       } else {
+        console.error("Upload failed:", result.error);
         alert(`Gagal mengupload foto: ${result.error}`);
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Gagal mengupload foto. Coba lagi nanti.");
+      alert(
+        `Gagal mengupload foto: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsUploadingPhotos(false);
     }
