@@ -377,6 +377,14 @@ export default function SideBar({
             children: [],
             roles: ["ADMIN", "OWNER"],
           },
+          {
+            id: "field-visits",
+            label: "Field Visit Logs",
+            icon: "📍",
+            href: "/management/field-visits",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
         ],
       },
     ];

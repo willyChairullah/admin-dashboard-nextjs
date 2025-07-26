@@ -8,12 +8,22 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Loading from "@/components/ui/common/Loading";
 import { Button } from "@/components/ui/common";
 import { Card } from "@/components/ui/common";
+import { getProducts } from "@/lib/actions/products";
 
 interface Store {
   id: string;
   name: string;
   address: string;
   phone: string | null;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  unit: string;
+  currentStock: number;
+  isActive: boolean;
 }
 
 interface OrderItem {
@@ -26,6 +36,8 @@ export default function OrdersPage() {
   const { user, loading: userLoading } = useCurrentUser();
   const [isSaving, setIsSaving] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [, startTransition] = useTransition();
 
   // Form states
@@ -44,6 +56,7 @@ export default function OrdersPage() {
   // Load data on component mount
   useEffect(() => {
     loadStores();
+    loadProducts();
   }, []);
 
   const loadStores = async () => {
@@ -54,6 +67,18 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error("Error loading stores:", error);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const products = await getProducts();
+      setProducts(products);
+    } catch (error) {
+      console.error("Error loading products:", error);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -164,7 +189,7 @@ export default function OrdersPage() {
     }
   };
 
-  if (userLoading) {
+  if (userLoading || loadingProducts) {
     return <Loading />;
   }
 
@@ -370,15 +395,33 @@ export default function OrdersPage() {
                       className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-md"
                     >
                       <div className="flex-1 min-w-0">
-                        <input
-                          type="text"
+                        <select
                           value={item.productName}
-                          onChange={(e) =>
-                            updateItem(index, "productName", e.target.value)
-                          }
-                          placeholder="Nama produk"
-                          className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                        />
+                          onChange={(e) => {
+                            const selectedProduct = products.find(
+                              (p) => p.name === e.target.value
+                            );
+                            updateItem(index, "productName", e.target.value);
+                            if (selectedProduct) {
+                              updateItem(index, "price", selectedProduct.price);
+                            }
+                          }}
+                          className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                        >
+                          <option value="">Pilih Produk</option>
+                          {products
+                            .filter(
+                              (product) =>
+                                product.isActive && product.currentStock > 0
+                            )
+                            .map((product) => (
+                              <option key={product.id} value={product.name}>
+                                {product.name} - Rp{" "}
+                                {product.price.toLocaleString("id-ID")} (
+                                {product.unit}) - Stock: {product.currentStock}
+                              </option>
+                            ))}
+                        </select>
                       </div>
                       <div className="flex items-center gap-3 sm:gap-2">
                         <div className="w-16 sm:w-20 flex-shrink-0">
