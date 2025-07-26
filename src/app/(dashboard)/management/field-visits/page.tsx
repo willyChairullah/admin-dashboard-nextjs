@@ -14,6 +14,8 @@ import {
   Store,
   Loader2,
   Image,
+  Navigation,
+  ExternalLink,
 } from "lucide-react";
 import {
   getAllFieldVisits,
@@ -114,6 +116,11 @@ export default function FieldVisitsPage() {
     } finally {
       setDeleteAllLoading(false);
     }
+  };
+
+  const handleLocationClick = (latitude: number, longitude: number) => {
+    const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    window.open(googleMapsUrl, "_blank");
   };
 
   const PhotoViewer = ({ photos }: { photos: string[] }) => {
@@ -394,6 +401,33 @@ export default function FieldVisitsPage() {
                       </p>
                     </div>
                   )}
+
+                  {/* Location Preview */}
+                  <div
+                    className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors duration-200"
+                    onClick={() =>
+                      handleLocationClick(visit.latitude, visit.longitude)
+                    }
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-semibold text-blue-800 dark:text-blue-300 text-xs uppercase tracking-wide mb-2 flex items-center">
+                          <Navigation className="h-3 w-3 mr-1" />
+                          GPS Location
+                        </p>
+                        <p className="text-gray-900 dark:text-white text-sm font-mono">
+                          {visit.latitude.toFixed(6)},{" "}
+                          {visit.longitude.toFixed(6)}
+                        </p>
+                      </div>
+                      <div className="flex items-center text-blue-600 dark:text-blue-400">
+                        <ExternalLink className="h-4 w-4 ml-2" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 italic">
+                      Click to view on Google Maps
+                    </p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -448,9 +482,23 @@ export default function FieldVisitsPage() {
                     <label className="text-sm font-semibold text-blue-800 uppercase tracking-wide">
                       GPS Coordinates
                     </label>
-                    <p className="text-gray-900 font-medium mt-1 font-mono text-sm">
-                      {selectedVisit.latitude.toFixed(6)},{" "}
-                      {selectedVisit.longitude.toFixed(6)}
+                    <div
+                      className="text-gray-900 font-medium mt-1 font-mono text-sm cursor-pointer hover:text-blue-600 transition-colors duration-200 flex items-center group"
+                      onClick={() =>
+                        handleLocationClick(
+                          selectedVisit.latitude,
+                          selectedVisit.longitude
+                        )
+                      }
+                    >
+                      <span className="mr-2">
+                        {selectedVisit.latitude.toFixed(6)},{" "}
+                        {selectedVisit.longitude.toFixed(6)}
+                      </span>
+                      <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-blue-600" />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 italic">
+                      Click to view on Google Maps
                     </p>
                   </div>
                 </div>
