@@ -12,11 +12,14 @@ import {
   getProductionLogById,
   getAvailableProducts,
   getAvailableUsers,
+  deleteProductionLog,
 } from "@/lib/actions/productionLogs";
 import { useRouter, useParams } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
+import { deleteProduct } from "@/lib/actions/products";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 
 interface ProductionLogItemFormData {
   productId: string;
@@ -57,11 +60,15 @@ export default function EditProductionLogPage() {
   const data = useSharedData();
   const router = useRouter();
   const params = useParams();
+  const productionId = params.id as string;
+
   const productionLogId = params.id as string;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [formData, setFormData] = useState<ProductionLogFormData>({
     productionDate: "",
@@ -214,6 +221,27 @@ export default function EditProductionLogPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const result = await deleteProductionLog(productionId);
+
+      if (result.success) {
+        toast.success("Produksi berhasil dihapus.");
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
+      } else {
+        toast.error(result.error || "Gagal menghapus produksi");
+      }
+    } catch (error) {
+      console.error("Error menghapus produksi:", error);
+      toast.error("Terjadi kesalahan yang tidak terduga saat menghapus.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false); // Selalu tutup modal setelah aksi selesai
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -275,6 +303,8 @@ export default function EditProductionLogPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        hideDeleteButton={false}
+        handleDelete={() => setIsDeleteModalOpen(true)}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -427,6 +457,20 @@ export default function EditProductionLogPage() {
           ))}
         </div>
       </ManagementForm>
+      {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="Konfirmasi Hapus Produksi"
+      >
+        <p>
+          Apakah Anda yakin ingin menghapus Produksi{" "}
+          <strong>{formData.notes}</strong>? Tindakan ini tidak dapat
+          dibatalkan.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 }
