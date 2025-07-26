@@ -103,7 +103,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map((child) => (
+          {item.children?.map(child => (
             <MenuItemComponent
               key={child.id}
               item={child}
@@ -221,10 +221,10 @@ export default function SideBar({
             roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },
           {
-            id: "stock-management",
-            label: "Stock Management",
-            icon: "🗄️",
-            href: "/inventory/stock",
+            id: "production-logs",
+            label: "Production Logs",
+            icon: "🏭",
+            href: "/inventory/manajemen-stok",
             children: [],
             roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           },

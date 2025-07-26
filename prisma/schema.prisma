@@ -61,49 +61,51 @@ model Customers {
 }
 
 model Products {
-  id                String             @id @default(cuid())
-  name              String
-  description       String?
-  unit              String
-  price             Float
-  cost              Float
-  minStock          Int                @default(0)
-  currentStock      Int                @default(0)
-  isActive          Boolean            @default(true)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  categoryId        String
-  category          Categories         @relation(fields: [categoryId], references: [id])
-  invoiceItems      InvoiceItems[]
-  orderItems        OrderItems[]
-  stockMovements    StockMovements[]
-  salesReturnItems  SalesReturnItems[] // Tambahan untuk Retur
-  stockOpnameItems  StockOpnameItems[] // Tambahan untuk Stok Opname
+  id                 String               @id @default(cuid())
+  name               String
+  description        String?
+  unit               String
+  price              Float
+  cost               Float
+  minStock           Int                  @default(0)
+  currentStock       Int                  @default(0)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  categoryId         String
+  category           Categories           @relation(fields: [categoryId], references: [id])
+  invoiceItems       InvoiceItems[]
+  orderItems         OrderItems[]
+  stockMovements     StockMovements[]
+  salesReturnItems   SalesReturnItems[] // Tambahan untuk Retur
+  stockOpnameItems   StockOpnameItems[] // Tambahan untuk Stok Opname
+  ProductionLogItems ProductionLogItems[]
 
   @@map("products")
 }
 
 model Users {
-  id                      String                @id @default(cuid())
-  email                   String                @unique
-  name                    String
-  password                String
-  role                    UserRole              @default(SALES)
-  phone                   String?
-  address                 String?
-  isActive                Boolean               @default(true)
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  customerVisits          CustomerVisits[]
-  deliveryNotes           DeliveryNotes[]
-  fieldVisits             FieldVisit[]
-  orders                  Orders[]
-  stockMovements          StockMovements[]
-  transactions            Transactions[]
-  userNotifications       UserNotifications[]
-  stockOpnames            StockOpnames[]        // Tambahan: Siapa yang melakukan Stok Opname
-  processedSalesReturns   SalesReturns[]        @relation("AdminProcessor") // Tambahan: Admin yg proses retur
-  requestedSalesReturns   SalesReturns[]        @relation("SalesRequester") // Tambahan: Sales yg request retur
+  id                    String              @id @default(cuid())
+  email                 String              @unique
+  name                  String
+  password              String
+  role                  UserRole            @default(SALES)
+  phone                 String?
+  address               String?
+  isActive              Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  customerVisits        CustomerVisits[]
+  deliveryNotes         DeliveryNotes[]
+  fieldVisits           FieldVisit[]
+  orders                Orders[]
+  stockMovements        StockMovements[]
+  transactions          Transactions[]
+  userNotifications     UserNotifications[]
+  stockOpnames          StockOpnames[] // Tambahan: Siapa yang melakukan Stok Opname
+  processedSalesReturns SalesReturns[]      @relation("AdminProcessor") // Tambahan: Admin yg proses retur
+  requestedSalesReturns SalesReturns[]      @relation("SalesRequester") // Tambahan: Sales yg request retur
+  ProductionLogs        ProductionLogs[]
 
   @@map("users")
 }
@@ -113,15 +115,15 @@ model Users {
 // =================================
 
 model Orders {
-  id                   String         @id @default(cuid())
-  orderNumber          String         @unique
-  orderDate            DateTime       @default(now())
+  id                   String           @id @default(cuid())
+  orderNumber          String           @unique
+  orderDate            DateTime         @default(now())
   deliveryDate         DateTime?
-  status               OrderStatus    @default(NEW)
-  totalAmount          Float          @default(0)
+  status               OrderStatus      @default(NEW)
+  totalAmount          Float            @default(0)
   notes                String?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
   customerId           String
   salesId              String
   adminNotes           String?
@@ -129,13 +131,14 @@ model Orders {
   completedAt          DateTime?
   confirmedAt          DateTime?
   confirmedBy          String?
-  requiresConfirmation Boolean        @default(false)
+  requiresConfirmation Boolean          @default(false)
   deliveryNotes        DeliveryNotes?
   invoice              Invoices?
   orderItems           OrderItems[]
-  customer             Customers      @relation(fields: [customerId], references: [id])
-  sales                Users          @relation(fields: [salesId], references: [id])
+  customer             Customers        @relation(fields: [customerId], references: [id])
+  sales                Users            @relation(fields: [salesId], references: [id])
   salesReturns         SalesReturns[] // Tambahan untuk Retur
+  StockMovements       StockMovements[]
 
   @@map("orders")
 }
@@ -268,26 +271,30 @@ model TransactionItems {
 // MODUL INVENTARIS
 // =================================
 
+// Model ini menjadi pusat dari semua aktivitas di halaman "Manajemen Stok".
 model StockMovements {
-  id            String            @id @default(cuid())
-  movementDate  DateTime          @default(now())
-  type          StockMovementType
-  quantity      Float
-  previousStock Int
-  newStock      Int
-  reference     String?
-  notes         String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  productId     String
-  userId        String
-  products      Products          @relation(fields: [productId], references: [id])
-  users         Users             @relation(fields: [userId], references: [id])
+  id               String            @id @default(cuid())
+  movementDate     DateTime          @default(now())
+  type             StockMovementType // Enum ini menjadi kunci utama
+  quantity         Float // Jumlah stok yang berubah
+  previousStock    Int
+  newStock         Int
+  reference        String? // Bisa diisi ID Order, ID Produksi, atau catatan manual
+  productionLogsItemsId String?
+  ordersId         String?
+  notes            String? // Catatan untuk penyesuaian
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  productId        String
+  userId           String // User yang melakukan aksi
+  products         Products          @relation(fields: [productId], references: [id])
+  users            Users             @relation(fields: [userId], references: [id])
+  productionLogItemId  ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id]) // FK ke ProductionLogs
+  orderId          Orders?           @relation(fields: [ordersId], references: [id]) // FK ke tabel Orders (jika ada)
 
   @@map("stock_movements")
 }
 
-// === BARU: MODUL STOK OPNAME ===
 model StockOpnames {
   id               String             @id @default(cuid())
   opnameDate       DateTime           @default(now())
@@ -301,20 +308,18 @@ model StockOpnames {
 }
 
 model StockOpnameItems {
-  id             String       @id @default(cuid())
-  systemStock    Int
-  physicalStock  Int
-  difference     Int
-  opnameId       String
-  productId      String
-  stockOpname    StockOpnames @relation(fields: [opnameId], references: [id], onDelete: Cascade)
-  product        Products     @relation(fields: [productId], references: [id])
+  id            String       @id @default(cuid())
+  systemStock   Int
+  physicalStock Int
+  difference    Int
+  opnameId      String
+  productId     String
+  stockOpname   StockOpnames @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  product       Products     @relation(fields: [productId], references: [id])
 
   @@map("stock_opname_items")
 }
 
-
-// === BARU: MODUL RETUR PENJUALAN ===
 model SalesReturns {
   id               String             @id @default(cuid())
   returnDate       DateTime           @default(now())
@@ -335,16 +340,40 @@ model SalesReturns {
 }
 
 model SalesReturnItems {
-  id             String       @id @default(cuid())
-  quantity       Float
-  returnId       String
-  productId      String
-  salesReturn    SalesReturns @relation(fields: [returnId], references: [id], onDelete: Cascade)
-  product        Products     @relation(fields: [productId], references: [id])
+  id          String       @id @default(cuid())
+  quantity    Float
+  returnId    String
+  productId   String
+  salesReturn SalesReturns @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  product     Products     @relation(fields: [productId], references: [id])
 
   @@map("sales_return_items")
 }
 
+model ProductionLogs {
+  id             String               @id @default(cuid())
+  // batchNumber    String               @unique
+  productionDate DateTime             @default(now())
+  status         ProductionStatus     @default(COMPLETED)
+  notes          String?
+  producedById   String
+  producedBy     Users                @relation(fields: [producedById], references: [id])
+  items          ProductionLogItems[]
+
+  @@map("production_logs")
+}
+
+model ProductionLogItems {
+  id              String         @id @default(cuid())
+  quantity        Float
+  productionLogId String
+  productId       String
+  productionLog   ProductionLogs @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
+  product         Products       @relation(fields: [productId], references: [id])
+  StockMovements StockMovements[]
+
+  @@map("production_log_items")
+}
 
 // =================================
 // MODUL LAIN-LAIN
@@ -402,14 +431,14 @@ model Settings {
 }
 
 model Notifications {
-  id                String                @id @default(cuid())
+  id                String              @id @default(cuid())
   title             String
   message           String
   type              String
-  isGlobal          Boolean               @default(false)
-  isRead            Boolean               @default(false)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  isGlobal          Boolean             @default(false)
+  isRead            Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   userNotifications UserNotifications[]
 
   @@map("notifications")
@@ -428,7 +457,6 @@ model UserNotifications {
   @@unique([userId, notificationId])
   @@map("user_notifications")
 }
-
 
 // =================================
 // ENUMS
@@ -460,9 +488,15 @@ enum OrderStatus {
 }
 
 enum StockMovementType {
-  IN
-  OUT
-  ADJUSTMENT
+  // --- Tipe Otomatis oleh Sistem ---
+  PRODUCTION_IN // Stok masuk dari hasil produksi (dari tabel ProductionLogs)
+  SALES_OUT // Stok keluar karena penjualan (dari tabel DeliveryNotes)
+  RETURN_IN // Stok masuk dari retur penjualan (dari tabel SalesReturns)
+
+  // --- Tipe Manual dari Halaman Manajemen Stok ---
+  ADJUSTMENT_IN // Penambahan stok manual (misal: ditemukan kelebihan)
+  ADJUSTMENT_OUT // Pengurangan stok manual (misal: barang rusak, sampel, pemakaian internal)
+  OPNAME_ADJUSTMENT // Penyesuaian dari hasil Stok Opname
 }
 
 enum TransactionType {
@@ -489,4 +523,11 @@ enum OpnameStatus {
   IN_PROGRESS
   COMPLETED
   RECONCILED
+}
+
+// Enum ini tidak berubah
+enum ProductionStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
