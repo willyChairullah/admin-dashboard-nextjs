@@ -1,12 +1,12 @@
-// app/inventory/manajemen-stok/layout.tsx
+// app/inventory/stok-opname/layout.tsx
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getManagementStocks } from "@/lib/actions/managementStocks";
+import { getStockOpnames } from "@/lib/actions/stockOpnames";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
-export default async function ManajemenStokLayout({
+export default async function StokOpnameLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -14,9 +14,9 @@ export default async function ManajemenStokLayout({
   // Data defined or fetched on the server side
   const myStaticData = {
     module: "inventory",
-    subModule: "manajemen-stok",
+    subModule: "stok-opname",
     allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
-    data: await getManagementStocks(), // Await the async function
+    data: await getStockOpnames(), // Await the async function
   };
 
   return (

@@ -80,6 +80,7 @@ model Products {
   salesReturnItems   SalesReturnItems[] // Tambahan untuk Retur
   stockOpnameItems   StockOpnameItems[] // Tambahan untuk Stok Opname
   ProductionLogItems ProductionLogItems[]
+  ManagementStockItems ManagementStockItems[]
 
   @@map("products")
 }
@@ -106,6 +107,7 @@ model Users {
   processedSalesReturns SalesReturns[]      @relation("AdminProcessor") // Tambahan: Admin yg proses retur
   requestedSalesReturns SalesReturns[]      @relation("SalesRequester") // Tambahan: Sales yg request retur
   ProductionLogs        ProductionLogs[]
+  ManagementStocks        ManagementStocks[]
 
   @@map("users")
 }
@@ -281,6 +283,8 @@ model StockMovements {
   newStock         Int
   reference        String? // Bisa diisi ID Order, ID Produksi, atau catatan manual
   productionLogsItemsId String?
+  ManagementStockItemsId String?
+  StockOpnameItemsId String?
   ordersId         String?
   notes            String? // Catatan untuk penyesuaian
   createdAt        DateTime          @default(now())
@@ -289,8 +293,10 @@ model StockMovements {
   userId           String // User yang melakukan aksi
   products         Products          @relation(fields: [productId], references: [id])
   users            Users             @relation(fields: [userId], references: [id])
-  productionLogItemId  ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id]) // FK ke ProductionLogs
   orderId          Orders?           @relation(fields: [ordersId], references: [id]) // FK ke tabel Orders (jika ada)
+  StockOpnameItemId  StockOpnameItems?   @relation(fields: [StockOpnameItemsId], references: [id]) // FK ke ProductionLogs
+  managementStockItemId  ManagementStockItems?   @relation(fields: [ManagementStockItemsId], references: [id]) // FK ke ProductionLogs
+  productionLogItemId  ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id]) // FK ke ProductionLogs
 
   @@map("stock_movements")
 }
@@ -298,7 +304,7 @@ model StockMovements {
 model StockOpnames {
   id               String             @id @default(cuid())
   opnameDate       DateTime           @default(now())
-  status           OpnameStatus       @default(IN_PROGRESS)
+  status           OpnameStatus       @default(RECONCILED)
   notes            String?
   conductedById    String
   conductedBy      Users              @relation(fields: [conductedById], references: [id])
@@ -316,6 +322,7 @@ model StockOpnameItems {
   productId     String
   stockOpname   StockOpnames @relation(fields: [opnameId], references: [id], onDelete: Cascade)
   product       Products     @relation(fields: [productId], references: [id])
+  StockMovements StockMovements[]
 
   @@map("stock_opname_items")
 }
@@ -373,6 +380,31 @@ model ProductionLogItems {
   StockMovements StockMovements[]
 
   @@map("production_log_items")
+}
+
+model ManagementStocks {
+  id             String               @id @default(cuid())
+  // batchNumber    String               @unique
+  managementDate DateTime             @default(now())
+  status         ManagementStockStatus     @default(IN)
+  notes          String?
+  producedById   String
+  producedBy     Users                @relation(fields: [producedById], references: [id])
+  items          ManagementStockItems[]
+
+  @@map("management_stocks")
+}
+
+model ManagementStockItems {
+  id              String         @id @default(cuid())
+  quantity        Float
+  managementStockId String
+  productId       String
+  managementStock   ManagementStocks @relation(fields: [managementStockId], references: [id], onDelete: Cascade)
+  product         Products       @relation(fields: [productId], references: [id])
+  StockMovements StockMovements[]
+
+  @@map("management_stock_items")
 }
 
 // =================================
@@ -530,4 +562,10 @@ enum ProductionStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum ManagementStockStatus {
+  IN
+  OUT
+  OPNAME_ADJUSTMENT
 }

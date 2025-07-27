@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getManagementStocks } from "@/lib/actions/managementStocks";
+import { getProductionLogs } from "@/lib/actions/productionLogs";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
@@ -14,9 +14,9 @@ export default async function ManajemenStokLayout({
   // Data defined or fetched on the server side
   const myStaticData = {
     module: "inventory",
-    subModule: "manajemen-stok",
+    subModule: "Produksi",
     allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
-    data: await getManagementStocks(), // Await the async function
+    data: await getProductionLogs(), // Await the async function
   };
 
   return (

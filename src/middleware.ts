@@ -15,7 +15,7 @@ export default async function middleware(request: NextRequest) {
   console.log("🔥 Session:", session ? "Authenticated" : "Unauthenticated");
   if (session?.user) {
     console.log("🔥 User Role:", session.user.role);
-    console.log("🔥 Full Session:", JSON.stringify(session.user, null, 2));
+    // console.log("🔥 Full Session:", JSON.stringify(session.user, null, 2));
   }
 
   // --- 1. Handle unauthenticated users ---

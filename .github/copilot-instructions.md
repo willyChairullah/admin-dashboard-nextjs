@@ -1,28 +1,30 @@
 I want to create a CRUD page from this database:
 
-model ProductionLogs {
-  id             String               @id @default(cuid())
-  // batchNumber    String               @unique
-  productionDate DateTime             @default(now())
-  status         ProductionStatus     @default(COMPLETED)
-  notes          String?
-  producedById   String
-  producedBy     Users                @relation(fields: [producedById], references: [id])
-  items          ProductionLogItems[]
 
-  @@map("production_logs")
+model StockOpnames {
+  id               String             @id @default(cuid())
+  opnameDate       DateTime           @default(now())
+  status           OpnameStatus       @default(IN_PROGRESS)
+  notes            String?
+  conductedById    String
+  conductedBy      Users              @relation(fields: [conductedById], references: [id])
+  stockOpnameItems StockOpnameItems[]
+
+  @@map("stock_opnames")
 }
 
-model ProductionLogItems {
-  id              String         @id @default(cuid())
-  quantity        Float
-  productionLogId String
-  productId       String
-  productionLog   ProductionLogs @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
-  product         Products       @relation(fields: [productId], references: [id])
+model StockOpnameItems {
+  id            String       @id @default(cuid())
+  systemStock   Int
+  physicalStock Int
+  difference    Int
+  opnameId      String
+  productId     String
+  stockOpname   StockOpnames @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  product       Products     @relation(fields: [productId], references: [id])
   StockMovements StockMovements[]
 
-  @@map("production_log_items")
+  @@map("stock_opname_items")
 }
 
 model StockMovements {
@@ -48,40 +50,38 @@ model StockMovements {
   @@map("stock_movements")
 }
 
-Will reference the folder page "/management/kategori"
+Will reference the folder page "/inventori/produksi"
 
-In the Sidebar Page, it will be named the stock management module. The page created will be placed at the path "inventory/manajemen-stok" and read on layout.tsx will contain this data:
+In the Sidebar Page, it will be named the "Stok Opname". The page created will be placed at the path "inventory/stok-opname" and read on layout.tsx will contain this data:
 const myStaticData = {
 module: "inventory",
-subModule: "manajemen-stok",
+subModule: "stok-opname",
 allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
 data: await getCategories(), // adjust according to the data retrieval
 };
 
 Main Features:
 
-Production In - Adding stock from production results
+Just Compare Stock in Databse with Real Stock (not automaticly change stock in database)
 
-Production Form with options:
+Stock Opname Form with the following options:
+  
+Opname Date  
+Notes  
+User performing the action  
+List of Items that:
 
-Type: Production In
-Production Date
-Notes
-User performing the action
-List of Items that can be added/removed:
-
-Select product
-Input quantity
-Notes per item
+Select product  
+Show database quantity product
+Enter quantity  
+Notes per item  
 Data Storage:
 
-Save to ProductionLogs
-Save details to ProductionLogItems
-Automatically create StockMovements with type PRODUCTION_IN
-Automatically update product stock
-Example Scenario:
+Save to StockOpnames  
+Save details to StockOpnamesItems
 
-Production In: Today producing 100 units of Product A
-Is this understanding correct? If so, I will create a system that supports both types of production (in and out) with a flexible form to add multiple items in a single production log.
+Example Scenarios:
+Today Notes, Product A is 100 and in real stock is 90
+to change different stock it is will do in modul manajemen-stok
 
 Make everything complete so that it can CRUD the data.

@@ -1,5 +1,6 @@
-// app/inventory/manajemen-stok/edit/[id]/page.tsx
+// app/inventory/manajemen-stok/create/page.tsx
 "use client";
+import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
   Input,
@@ -7,20 +8,16 @@ import {
   InputTextArea,
   ManagementForm,
   InputDate,
-  ManagementHeader,
 } from "@/components/ui";
 import {
-  updateManagementStock,
-  getManagementStockById,
+  createManagementStock,
   getAvailableProducts,
   getAvailableUsers,
-  deleteManagementStock,
 } from "@/lib/actions/managementStocks";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
-import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { ManagementStockStatus } from "@prisma/client";
 
 interface ManagementStockItemFormData {
@@ -60,16 +57,13 @@ interface User {
   role: string;
 }
 
-export default function EditManagementStockPage() {
+export default function CreateManagementStockPage() {
   const data = useSharedData();
   const router = useRouter();
-  const params = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [formData, setFormData] = useState<ManagementStockFormData>({
     managementDate: new Date().toISOString().split("T")[0],
@@ -84,30 +78,12 @@ export default function EditManagementStockPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [stock, products, users] = await Promise.all([
-          getManagementStockById(params.id as string),
+        const [products, users] = await Promise.all([
           getAvailableProducts(),
           getAvailableUsers(),
         ]);
-
         setAvailableProducts(products);
         setAvailableUsers(users);
-
-        if (stock) {
-          setFormData({
-            managementDate: new Date(stock.managementDate)
-              .toISOString()
-              .split("T")[0],
-            status: stock.status,
-            notes: stock.notes || "",
-            producedById: stock.producedById,
-            items: stock.items.map(item => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              notes: "",
-            })),
-          });
-        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
@@ -117,7 +93,7 @@ export default function EditManagementStockPage() {
     };
 
     fetchData();
-  }, [params.id]);
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: ManagementStockFormErrors = {};
@@ -158,6 +134,14 @@ export default function EditManagementStockPage() {
 
         if (!item.quantity || item.quantity <= 0) {
           itemError.quantity = "Quantity harus lebih dari 0";
+        }
+
+        // Check stock for OUT adjustments
+        if (formData.status === ManagementStockStatus.OUT && item.productId) {
+          const product = availableProducts.find(p => p.id === item.productId);
+          if (product && item.quantity > product.currentStock) {
+            itemError.quantity = `Stok tidak mencukupi (tersedia: ${product.currentStock})`;
+          }
         }
 
         if (Object.keys(itemError).length > 0) {
@@ -231,7 +215,7 @@ export default function EditManagementStockPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await updateManagementStock(params.id as string, {
+      const result = await createManagementStock({
         managementDate: new Date(formData.managementDate),
         status: formData.status,
         notes: formData.notes || undefined,
@@ -240,37 +224,16 @@ export default function EditManagementStockPage() {
       });
 
       if (result.success) {
-        toast.success("Manajemen stok berhasil diperbarui!");
+        toast.success("Manajemen stok berhasil dibuat!");
         router.push(`/${data.module}/${data.subModule}`);
       } else {
-        toast.error(result.error || "Gagal memperbarui manajemen stok");
+        toast.error(result.error || "Gagal membuat manajemen stok");
       }
     } catch (error) {
-      console.error("Error updating management stock:", error);
-      toast.error("Terjadi kesalahan saat memperbarui manajemen stok");
+      console.error("Error creating management stock:", error);
+      toast.error("Terjadi kesalahan saat membuat manajemen stok");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-
-    try {
-      const result = await deleteManagementStock(params.id as string);
-
-      if (result.success) {
-        toast.success("Manajemen stok berhasil dihapus!");
-        router.push(`/${data.module}/${data.subModule}`);
-      } else {
-        toast.error(result.error || "Gagal menghapus manajemen stok");
-      }
-    } catch (error) {
-      console.error("Error deleting management stock:", error);
-      toast.error("Terjadi kesalahan saat menghapus manajemen stok");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
     }
   };
 
@@ -292,7 +255,7 @@ export default function EditManagementStockPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Edit Manajemen Stok"
+        headerTittle="Tambah Manajemen Stok"
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
@@ -302,8 +265,6 @@ export default function EditManagementStockPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
-        handleDelete={() => setShowDeleteModal(true)}
-        hideDeleteButton={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -496,19 +457,8 @@ export default function EditManagementStockPage() {
           })}
         </div>
       </ManagementForm>
-
-      <ConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDelete}
-        title="Hapus Manajemen Stok"
-        isLoading={isDeleting}
-      >
-        <p>
-          Apakah Anda yakin ingin menghapus data manajemen stok ini? Tindakan
-          ini akan membalikkan perubahan stok dan tidak dapat dibatalkan.
-        </p>
-      </ConfirmationModal>
     </div>
   );
 }
+
+
