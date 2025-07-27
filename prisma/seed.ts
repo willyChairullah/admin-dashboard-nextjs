@@ -126,95 +126,275 @@ async function main() {
     // --- Penambahan Kategori dan Produk Minyak ---
     console.log("📦 Creating categories and products...");
 
-    const oilCategory = await prisma.categories.create({
-      data: {
+    // Create multiple categories
+    const categories = [
+      {
         id: uuid(),
-        code: "OIL",
-        name: "Minyak",
-        description: "Berbagai jenis minyak goreng",
+        code: "ENGINE",
+        name: "Engine Oil",
+        description: "Minyak mesin berkualitas tinggi",
         isActive: true,
         updatedAt: new Date(),
       },
-    });
-    console.log(`✅ Created category: ${oilCategory.name}`);
+      {
+        id: uuid(),
+        code: "HYDRAULIC",
+        name: "Hydraulic",
+        description: "Minyak hidrolik untuk berbagai aplikasi",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "GEAR",
+        name: "Gear Oil",
+        description: "Minyak gear untuk transmisi",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "INDUSTRIAL",
+        name: "Industrial",
+        description: "Minyak untuk aplikasi industri",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "TRANSMISSION",
+        name: "Transmission",
+        description: "Minyak transmisi otomatis",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "BRAKE",
+        name: "Brake Fluid",
+        description: "Cairan rem berkualitas tinggi",
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    ];
+
+    const createdCategories = [];
+    for (const categoryData of categories) {
+      const category = await prisma.categories.create({
+        data: categoryData,
+      });
+      createdCategories.push(category);
+      console.log(`✅ Created category: ${category.name}`);
+    }
 
     const productsToCreate = [
+      // Engine Oil Products
       {
         id: uuid(),
-        name: "Minyak Indana 250 ml",
-        description: "Minyak goreng Indana kemasan 250 ml",
-        unit: "Pcs",
-        price: 7000,
-        cost: 5000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Premium Engine Oil 5W-30",
+        description:
+          "Minyak mesin premium sintetik 5W-30 untuk kendaraan modern",
+        unit: "Liter",
+        price: 145000,
+        cost: 95000,
+        minStock: 100,
+        currentStock: 450,
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[0].id, // Engine Oil
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Minyak Indana 500 ml",
-        description: "Minyak goreng Indana kemasan 500 ml",
-        unit: "Pcs",
-        price: 13000,
-        cost: 10000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Conventional Engine Oil 15W-40",
+        description: "Minyak mesin konvensional 15W-40 untuk diesel",
+        unit: "Liter",
+        price: 85000,
+        cost: 55000,
+        minStock: 80,
+        currentStock: 320,
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[0].id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Minyak Indana 800 ml",
-        description: "Minyak goreng Indana kemasan 800 ml",
-        unit: "Pcs",
-        price: 18000,
-        cost: 14000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Motorcycle Engine Oil 10W-40",
+        description: "Minyak mesin khusus motor 4-tak",
+        unit: "Liter",
+        price: 95000,
+        cost: 65000,
+        minStock: 60,
+        currentStock: 280,
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[0].id,
+        updatedAt: new Date(),
+      },
+
+      // Hydraulic Products
+      {
+        id: uuid(),
+        name: "Hydraulic Oil ISO 46",
+        description: "Minyak hidrolik kualitas premium ISO 46",
+        unit: "Liter",
+        price: 135000,
+        cost: 88000,
+        minStock: 80,
+        currentStock: 320,
+        isActive: true,
+        categoryId: createdCategories[1].id, // Hydraulic
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Minyak Indana 900 ml",
-        description: "Minyak goreng Indana kemasan 900 ml",
-        unit: "Pcs",
-        price: 20000,
-        cost: 16000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Hydraulic Oil ISO 68",
+        description: "Minyak hidrolik heavy duty ISO 68",
+        unit: "Liter",
+        price: 142000,
+        cost: 92000,
+        minStock: 50,
+        currentStock: 180,
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[1].id,
+        updatedAt: new Date(),
+      },
+
+      // Gear Oil Products
+      {
+        id: uuid(),
+        name: "Gear Oil SAE 90",
+        description: "Minyak gear differential SAE 90",
+        unit: "Liter",
+        price: 115000,
+        cost: 75000,
+        minStock: 50,
+        currentStock: 200,
+        isActive: true,
+        categoryId: createdCategories[2].id, // Gear Oil
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Minyak Indana 1 Liter",
-        description: "Minyak goreng Indana kemasan 1 liter",
-        unit: "Pcs",
-        price: 22000,
-        cost: 18000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Gear Oil SAE 140",
+        description: "Minyak gear heavy duty SAE 140",
+        unit: "Liter",
+        price: 125000,
+        cost: 82000,
+        minStock: 40,
+        currentStock: 150,
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[2].id,
+        updatedAt: new Date(),
+      },
+
+      // Industrial Products
+      {
+        id: uuid(),
+        name: "Industrial Lubricant",
+        description: "Pelumas industri multiguna",
+        unit: "Liter",
+        price: 125000,
+        cost: 85000,
+        minStock: 30,
+        currentStock: 150,
+        isActive: true,
+        categoryId: createdCategories[3].id, // Industrial
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Minyak Kita 1 Liter",
-        description: "Minyak goreng merek Minyak Kita kemasan 1 liter",
-        unit: "Pcs",
-        price: 15000,
-        cost: 12000,
-        minStock: 10,
-        currentStock: 100,
+        name: "Compressor Oil ISO 100",
+        description: "Minyak kompresor tahan panas tinggi",
+        unit: "Liter",
+        price: 165000,
+        cost: 110000,
+        minStock: 35,
+        currentStock: 18, // Low stock
         isActive: true,
-        categoryId: oilCategory.id,
+        categoryId: createdCategories[3].id,
+        updatedAt: new Date(),
+      },
+
+      // Transmission Products
+      {
+        id: uuid(),
+        name: "Transmission Fluid ATF",
+        description: "Cairan transmisi otomatis premium",
+        unit: "Liter",
+        price: 155000,
+        cost: 102000,
+        minStock: 40,
+        currentStock: 180,
+        isActive: true,
+        categoryId: createdCategories[4].id, // Transmission
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "CVT Transmission Fluid",
+        description: "Cairan transmisi CVT khusus",
+        unit: "Liter",
+        price: 185000,
+        cost: 125000,
+        minStock: 25,
+        currentStock: 95,
+        isActive: true,
+        categoryId: createdCategories[4].id,
+        updatedAt: new Date(),
+      },
+
+      // Brake Fluid Products
+      {
+        id: uuid(),
+        name: "Brake Fluid DOT 4",
+        description: "Cairan rem DOT 4 berkualitas tinggi",
+        unit: "Liter",
+        price: 108000,
+        cost: 72000,
+        minStock: 50,
+        currentStock: 15, // Low stock
+        isActive: true,
+        categoryId: createdCategories[5].id, // Brake Fluid
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Brake Fluid DOT 3",
+        description: "Cairan rem DOT 3 standar",
+        unit: "Liter",
+        price: 95000,
+        cost: 65000,
+        minStock: 40,
+        currentStock: 120,
+        isActive: true,
+        categoryId: createdCategories[5].id,
+        updatedAt: new Date(),
+      },
+
+      // Additional specialty products
+      {
+        id: uuid(),
+        name: "Coolant Concentrate",
+        description: "Konsentrat pendingin radiator",
+        unit: "Liter",
+        price: 98000,
+        cost: 68000,
+        minStock: 40,
+        currentStock: 25, // Low stock
+        isActive: true,
+        categoryId: createdCategories[3].id, // Industrial
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        name: "Marine Oil SAE 30",
+        description: "Minyak mesin kapal laut SAE 30",
+        unit: "Liter",
+        price: 175000,
+        cost: 115000,
+        minStock: 30,
+        currentStock: 8, // Critical low stock
+        isActive: true,
+        categoryId: createdCategories[0].id, // Engine Oil
         updatedAt: new Date(),
       },
     ];
@@ -242,7 +422,7 @@ async function main() {
   }
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
