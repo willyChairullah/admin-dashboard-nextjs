@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/common/Card";
+import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
 import {
   TrendingUp,
   ArrowLeft,
@@ -303,18 +304,11 @@ export default function RevenueAnalytics() {
               ))}
             </div>
 
-            {/* Chart Placeholder */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-8 h-80 flex items-center justify-center">
-              <div className="text-center">
-                <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  Interactive Revenue Trend Chart
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  Coming soon with detailed analytics
-                </p>
-              </div>
-            </div>
+            {/* Interactive Revenue Trend Chart */}
+            <RevenueTrendChart
+              data={data.monthlyTrends}
+              timeRange={timeRange}
+            />
           </Card>
         )}
 
@@ -570,18 +564,14 @@ export default function RevenueAnalytics() {
               </div>
             </div>
 
-            {/* Chart Placeholder */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-8 h-64 flex items-center justify-center">
-              <div className="text-center">
-                <DollarSign className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  Order Value Trend Chart
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  Detailed AOV analytics coming soon
-                </p>
-              </div>
-            </div>
+            {/* Interactive Order Value Trend Chart */}
+            <OrderValueTrendChart
+              data={data.avgOrderValue.breakdown}
+              current={data.avgOrderValue.current}
+              previous={data.avgOrderValue.previous}
+              trend={data.avgOrderValue.trend}
+              timeRange={timeRange}
+            />
           </Card>
         )}
       </div>

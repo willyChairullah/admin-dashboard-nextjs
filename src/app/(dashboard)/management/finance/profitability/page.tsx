@@ -19,6 +19,7 @@ import {
   Percent,
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { MarginTrendChart, CostDistributionChart } from "@/components/charts";
 
 interface ProfitabilityData {
   grossProfitMargins: {
@@ -351,16 +352,13 @@ export default function ProfitabilityAnalysis() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-8 h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">
-                    Margin Trend Chart
-                  </p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                    Interactive margin analysis coming soon
-                  </p>
-                </div>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 h-96">
+                <MarginTrendChart
+                  currentMargin={data.grossProfitMargins.current}
+                  previousMargin={data.grossProfitMargins.previous}
+                  targetMargin={data.grossProfitMargins.target}
+                  trend={data.grossProfitMargins.trend}
+                />
               </div>
             </div>
           </Card>
@@ -491,16 +489,11 @@ export default function ProfitabilityAnalysis() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-8 h-96 flex items-center justify-center">
-                <div className="text-center">
-                  <PieChart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">
-                    Cost Distribution Chart
-                  </p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                    Visual cost breakdown coming soon
-                  </p>
-                </div>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 h-96">
+                <CostDistributionChart
+                  costBreakdown={data.costAnalysis.costBreakdown}
+                  totalCosts={data.costAnalysis.totalCosts}
+                />
               </div>
             </div>
 

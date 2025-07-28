@@ -126,275 +126,95 @@ async function main() {
     // --- Penambahan Kategori dan Produk Minyak ---
     console.log("📦 Creating categories and products...");
 
-    // Create multiple categories
-    const categories = [
-      {
+    const oilCategory = await prisma.categories.create({
+      data: {
         id: uuid(),
-        code: "ENGINE",
-        name: "Engine Oil",
-        description: "Minyak mesin berkualitas tinggi",
+        code: "OIL",
+        name: "Minyak",
+        description: "Berbagai jenis minyak goreng",
         isActive: true,
         updatedAt: new Date(),
       },
-      {
-        id: uuid(),
-        code: "HYDRAULIC",
-        name: "Hydraulic",
-        description: "Minyak hidrolik untuk berbagai aplikasi",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "GEAR",
-        name: "Gear Oil",
-        description: "Minyak gear untuk transmisi",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "INDUSTRIAL",
-        name: "Industrial",
-        description: "Minyak untuk aplikasi industri",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "TRANSMISSION",
-        name: "Transmission",
-        description: "Minyak transmisi otomatis",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "BRAKE",
-        name: "Brake Fluid",
-        description: "Cairan rem berkualitas tinggi",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-    ];
-
-    const createdCategories = [];
-    for (const categoryData of categories) {
-      const category = await prisma.categories.create({
-        data: categoryData,
-      });
-      createdCategories.push(category);
-      console.log(`✅ Created category: ${category.name}`);
-    }
+    });
+    console.log(`✅ Created category: ${oilCategory.name}`);
 
     const productsToCreate = [
-      // Engine Oil Products
       {
         id: uuid(),
-        name: "Premium Engine Oil 5W-30",
-        description:
-          "Minyak mesin premium sintetik 5W-30 untuk kendaraan modern",
-        unit: "Liter",
-        price: 145000,
-        cost: 95000,
-        minStock: 100,
-        currentStock: 450,
+        name: "Minyak Indana 250 ml",
+        description: "Minyak goreng Indana kemasan 250 ml",
+        unit: "Pcs",
+        price: 7000,
+        cost: 5000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[0].id, // Engine Oil
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Conventional Engine Oil 15W-40",
-        description: "Minyak mesin konvensional 15W-40 untuk diesel",
-        unit: "Liter",
-        price: 85000,
-        cost: 55000,
-        minStock: 80,
-        currentStock: 320,
+        name: "Minyak Indana 500 ml",
+        description: "Minyak goreng Indana kemasan 500 ml",
+        unit: "Pcs",
+        price: 13000,
+        cost: 10000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[0].id,
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Motorcycle Engine Oil 10W-40",
-        description: "Minyak mesin khusus motor 4-tak",
-        unit: "Liter",
-        price: 95000,
-        cost: 65000,
-        minStock: 60,
-        currentStock: 280,
+        name: "Minyak Indana 800 ml",
+        description: "Minyak goreng Indana kemasan 800 ml",
+        unit: "Pcs",
+        price: 18000,
+        cost: 14000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[0].id,
-        updatedAt: new Date(),
-      },
-
-      // Hydraulic Products
-      {
-        id: uuid(),
-        name: "Hydraulic Oil ISO 46",
-        description: "Minyak hidrolik kualitas premium ISO 46",
-        unit: "Liter",
-        price: 135000,
-        cost: 88000,
-        minStock: 80,
-        currentStock: 320,
-        isActive: true,
-        categoryId: createdCategories[1].id, // Hydraulic
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Hydraulic Oil ISO 68",
-        description: "Minyak hidrolik heavy duty ISO 68",
-        unit: "Liter",
-        price: 142000,
-        cost: 92000,
-        minStock: 50,
-        currentStock: 180,
+        name: "Minyak Indana 900 ml",
+        description: "Minyak goreng Indana kemasan 900 ml",
+        unit: "Pcs",
+        price: 20000,
+        cost: 16000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[1].id,
-        updatedAt: new Date(),
-      },
-
-      // Gear Oil Products
-      {
-        id: uuid(),
-        name: "Gear Oil SAE 90",
-        description: "Minyak gear differential SAE 90",
-        unit: "Liter",
-        price: 115000,
-        cost: 75000,
-        minStock: 50,
-        currentStock: 200,
-        isActive: true,
-        categoryId: createdCategories[2].id, // Gear Oil
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Gear Oil SAE 140",
-        description: "Minyak gear heavy duty SAE 140",
-        unit: "Liter",
-        price: 125000,
-        cost: 82000,
-        minStock: 40,
-        currentStock: 150,
+        name: "Minyak Indana 1 Liter",
+        description: "Minyak goreng Indana kemasan 1 liter",
+        unit: "Pcs",
+        price: 22000,
+        cost: 18000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[2].id,
-        updatedAt: new Date(),
-      },
-
-      // Industrial Products
-      {
-        id: uuid(),
-        name: "Industrial Lubricant",
-        description: "Pelumas industri multiguna",
-        unit: "Liter",
-        price: 125000,
-        cost: 85000,
-        minStock: 30,
-        currentStock: 150,
-        isActive: true,
-        categoryId: createdCategories[3].id, // Industrial
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
       {
         id: uuid(),
-        name: "Compressor Oil ISO 100",
-        description: "Minyak kompresor tahan panas tinggi",
-        unit: "Liter",
-        price: 165000,
-        cost: 110000,
-        minStock: 35,
-        currentStock: 18, // Low stock
+        name: "Minyak Kita 1 Liter",
+        description: "Minyak goreng merek Minyak Kita kemasan 1 liter",
+        unit: "Pcs",
+        price: 15000,
+        cost: 12000,
+        minStock: 10,
+        currentStock: 100,
         isActive: true,
-        categoryId: createdCategories[3].id,
-        updatedAt: new Date(),
-      },
-
-      // Transmission Products
-      {
-        id: uuid(),
-        name: "Transmission Fluid ATF",
-        description: "Cairan transmisi otomatis premium",
-        unit: "Liter",
-        price: 155000,
-        cost: 102000,
-        minStock: 40,
-        currentStock: 180,
-        isActive: true,
-        categoryId: createdCategories[4].id, // Transmission
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        name: "CVT Transmission Fluid",
-        description: "Cairan transmisi CVT khusus",
-        unit: "Liter",
-        price: 185000,
-        cost: 125000,
-        minStock: 25,
-        currentStock: 95,
-        isActive: true,
-        categoryId: createdCategories[4].id,
-        updatedAt: new Date(),
-      },
-
-      // Brake Fluid Products
-      {
-        id: uuid(),
-        name: "Brake Fluid DOT 4",
-        description: "Cairan rem DOT 4 berkualitas tinggi",
-        unit: "Liter",
-        price: 108000,
-        cost: 72000,
-        minStock: 50,
-        currentStock: 15, // Low stock
-        isActive: true,
-        categoryId: createdCategories[5].id, // Brake Fluid
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        name: "Brake Fluid DOT 3",
-        description: "Cairan rem DOT 3 standar",
-        unit: "Liter",
-        price: 95000,
-        cost: 65000,
-        minStock: 40,
-        currentStock: 120,
-        isActive: true,
-        categoryId: createdCategories[5].id,
-        updatedAt: new Date(),
-      },
-
-      // Additional specialty products
-      {
-        id: uuid(),
-        name: "Coolant Concentrate",
-        description: "Konsentrat pendingin radiator",
-        unit: "Liter",
-        price: 98000,
-        cost: 68000,
-        minStock: 40,
-        currentStock: 25, // Low stock
-        isActive: true,
-        categoryId: createdCategories[3].id, // Industrial
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        name: "Marine Oil SAE 30",
-        description: "Minyak mesin kapal laut SAE 30",
-        unit: "Liter",
-        price: 175000,
-        cost: 115000,
-        minStock: 30,
-        currentStock: 8, // Critical low stock
-        isActive: true,
-        categoryId: createdCategories[0].id, // Engine Oil
+        categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
     ];
@@ -406,6 +226,376 @@ async function main() {
       console.log(`✅ Created product: ${product.name}`);
     }
     // --- Akhir Penambahan Kategori dan Produk Minyak ---
+
+    // --- Seeding Chart Data ---
+    console.log("📊 Creating sample customers and orders for charts...");
+
+    // Get all created users and stores for reference
+    const allUsers = await prisma.users.findMany();
+    const allStores = await prisma.store.findMany();
+    const allProducts = await prisma.products.findMany();
+    const salesUsers = allUsers.filter(
+      (user) => user.role === "SALES" || user.role === "ADMIN"
+    );
+
+    // First, create some customers
+    console.log("👥 Creating sample customers...");
+    const customersToCreate = [
+      {
+        id: uuid(),
+        code: "CUST001",
+        name: "PT Sinar Jaya Abadi",
+        email: "purchasing@sinarjaya.com",
+        phone: "+62211234567",
+        address: "Jl. Raya Jakarta No. 123",
+        city: "Jakarta",
+        latitude: -6.2088,
+        longitude: 106.8456,
+        creditLimit: 50000000,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "CUST002",
+        name: "CV Berkah Makmur",
+        email: "admin@berkahmakmur.com",
+        phone: "+62212345678",
+        address: "Jl. Sudirman No. 45",
+        city: "Jakarta",
+        latitude: -6.2146,
+        longitude: 106.8451,
+        creditLimit: 30000000,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "CUST003",
+        name: "Toko Harapan Jaya",
+        email: "harapanjaya@gmail.com",
+        phone: "+62213456789",
+        address: "Jl. Thamrin No. 78",
+        city: "Jakarta",
+        latitude: -6.1944,
+        longitude: 106.8229,
+        creditLimit: 20000000,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    ];
+
+    const createdCustomers = [];
+    for (const customerData of customersToCreate) {
+      const customer = await prisma.customers.create({
+        data: customerData,
+      });
+      createdCustomers.push(customer);
+      console.log(`✅ Created customer: ${customer.name}`);
+    }
+
+    // Create sample orders over the last 6 months
+    console.log("📦 Creating sample orders...");
+    const ordersToCreate = [];
+    const now = new Date();
+
+    for (let monthOffset = 6; monthOffset >= 0; monthOffset--) {
+      const orderDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthOffset,
+        1
+      );
+      const ordersInMonth = Math.floor(Math.random() * 15) + 5; // 5-20 orders per month
+
+      for (let i = 0; i < ordersInMonth; i++) {
+        const orderDay = new Date(orderDate);
+        orderDay.setDate(Math.floor(Math.random() * 28) + 1); // Random day in month
+
+        const randomCustomer =
+          createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
+        const randomSales =
+          salesUsers[Math.floor(Math.random() * salesUsers.length)];
+        const orderStatus =
+          Math.random() > 0.2
+            ? "COMPLETED"
+            : Math.random() > 0.5
+            ? "PROCESSING"
+            : ("NEW" as
+                | "NEW"
+                | "PROCESSING"
+                | "COMPLETED"
+                | "CANCELLED"
+                | "PENDING_CONFIRMATION"
+                | "IN_PROCESS"
+                | "CANCELED");
+
+        ordersToCreate.push({
+          id: uuid(),
+          orderNumber: `ORD-${orderDate.getFullYear()}${String(
+            orderDate.getMonth() + 1
+          ).padStart(2, "0")}-${String(i + 1).padStart(3, "0")}`,
+          orderDate: orderDay,
+          customerId: randomCustomer.id,
+          salesId: randomSales.id,
+          status: orderStatus,
+          totalAmount: 0, // Will be calculated after order items
+          notes: `Sample order for ${randomCustomer.name}`,
+          createdAt: orderDay,
+          updatedAt: orderDay,
+        });
+      }
+    }
+
+    // Create orders first
+    const createdOrders = [];
+    for (const orderData of ordersToCreate) {
+      const order = await prisma.orders.create({
+        data: orderData,
+      });
+      createdOrders.push(order);
+    }
+    console.log(`✅ Created ${createdOrders.length} sample orders`);
+
+    // Create order items for each order
+    console.log("📦 Creating order items...");
+    let totalOrderItems = 0;
+
+    for (const order of createdOrders) {
+      const itemsInOrder = Math.floor(Math.random() * 4) + 1; // 1-4 items per order
+      let orderTotal = 0;
+
+      for (let i = 0; i < itemsInOrder; i++) {
+        const randomProduct =
+          allProducts[Math.floor(Math.random() * allProducts.length)];
+        const quantity = Math.floor(Math.random() * 10) + 1; // 1-10 quantity
+        const unitPrice = randomProduct.price;
+        const totalPrice = quantity * unitPrice;
+        orderTotal += totalPrice;
+
+        await prisma.orderItems.create({
+          data: {
+            id: uuid(),
+            orderId: order.id,
+            productId: randomProduct.id,
+            quantity: quantity,
+            price: unitPrice,
+            totalPrice: totalPrice,
+            createdAt: order.orderDate,
+            updatedAt: order.orderDate,
+          },
+        });
+        totalOrderItems++;
+      }
+
+      // Update order total
+      await prisma.orders.update({
+        where: { id: order.id },
+        data: { totalAmount: orderTotal },
+      });
+    }
+    console.log(`✅ Created ${totalOrderItems} order items`);
+
+    // Create invoices for completed orders
+    console.log("🧾 Creating invoices for completed orders...");
+    const completedOrders = createdOrders.filter(
+      (order) => order.status === "COMPLETED"
+    );
+    let totalInvoices = 0;
+
+    for (const order of completedOrders) {
+      const invoiceDate = new Date(order.orderDate);
+      invoiceDate.setDate(
+        invoiceDate.getDate() + Math.floor(Math.random() * 7) + 1
+      ); // 1-7 days after order
+      const dueDate = new Date(
+        invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000
+      ); // 30 days later
+
+      const invoice = await prisma.invoices.create({
+        data: {
+          id: uuid(),
+          invoiceNumber: `INV-${invoiceDate.getFullYear()}${String(
+            invoiceDate.getMonth() + 1
+          ).padStart(2, "0")}-${String(totalInvoices + 1).padStart(3, "0")}`,
+          orderId: order.id,
+          customerId: order.customerId,
+          invoiceDate: invoiceDate,
+          dueDate: dueDate,
+          status:
+            Math.random() > 0.1
+              ? "PAID"
+              : ("DRAFT" as
+                  | "DRAFT"
+                  | "SENT"
+                  | "PAID"
+                  | "OVERDUE"
+                  | "CANCELLED"), // 90% paid
+          totalAmount: order.totalAmount,
+          notes: `Invoice for order ${order.orderNumber}`,
+          createdAt: invoiceDate,
+          updatedAt: invoiceDate,
+        },
+      });
+
+      // Create invoice items
+      const orderItems = await prisma.orderItems.findMany({
+        where: { orderId: order.id },
+        include: { products: true },
+      });
+
+      for (const orderItem of orderItems) {
+        await prisma.invoiceItems.create({
+          data: {
+            id: uuid(),
+            invoiceId: invoice.id,
+            productId: orderItem.productId,
+            quantity: orderItem.quantity,
+            price: orderItem.price,
+            totalPrice: orderItem.totalPrice,
+            createdAt: invoiceDate,
+            updatedAt: invoiceDate,
+          },
+        });
+      }
+
+      totalInvoices++;
+    }
+    console.log(`✅ Created ${totalInvoices} invoices with items`);
+
+    // Create payments for paid invoices
+    console.log("💰 Creating payments for paid invoices...");
+    const paidInvoices = await prisma.invoices.findMany({
+      where: { status: "PAID" },
+    });
+
+    for (const invoice of paidInvoices) {
+      const paymentDate = new Date(invoice.invoiceDate);
+      paymentDate.setDate(
+        paymentDate.getDate() + Math.floor(Math.random() * 10) + 1
+      ); // 1-10 days after invoice
+
+      await prisma.payments.create({
+        data: {
+          id: uuid(),
+          invoiceId: invoice.id,
+          amount: invoice.totalAmount,
+          paymentDate: paymentDate,
+          method: Math.random() > 0.5 ? "CASH" : "TRANSFER",
+          reference: `PAY-${paymentDate.getFullYear()}${String(
+            paymentDate.getMonth() + 1
+          ).padStart(2, "0")}-${Math.floor(Math.random() * 1000)
+            .toString()
+            .padStart(3, "0")}`,
+          notes: `Payment for invoice ${invoice.invoiceNumber}`,
+          createdAt: paymentDate,
+          updatedAt: paymentDate,
+        },
+      });
+    }
+    console.log(`✅ Created ${paidInvoices.length} payments`);
+
+    // Create stock movements
+    console.log("📈 Creating stock movements...");
+    let totalStockMovements = 0;
+    const warehouseUsers = allUsers.filter(
+      (user) => user.role === "WAREHOUSE" || user.role === "ADMIN"
+    );
+
+    for (const product of allProducts) {
+      // Create some random stock movements over the last 6 months
+      for (let monthOffset = 6; monthOffset >= 0; monthOffset--) {
+        const movementDate = new Date(
+          now.getFullYear(),
+          now.getMonth() - monthOffset,
+          1
+        );
+        const movementsInMonth = Math.floor(Math.random() * 3) + 1; // 1-3 movements per month per product
+
+        for (let i = 0; i < movementsInMonth; i++) {
+          const moveDay = new Date(movementDate);
+          moveDay.setDate(Math.floor(Math.random() * 28) + 1);
+
+          const movementType =
+            Math.random() > 0.3 ? "OUT" : ("IN" as "IN" | "OUT" | "ADJUSTMENT"); // 70% out, 30% in
+          const quantity = Math.floor(Math.random() * 20) + 1;
+          const randomUser =
+            warehouseUsers[Math.floor(Math.random() * warehouseUsers.length)];
+
+          // Calculate stock levels
+          const previousStock = product.currentStock;
+          const newStock =
+            movementType === "OUT"
+              ? previousStock - quantity
+              : previousStock + quantity;
+
+          await prisma.stockMovements.create({
+            data: {
+              id: uuid(),
+              productId: product.id,
+              userId: randomUser.id,
+              type: movementType,
+              quantity: quantity,
+              previousStock: previousStock,
+              newStock: Math.max(0, newStock), // Don't allow negative stock
+              reference: `${movementType}-${moveDay.getFullYear()}${String(
+                moveDay.getMonth() + 1
+              ).padStart(2, "0")}-${i + 1}`,
+              notes: `${
+                movementType === "OUT" ? "Sale" : "Restock"
+              } movement for ${product.name}`,
+              movementDate: moveDay,
+              createdAt: moveDay,
+              updatedAt: moveDay,
+            },
+          });
+          totalStockMovements++;
+        }
+      }
+    }
+    console.log(`✅ Created ${totalStockMovements} stock movements`);
+
+    // Create some customer visits
+    console.log("🚗 Creating customer visits...");
+    let totalVisits = 0;
+
+    for (let monthOffset = 3; monthOffset >= 0; monthOffset--) {
+      const visitDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthOffset,
+        1
+      );
+      const visitsInMonth = Math.floor(Math.random() * 10) + 5; // 5-15 visits per month
+
+      for (let i = 0; i < visitsInMonth; i++) {
+        const visitDay = new Date(visitDate);
+        visitDay.setDate(Math.floor(Math.random() * 28) + 1);
+
+        const randomSales =
+          salesUsers[Math.floor(Math.random() * salesUsers.length)];
+        const randomCustomer =
+          createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
+
+        await prisma.customerVisits.create({
+          data: {
+            id: uuid(),
+            salesId: randomSales.id,
+            customerId: randomCustomer.id,
+            visitDate: visitDay,
+            latitude:
+              (randomCustomer.latitude || 0) + (Math.random() - 0.5) * 0.001, // Slight variation
+            longitude:
+              (randomCustomer.longitude || 0) + (Math.random() - 0.5) * 0.001,
+            notes: `Visit to ${randomCustomer.name} for sales opportunity`,
+            createdAt: visitDay,
+            updatedAt: visitDay,
+          },
+        });
+        totalVisits++;
+      }
+    }
+    console.log(`✅ Created ${totalVisits} customer visits`);
+
+    // --- End Chart Data Seeding ---
 
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
