@@ -32,21 +32,30 @@ import {
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
   Tooltip,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Cell,
-  Pie,
-  LineChart as RechartsLineChart,
-  Line,
-  BarChart,
-  Bar,
-} from "recharts";
+  Legend,
+  Filler,
+  ArcElement,
+} from "chart.js";
+import { Line, Doughnut } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  ArcElement
+);
 
 interface ComprehensiveFinanceData {
   overview: {
@@ -835,42 +844,102 @@ export default function ComprehensiveFinanceDashboard() {
               </div>
 
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsLineChart
-                    data={[
+                <Line
+                  data={{
+                    labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+                    datasets: [
                       {
-                        name: "Week 1",
-                        value: data.sales.monthlyRevenue * 0.2,
+                        label: "Revenue",
+                        data: [
+                          data.sales.monthlyRevenue * 0.2,
+                          data.sales.monthlyRevenue * 0.25,
+                          data.sales.monthlyRevenue * 0.22,
+                          data.sales.monthlyRevenue * 0.33,
+                        ],
+                        backgroundColor: "rgba(16, 185, 129, 0.1)",
+                        borderColor: "rgb(16, 185, 129)",
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: "rgb(16, 185, 129)",
+                        pointBorderColor: "white",
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: "rgb(16, 185, 129)",
+                        pointHoverBorderColor: "white",
+                        pointHoverBorderWidth: 3,
                       },
-                      {
-                        name: "Week 2",
-                        value: data.sales.monthlyRevenue * 0.25,
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                      duration: 1500,
+                      easing: "easeInOutQuart",
+                    },
+                    interaction: {
+                      mode: "index",
+                      intersect: false,
+                    },
+                    hover: {
+                      mode: "index",
+                      intersect: false,
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function (value: any) {
+                            return formatRupiah(Number(value));
+                          },
+                        },
                       },
-                      {
-                        name: "Week 3",
-                        value: data.sales.monthlyRevenue * 0.22,
+                    },
+                    plugins: {
+                      legend: {
+                        display: false,
                       },
-                      {
-                        name: "Week 4",
-                        value: data.sales.monthlyRevenue * 0.33,
+                      tooltip: {
+                        backgroundColor: "rgba(0, 0, 0, 0.8)",
+                        titleColor: "white",
+                        bodyColor: "white",
+                        borderColor: "rgba(16, 185, 129, 1)",
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                          title: function (context: any) {
+                            return `Revenue for ${context[0].label}`;
+                          },
+                          label: function (context: any) {
+                            const value = formatRupiah(
+                              Number(context.parsed.y)
+                            );
+                            const percentage = (
+                              (context.parsed.y / data.sales.monthlyRevenue) *
+                              100
+                            ).toFixed(1);
+                            return [
+                              `Amount: ${value}`,
+                              `Percentage of Month: ${percentage}%`,
+                            ];
+                          },
+                          afterBody: function (context: any) {
+                            const total = context.reduce(
+                              (sum: number, item: any) => sum + item.parsed.y,
+                              0
+                            );
+                            return `Total Monthly Revenue: ${formatRupiah(
+                              data.sales.monthlyRevenue
+                            )}`;
+                          },
+                        },
                       },
-                    ]}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => formatRupiah(value)} />
-                    <Tooltip
-                      formatter={(value: any) => formatRupiah(Number(value))}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#10B981"
-                      strokeWidth={3}
-                      fill="#10B981"
-                    />
-                  </RechartsLineChart>
-                </ResponsiveContainer>
+                    },
+                  }}
+                />
               </div>
             </div>
           </Card>
@@ -915,66 +984,107 @@ export default function ComprehensiveFinanceDashboard() {
               </div>
 
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={[
-                        {
-                          name: "Profit",
-                          value: data.overview.totalProfit,
-                          fill: "#10B981",
+                <Doughnut
+                  data={{
+                    labels: [
+                      "Profit",
+                      "Operational Costs",
+                      "Product Costs",
+                      "Marketing",
+                    ],
+                    datasets: [
+                      {
+                        data: [
+                          data.overview.totalProfit,
+                          data.inventory.totalValue * 0.3,
+                          data.inventory.totalValue * 0.4,
+                          data.inventory.totalValue * 0.1,
+                        ],
+                        backgroundColor: [
+                          "#10B981",
+                          "#3B82F6",
+                          "#F59E0B",
+                          "#EF4444",
+                        ],
+                        hoverBackgroundColor: [
+                          "#059669",
+                          "#2563EB",
+                          "#D97706",
+                          "#DC2626",
+                        ],
+                        borderWidth: 0,
+                        hoverBorderWidth: 3,
+                        hoverBorderColor: "white",
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "50%",
+                    animation: {
+                      duration: 2000,
+                      easing: "easeInOutQuart",
+                      animateRotate: true,
+                      animateScale: true,
+                    },
+                    interaction: {
+                      mode: "point",
+                    },
+                    hover: {
+                      mode: "point",
+                    },
+                    plugins: {
+                      legend: {
+                        position: "bottom",
+                        labels: {
+                          padding: 15,
+                          usePointStyle: true,
                         },
-                        {
-                          name: "Operational Costs",
-                          value: data.inventory.totalValue * 0.3,
-                          fill: "#3B82F6",
+                      },
+                      tooltip: {
+                        backgroundColor: "rgba(0, 0, 0, 0.8)",
+                        titleColor: "white",
+                        bodyColor: "white",
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                          title: function (context: any) {
+                            return `${context[0].label} Breakdown`;
+                          },
+                          label: function (context: any) {
+                            const value = formatRupiah(Number(context.parsed));
+                            const total = context.dataset.data.reduce(
+                              (sum: number, val: number) => sum + val,
+                              0
+                            );
+                            const percentage = (
+                              (context.parsed / total) *
+                              100
+                            ).toFixed(1);
+                            return [
+                              `Amount: ${value}`,
+                              `Percentage: ${percentage}%`,
+                            ];
+                          },
+                          afterBody: function (context: any) {
+                            const total = context[0].dataset.data.reduce(
+                              (sum: number, val: number) => sum + val,
+                              0
+                            );
+                            return [
+                              "",
+                              `Total Costs & Profit: ${formatRupiah(total)}`,
+                              `Profit Margin: ${data.overview.profitMargin}%`,
+                            ];
+                          },
                         },
-                        {
-                          name: "Product Costs",
-                          value: data.inventory.totalValue * 0.4,
-                          fill: "#F59E0B",
-                        },
-                        {
-                          name: "Marketing",
-                          value: data.inventory.totalValue * 0.1,
-                          fill: "#EF4444",
-                        },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {[
-                        {
-                          name: "Profit",
-                          value: data.overview.totalProfit,
-                          fill: "#10B981",
-                        },
-                        {
-                          name: "Operational Costs",
-                          value: data.inventory.totalValue * 0.3,
-                          fill: "#3B82F6",
-                        },
-                        {
-                          name: "Product Costs",
-                          value: data.inventory.totalValue * 0.4,
-                          fill: "#F59E0B",
-                        },
-                        {
-                          name: "Marketing",
-                          value: data.inventory.totalValue * 0.1,
-                          fill: "#EF4444",
-                        },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: any) => formatRupiah(Number(value))}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
+                      },
+                    },
+                  }}
+                />
               </div>
             </div>
           </Card>
@@ -1166,38 +1276,140 @@ export default function ComprehensiveFinanceDashboard() {
               </div>
 
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={data.financial.monthlyTrends.map((trend) => ({
-                      month: trend.month,
-                      cashFlow: trend.cashFlow,
-                      revenue: trend.revenue,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => formatRupiah(value)} />
-                    <Tooltip
-                      formatter={(value: any) => formatRupiah(Number(value))}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="cashFlow"
-                      stackId="1"
-                      stroke="#3B82F6"
-                      fill="#3B82F6"
-                      fillOpacity={0.3}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stackId="2"
-                      stroke="#10B981"
-                      fill="#10B981"
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <Line
+                  data={{
+                    labels: data.financial.monthlyTrends.map(
+                      (trend) => trend.month
+                    ),
+                    datasets: [
+                      {
+                        label: "Cash Flow",
+                        data: data.financial.monthlyTrends.map(
+                          (trend) => trend.cashFlow
+                        ),
+                        backgroundColor: "rgba(59, 130, 246, 0.3)",
+                        borderColor: "rgb(59, 130, 246)",
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: "rgb(59, 130, 246)",
+                        pointBorderColor: "white",
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: "rgb(59, 130, 246)",
+                        pointHoverBorderColor: "white",
+                        pointHoverBorderWidth: 3,
+                      },
+                      {
+                        label: "Revenue",
+                        data: data.financial.monthlyTrends.map(
+                          (trend) => trend.revenue
+                        ),
+                        backgroundColor: "rgba(16, 185, 129, 0.3)",
+                        borderColor: "rgb(16, 185, 129)",
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: "rgb(16, 185, 129)",
+                        pointBorderColor: "white",
+                        pointBorderWidth: 2,
+                        pointHoverBackgroundColor: "rgb(16, 185, 129)",
+                        pointHoverBorderColor: "white",
+                        pointHoverBorderWidth: 3,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                      duration: 1800,
+                      easing: "easeInOutQuart",
+                    },
+                    interaction: {
+                      mode: "index",
+                      intersect: false,
+                    },
+                    hover: {
+                      mode: "index",
+                      intersect: false,
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function (value: any) {
+                            return formatRupiah(Number(value));
+                          },
+                        },
+                      },
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          padding: 15,
+                          usePointStyle: true,
+                        },
+                      },
+                      tooltip: {
+                        backgroundColor: "rgba(0, 0, 0, 0.9)",
+                        titleColor: "white",
+                        bodyColor: "white",
+                        borderColor: "rgba(255, 255, 255, 0.3)",
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                          title: function (context: any) {
+                            return `Financial Data for ${context[0].label}`;
+                          },
+                          label: function (context: any) {
+                            const value = formatRupiah(
+                              Number(context.parsed.y)
+                            );
+                            const datasetLabel = context.dataset.label;
+
+                            if (datasetLabel === "Cash Flow") {
+                              const isPositive = context.parsed.y >= 0;
+                              return [
+                                `${datasetLabel}: ${value}`,
+                                `Status: ${
+                                  isPositive ? "Positive" : "Negative"
+                                } Flow`,
+                              ];
+                            } else {
+                              return `${datasetLabel}: ${value}`;
+                            }
+                          },
+                          afterBody: function (context: any) {
+                            const month = context[0].label;
+                            const monthData = data.financial.monthlyTrends.find(
+                              (trend) => trend.month === month
+                            );
+
+                            if (monthData) {
+                              const profitMargin = (
+                                (monthData.profit / monthData.revenue) *
+                                100
+                              ).toFixed(1);
+                              return [
+                                "",
+                                `Profit: ${formatRupiah(monthData.profit)}`,
+                                `Expenses: ${formatRupiah(monthData.expenses)}`,
+                                `Profit Margin: ${profitMargin}%`,
+                              ];
+                            }
+                            return "";
+                          },
+                        },
+                      },
+                    },
+                  }}
+                />
               </div>
             </div>
           </Card>
