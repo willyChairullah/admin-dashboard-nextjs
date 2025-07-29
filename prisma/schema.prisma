@@ -81,6 +81,7 @@ model Products {
   stockOpnameItems     StockOpnameItems[] // Tambahan untuk Stok Opname
   ProductionLogItems   ProductionLogItems[]
   ManagementStockItems ManagementStockItems[]
+  PurchaseOrderItems   PurchaseOrderItems[]
 
   @@map("products")
 }
@@ -108,6 +109,7 @@ model Users {
   requestedSalesReturns SalesReturns[]      @relation("SalesRequester") // Tambahan: Sales yg request retur
   ProductionLogs        ProductionLogs[]
   ManagementStocks      ManagementStocks[]
+  PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
 
   @@map("users")
 }
@@ -118,39 +120,39 @@ model Users {
 
 model PurchaseOrders {
   id        String              @id @default(cuid())
-  poNumber  String              @unique
+  // poNumber  String              @unique
   poDate    DateTime            @default(now())
+  dateline  DateTime            @default(now())
   status    PurchaseOrderStatus @default(PENDING)
   notes     String?
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
 
   // Relasi penting
-  orderId   String              @unique // Setiap Order hanya punya satu PO internal
-  order     Orders              @relation(fields: [orderId], references: [id])
-  
+  orderId String @unique // Setiap Order hanya punya satu PO internal
+  order   Orders @relation(fields: [orderId], references: [id])
+
   creatorId String
-  creator   Users               @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
-  
-  items     PurchaseOrderItems[]
+  creator   Users  @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
+
+  items PurchaseOrderItems[]
 
   @@map("purchase_orders")
 }
 
 model PurchaseOrderItems {
-  id              String         @id @default(cuid())
-  quantity        Float
+  id       String @id @default(cuid())
+  quantity Float
 
   // Relasi penting
   purchaseOrderId String
   purchaseOrder   PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
-  productId       String
-  product         Products       @relation(fields: [productId], references: [id])
+  productId String
+  product   Products @relation(fields: [productId], references: [id])
 
   @@map("purchase_order_items")
 }
-
 
 model Orders {
   id                   String           @id @default(cuid())
@@ -177,6 +179,7 @@ model Orders {
   sales                Users            @relation(fields: [salesId], references: [id])
   salesReturns         SalesReturns[] // Tambahan untuk Retur
   StockMovements       StockMovements[]
+  PurchaseOrders       PurchaseOrders?
 
   @@map("orders")
 }
@@ -322,28 +325,28 @@ model StockMovements {
   ManagementStockItemsId String?
   stockOpnameItemId      String?
   ordersId               String?
-  notes                  String? 
+  notes                  String?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   productId              String
   userId                 String // User yang melakukan aksi
   products               Products              @relation(fields: [productId], references: [id])
   users                  Users                 @relation(fields: [userId], references: [id])
-  orderId                Orders?               @relation(fields: [ordersId], references: [id]) 
-  stockOpnameItem         StockOpnameItems? @relation(fields: [stockOpnameItemId], references: [id], onDelete: Cascade) 
-  managementStockItemId  ManagementStockItems? @relation(fields: [ManagementStockItemsId], references: [id]) 
-  productionLogItemId    ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id]) 
+  orderId                Orders?               @relation(fields: [ordersId], references: [id])
+  stockOpnameItem        StockOpnameItems?     @relation(fields: [stockOpnameItemId], references: [id], onDelete: Cascade)
+  managementStockItemId  ManagementStockItems? @relation(fields: [ManagementStockItemsId], references: [id])
+  productionLogItemId    ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id])
 
   @@map("stock_movements")
 }
 
 model StockOpnames {
-  id               String                 @id @default(cuid())
-  opnameDate       DateTime               @default(now())
-  status           OpnameStatus           @default(RECONCILED)
+  id               String             @id @default(cuid())
+  opnameDate       DateTime           @default(now())
+  status           OpnameStatus       @default(RECONCILED)
   notes            String?
   conductedById    String
-  conductedBy      Users                  @relation(fields: [conductedById], references: [id])
+  conductedBy      Users              @relation(fields: [conductedById], references: [id])
   stockOpnameItems StockOpnameItems[]
   ManagementStocks ManagementStocks[]
 
@@ -413,7 +416,7 @@ model ProductionLogItems {
   quantity        Float
   productionLogId String
   productId       String
-  notes          String?
+  notes           String?
   productionLog   ProductionLogs   @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
   product         Products         @relation(fields: [productId], references: [id])
   StockMovements  StockMovements[]
@@ -441,7 +444,7 @@ model ManagementStockItems {
   quantity          Float
   managementStockId String
   productId         String
-  notes          String?
+  notes             String?
   managementStock   ManagementStocks @relation(fields: [managementStockId], references: [id], onDelete: Cascade)
   product           Products         @relation(fields: [productId], references: [id])
   StockMovements    StockMovements[]
@@ -614,9 +617,9 @@ enum ManagementStockStatus {
 }
 
 enum PurchaseOrderStatus {
-  PENDING             // Baru dibuat, menunggu dikerjakan gudang
-  PROCESSING          // Sedang dalam proses penyiapan barang
-  READY_FOR_DELIVERY  // Barang sudah siap untuk dikirim
-  COMPLETED           // Sudah dikirim (Surat Jalan telah dibuat)
-  CANCELLED           // Dibatalkan
+  PENDING // Baru dibuat, menunggu dikerjakan gudang
+  PROCESSING // Sedang dalam proses penyiapan barang
+  READY_FOR_DELIVERY // Barang sudah siap untuk dikirim
+  COMPLETED // Sudah dikirim (Surat Jalan telah dibuat)
+  CANCELLED // Dibatalkan
 }

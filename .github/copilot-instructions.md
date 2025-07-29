@@ -1,87 +1,73 @@
 I want to create a CRUD page from this database:
 
+model PurchaseOrders {
+id String @id @default(cuid())
+poNumber String @unique
+poDate DateTime @default(now())
+dateline DateTime @default(now())
+status PurchaseOrderStatus @default(PENDING)
+notes String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-model StockOpnames {
-  id               String             @id @default(cuid())
-  opnameDate       DateTime           @default(now())
-  status           OpnameStatus       @default(IN_PROGRESS)
-  notes            String?
-  conductedById    String
-  conductedBy      Users              @relation(fields: [conductedById], references: [id])
-  stockOpnameItems StockOpnameItems[]
+// Relasi penting
+orderId String @unique // Setiap Order hanya punya satu PO internal
+order Orders @relation(fields: [orderId], references: [id])
 
-  @@map("stock_opnames")
+creatorId String
+creator Users @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
+
+items PurchaseOrderItems[]
+
+@@map("purchase_orders")
 }
 
-model StockOpnameItems {
-  id            String       @id @default(cuid())
-  systemStock   Int
-  physicalStock Int
-  difference    Int
-  opnameId      String
-  productId     String
-  stockOpname   StockOpnames @relation(fields: [opnameId], references: [id], onDelete: Cascade)
-  product       Products     @relation(fields: [productId], references: [id])
-  StockMovements StockMovements[]
+model PurchaseOrderItems {
+id String @id @default(cuid())
+quantity Float
 
-  @@map("stock_opname_items")
-}
+// Relasi penting
+purchaseOrderId String
+purchaseOrder PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
-model StockMovements {
-  id               String            @id @default(cuid())
-  movementDate     DateTime          @default(now())
-  type             StockMovementType Read and understand all the instructions first, then proceed with the tasks.
-  quantity         Float 
-  previousStock    Int
-  newStock         Int
-  reference        String? // Bisa diisi ID Order, ID Produksi, atau catatan manual
-  productionLogsItemsId String?
-  ordersId         String?
-  notes            String? 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  productId        String
-  userId           String 
-  products         Products          @relation(fields: [productId], references: [id])
-  users            Users             @relation(fields: [userId], references: [id])
-  productionLogItemId  ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id]) 
-  orderId          Orders?           @relation(fields: [ordersId], references: [id]) // FK ke tabel Orders (jika ada)
+productId String
+product Products @relation(fields: [productId], references: [id])
 
-  @@map("stock_movements")
+@@map("purchase_order_items")
 }
 
 Will reference the folder page "/inventori/produksi"
 
-In the Sidebar Page, it will be named the "Stok Opname". The page created will be placed at the path "inventory/stok-opname" and read on layout.tsx will contain this data:
+In the Sidebar Page, it will be named the Daftar PO module. The page created will be placed at the path "sales/daftar-po" and read on layout.tsx will contain this data:
 const myStaticData = {
-module: "inventory",
-subModule: "stok-opname",
-allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
+module: "sales",
+subModule: "daftar-po",
+allowedRole: ["OWNER", "ADMIN"],
 data: await getCategories(), // adjust according to the data retrieval
 };
 
 Main Features:
 
-Just Compare Stock in Databse with Real Stock (not automaticly change stock in database)
+Add PO into database
 
-Stock Opname Form with the following options:
-  
-Opname Date  
-Notes  
-User performing the action  
-List of Items that:
+PurchaseOrders Form with the following options:
 
-Select product  
-Show database quantity product
-Enter quantity  
-Notes per item  
+Type: Purchase Orders
+PO Date  
+Deadline  
+Choose User
+Choose Orders data  
+Automatically show List of OrderItems that can :
+
+Will show quantity
+
 Data Storage:
 
-Save to StockOpnames  
-Save details to StockOpnamesItems
+Save to PurchaseOrders
+Save details to PurchaseOrderItems
 
 Example Scenarios:
-Today Notes, Product A is 100 and in real stock is 90
-to change different stock it is will do in modul manajemen-stok
+
+Admin only can fill PO Date, Deadline, Choose User, Choose Orders data
 
 Make everything complete so that it can CRUD the data.
