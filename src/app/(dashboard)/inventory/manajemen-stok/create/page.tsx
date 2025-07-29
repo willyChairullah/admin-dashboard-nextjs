@@ -28,6 +28,7 @@ interface ManagementStockItemFormData {
   productId: string;
   quantity: number;
   notes?: string;
+  stockOpnameItemId?: string;
 }
 
 interface ManagementStockFormData {
@@ -46,7 +47,12 @@ interface ManagementStockFormErrors {
   producedById?: string;
   selectedOpnameId?: string; // For OPNAME_ADJUSTMENT
   items?: {
-    [key: number]: { productId?: string; quantity?: string; notes?: string };
+    [key: number]: {
+      productId?: string;
+      quantity?: string;
+      notes?: string;
+      stockOpnameItemId?: string;
+    };
   };
 }
 
@@ -75,6 +81,7 @@ interface ReconciledOpname {
   stockOpnameItems: {
     id: string;
     difference: number;
+    notes: string | null;
     product: {
       id: string;
       name: string;
@@ -102,8 +109,10 @@ export default function CreateManagementStockPage() {
     status: ManagementStockStatus.IN,
     notes: "",
     producedById: "",
-    items: [{ productId: "", quantity: 0, notes: "" }],
+    items: [{ productId: "", quantity: 0, notes: "", stockOpnameItemId: "" }],
   });
+
+  console.log(formData);
 
   const [formErrors, setFormErrors] = useState<ManagementStockFormErrors>({});
 
@@ -137,13 +146,14 @@ export default function CreateManagementStockPage() {
       const selectedOpname = reconciledOpnames.find(
         opname => opname.id === formData.selectedOpnameId
       );
+      console.log(selectedOpname);
+
       if (selectedOpname) {
         const opnameItems = selectedOpname.stockOpnameItems.map(item => ({
           productId: item.product.id,
           quantity: item.difference, // Use the difference as the adjustment quantity
-          notes: `Penyesuaian dari stok opname tanggal ${new Date(
-            selectedOpname.opnameDate
-          ).toLocaleDateString("id-ID")}`,
+          notes: item.notes || "",
+          stockOpnameItemId: item.id || "",
         }));
 
         setFormData(prev => ({
@@ -288,6 +298,7 @@ export default function CreateManagementStockPage() {
         status: formData.status,
         notes: formData.notes || undefined,
         producedById: formData.producedById,
+        selectedOpnameId: formData.selectedOpnameId || undefined,
         items: formData.items,
       });
 
@@ -300,8 +311,8 @@ export default function CreateManagementStockPage() {
         );
 
         if (updateOpname.success) {
-          toast.success("Manajemen stok berhasil dibuat!");
-          router.push(`/${data.module}/${data.subModule}`);
+          // toast.success("Manajemen stok berhasil dibuat!");
+          // router.push(`/${data.module}/${data.subModule}`);
         } else {
           toast.error(result.error || "Gagal membuat manajemen stok");
         }
@@ -427,25 +438,6 @@ export default function CreateManagementStockPage() {
                   </option>
                 ))}
               </select>
-              {formData.selectedOpnameId && (
-                <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Detail Item dengan Selisih:
-                  </p>
-                  {reconciledOpnames
-                    .find(opname => opname.id === formData.selectedOpnameId)
-                    ?.stockOpnameItems.map(item => (
-                      <div
-                        key={item.id}
-                        className="text-xs text-gray-600 dark:text-gray-400 mb-1"
-                      >
-                        {item.product.name}: Selisih{" "}
-                        {item.difference > 0 ? "+" : ""}
-                        {item.difference} {item.product.unit}
-                      </div>
-                    ))}
-                </div>
-              )}
             </FormField>
           )}
 
@@ -470,27 +462,26 @@ export default function CreateManagementStockPage() {
               ))}
             </select>
           </FormField>
-
-          <FormField label="Catatan" errorMessage={formErrors.notes}>
-            <InputTextArea
-              name="notes"
-              height="45px"
-              placeholder="Catatan manajemen stok (opsional)"
-              value={formData.notes}
-              onChange={e => handleInputChange("notes", e.target.value)}
-              errorMessage={formErrors.notes}
-              rows={3}
-            />
-          </FormField>
         </div>
+        <FormField label="Catatan" errorMessage={formErrors.notes}>
+          <InputTextArea
+            name="notes"
+            height="45px"
+            placeholder="Catatan manajemen stok (opsional)"
+            value={formData.notes}
+            onChange={e => handleInputChange("notes", e.target.value)}
+            errorMessage={formErrors.notes}
+            rows={3}
+          />
+        </FormField>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="block text-xl font-bold text-gray-700 dark:text-gray-300">
               {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT
-                ? "Daftar Penyesuaian Stok (Auto-Generated)"
+                ? "Daftar Penyesuaian Stok (Dibuat Otomatis)"
                 : "Daftar Produk"}
-            </label>
+            </p>
             {formData.status !== ManagementStockStatus.OPNAME_ADJUSTMENT && (
               <button
                 type="button"
@@ -563,7 +554,12 @@ export default function CreateManagementStockPage() {
                   </FormField>
 
                   <FormField
-                    label="Quantity"
+                    label={`${
+                      formData.status ===
+                      ManagementStockStatus.OPNAME_ADJUSTMENT
+                        ? "Selisih"
+                        : "Quantity"
+                    }`}
                     errorMessage={formErrors.items?.[index]?.quantity}
                   >
                     <Input
@@ -587,17 +583,88 @@ export default function CreateManagementStockPage() {
                       placeholder="0"
                     />
                     {selectedProduct && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <span className="text-xs text-gray-500 mt-1">
                         Stok saat ini: {selectedProduct.currentStock}{" "}
                         {selectedProduct.unit}
-                      </p>
+                      </span>
                     )}
                   </FormField>
 
+                  {formData.status ===
+                  ManagementStockStatus.OPNAME_ADJUSTMENT ? (
+                    <FormField
+                      label="Total Barang"
+                      errorMessage={formErrors.items?.[index]?.quantity}
+                    >
+                      <Input
+                        type="number"
+                        name={`quantity-${index}`}
+                        min="0"
+                        step="0.01"
+                        value={
+                          selectedProduct
+                            ? (
+                                selectedProduct.currentStock + item.quantity
+                              ).toString()
+                            : ""
+                        }
+                        onChange={e =>
+                          handleItemChange(
+                            index,
+                            "quantity",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        disabled={
+                          formData.status ===
+                          ManagementStockStatus.OPNAME_ADJUSTMENT
+                        }
+                        errorMessage={formErrors.items?.[index]?.quantity}
+                        placeholder="0"
+                      />
+                      {selectedProduct && (
+                        <span className="text-xs text-gray-500 mt-1">
+                          Perhitungan: {selectedProduct.currentStock} {"+ ("}{" "}
+                          {item.quantity} {") = "}{" "}
+                          {selectedProduct.currentStock + item.quantity}
+                        </span>
+                      )}
+                    </FormField>
+                  ) : (
+                    <FormField
+                      label="Catatan Item"
+                      errorMessage={formErrors.items?.[index]?.notes}
+                    >
+                      <Input
+                        type="text"
+                        name={`notes-${index}`}
+                        value={item.notes || ""}
+                        onChange={e =>
+                          handleItemChange(index, "notes", e.target.value)
+                        }
+                        errorMessage={formErrors.items?.[index]?.notes}
+                        placeholder="Catatan untuk item ini (opsional)"
+                      />
+                    </FormField>
+                  )}
+                </div>
+                {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT ? (
                   <FormField
                     label="Catatan Item"
                     errorMessage={formErrors.items?.[index]?.notes}
                   >
+                    <Input
+                      type="hidden"
+                      name={`stockOpnameItems-${index}`}
+                      value={item.stockOpnameItemId || ""}
+                      onChange={e =>
+                        handleItemChange(
+                          index,
+                          "stockOpnameItemId",
+                          e.target.value
+                        )
+                      }
+                    />
                     <Input
                       type="text"
                       name={`notes-${index}`}
@@ -613,7 +680,28 @@ export default function CreateManagementStockPage() {
                       placeholder="Catatan untuk item ini (opsional)"
                     />
                   </FormField>
-                </div>
+                ) : (
+                  ""
+                )}
+                {/* {formData.selectedOpnameId && (
+                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Detail Item dengan Selisih:
+                    </p>
+                    {reconciledOpnames
+                      .find(opname => opname.id === formData.selectedOpnameId)
+                      ?.stockOpnameItems.map(item => (
+                        <div
+                          key={item.id}
+                          className="text-xs text-gray-600 dark:text-gray-400 mb-1"
+                        >
+                          {item.product.name}: Selisih{" "}
+                          {item.difference > 0 ? "+" : ""}
+                          {item.difference} {item.product.unit}
+                        </div>
+                      ))}
+                  </div>
+                )} */}
               </div>
             );
           })}

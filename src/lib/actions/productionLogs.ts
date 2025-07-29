@@ -141,6 +141,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
             quantity: item.quantity,
             productionLogId: productionLog.id,
             productId: item.productId,
+            notes: item.notes || null,
           },
         });
 
@@ -258,6 +259,7 @@ export async function updateProductionLog(
             quantity: item.quantity,
             productionLogId: updatedLog.id,
             productId: item.productId,
+            notes: item.notes || null,
           },
         });
 

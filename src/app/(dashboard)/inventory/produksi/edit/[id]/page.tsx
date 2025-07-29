@@ -91,7 +91,7 @@ export default function EditProductionLogPage() {
 
         if (!productionLog) {
           toast.error("Production log tidak ditemukan");
-          router.push(`/${data.module}/${data.subModule}`);
+          router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
           return;
         }
 
@@ -108,13 +108,13 @@ export default function EditProductionLogPage() {
           items: productionLog.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            notes: "", // Note: items don't have individual notes in the current schema
+            notes: item.notes || "", // Note: items don't have individual notes in the current schema
           })),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } finally {
         setIsLoading(false);
       }
@@ -267,7 +267,7 @@ export default function EditProductionLogPage() {
 
       if (result.success) {
         toast.success("Production log berhasil diperbarui.");
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
         const errorMessage = result.error || "Gagal memperbarui production log";
         toast.error(errorMessage);
@@ -295,12 +295,12 @@ export default function EditProductionLogPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle="Edit Produksi"
-        mainPageName={`/${data.module}/${data.subModule}`}
+        mainPageName={`/${data.module}/${data.subModule.toLowerCase()}`}
         allowedRoles={data.allowedRole}
       />
 
       <ManagementForm
-        subModuleName={data.subModule}
+        subModuleName={data.subModule.toLowerCase()}
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}

@@ -2,7 +2,6 @@
 
 import db from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { OpnameStatus } from "@prisma/client";
 
 // Types
@@ -21,6 +20,7 @@ export interface StockOpnameWithDetails {
     id: string;
     systemStock: number;
     physicalStock: number;
+    notes: string | null;
     difference: number;
     productId: string;
     product: {
@@ -40,6 +40,7 @@ export interface CreateStockOpnameData {
     productId: string;
     systemStock: number;
     physicalStock: number;
+    notes?: string;
   }[];
 }
 
@@ -52,6 +53,7 @@ export interface UpdateStockOpnameData {
     productId: string;
     systemStock: number;
     physicalStock: number;
+    notes?: string;
   }[];
 }
 
@@ -134,6 +136,8 @@ export async function createStockOpname(data: CreateStockOpnameData) {
   try {
     const result = await db.$transaction(async tx => {
       // Calculate differences and determine status
+      console.log(data);
+
       const itemsWithDifference = data.items.map(item => ({
         ...item,
         difference: item.physicalStock - item.systemStock,
@@ -164,6 +168,7 @@ export async function createStockOpname(data: CreateStockOpnameData) {
               productId: item.productId,
               systemStock: item.systemStock,
               physicalStock: item.physicalStock,
+              notes: item.notes,
               difference: item.difference,
             },
           })
@@ -234,6 +239,7 @@ export async function updateStockOpname(
                 productId: item.productId,
                 systemStock: item.systemStock,
                 physicalStock: item.physicalStock,
+                notes: item.notes,
                 difference: item.difference,
               },
             })
@@ -246,8 +252,7 @@ export async function updateStockOpname(
       return { stockOpname };
     });
 
-    revalidatePath("/inventory/stok-opname");
-    revalidatePath(`/inventory/stok-opname/edit/${id}`);
+    // revalidatePath("/inventory/stok-opname");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error updating stock opname:", error);
@@ -261,7 +266,6 @@ export async function deleteStockOpname(id: string) {
     await db.stockOpnames.delete({
       where: { id },
     });
-
     revalidatePath("/inventory/stok-opname");
     return { success: true };
   } catch (error) {
@@ -335,104 +339,6 @@ export async function getProductsForOpname() {
   } catch (error) {
     console.error("Error fetching products for opname:", error);
     throw new Error("Failed to fetch products");
-  }
-}
-
-// Form action for creating stock opname
-export async function createStockOpnameAction(formData: FormData) {
-  try {
-    const opnameDate = new Date(formData.get("opnameDate") as string);
-    const notes = (formData.get("notes") as string) || undefined;
-    const conductedById = formData.get("conductedById") as string;
-
-    // Parse items from form data
-    const items: CreateStockOpnameData["items"] = [];
-    let index = 0;
-
-    while (formData.get(`items.${index}.productId`)) {
-      const productId = formData.get(`items.${index}.productId`) as string;
-      const systemStock = parseInt(
-        formData.get(`items.${index}.systemStock`) as string
-      );
-      const physicalStock = parseInt(
-        formData.get(`items.${index}.physicalStock`) as string
-      );
-
-      items.push({
-        productId,
-        systemStock,
-        physicalStock,
-      });
-
-      index++;
-    }
-
-    if (items.length === 0) {
-      throw new Error("At least one item is required");
-    }
-
-    const result = await createStockOpname({
-      opnameDate,
-      notes,
-      conductedById,
-      items,
-    });
-
-    if (result.success) {
-      redirect("/inventory/stok-opname");
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (error) {
-    console.error("Error in createStockOpnameAction:", error);
-    throw error;
-  }
-}
-
-// Form action for updating stock opname
-export async function updateStockOpnameAction(id: string, formData: FormData) {
-  try {
-    const opnameDate = new Date(formData.get("opnameDate") as string);
-    const notes = (formData.get("notes") as string) || undefined;
-    const status = (formData.get("status") as OpnameStatus) || undefined;
-
-    // Parse items from form data
-    const items: UpdateStockOpnameData["items"] = [];
-    let index = 0;
-
-    while (formData.get(`items.${index}.productId`)) {
-      const productId = formData.get(`items.${index}.productId`) as string;
-      const systemStock = parseInt(
-        formData.get(`items.${index}.systemStock`) as string
-      );
-      const physicalStock = parseInt(
-        formData.get(`items.${index}.physicalStock`) as string
-      );
-
-      items.push({
-        productId,
-        systemStock,
-        physicalStock,
-      });
-
-      index++;
-    }
-
-    const result = await updateStockOpname(id, {
-      opnameDate,
-      notes,
-      status,
-      items: items.length > 0 ? items : undefined,
-    });
-
-    if (result.success) {
-      redirect("/inventory/stok-opname");
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (error) {
-    console.error("Error in updateStockOpnameAction:", error);
-    throw error;
   }
 }
 

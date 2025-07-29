@@ -10,7 +10,7 @@ import {
   InputDate,
 } from "@/components/ui";
 import {
-  updateStockOpnameAction,
+  updateStockOpname,
   getStockOpnameById,
   getProductsForOpname,
   deleteStockOpname,
@@ -20,6 +20,8 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2, Plus, Check } from "lucide-react";
 import { OpnameStatus } from "@prisma/client";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
+import { format } from "node:url";
 
 interface StockOpnameItemFormData {
   productId: string;
@@ -76,6 +78,8 @@ const EditStokOpnamePage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [formData, setFormData] = useState<StockOpnameFormData>({
     opnameDate: "",
@@ -119,7 +123,7 @@ const EditStokOpnamePage = () => {
             productId: item.productId,
             systemStock: item.systemStock,
             physicalStock: item.physicalStock,
-            notes: "",
+            notes: item.notes || "",
           })),
         });
       } catch (error) {
@@ -278,39 +282,24 @@ const EditStokOpnamePage = () => {
     setSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("opnameDate", formData.opnameDate);
-      formDataToSend.append("notes", formData.notes);
-
-      // Only send status if it's not IN_PROGRESS (to allow auto status calculation)
-      if (formData.status !== "IN_PROGRESS") {
-        formDataToSend.append("status", formData.status);
-      }
-
-      formData.items.forEach((item, index) => {
-        formDataToSend.append(`items.${index}.productId`, item.productId);
-        formDataToSend.append(
-          `items.${index}.systemStock`,
-          item.systemStock.toString()
-        );
-        formDataToSend.append(
-          `items.${index}.physicalStock`,
-          item.physicalStock.toString()
-        );
+      const result = await updateStockOpname(id, {
+        opnameDate: new Date(formData.opnameDate),
+        notes: formData.notes || undefined,
+        items: formData.items.map(item => ({
+          productId: item.productId,
+          systemStock: item.systemStock,
+          physicalStock: item.physicalStock,
+          notes: item.notes,
+        })),
       });
 
-      await updateStockOpnameAction(id, formDataToSend);
-
-      // Update local status based on differences if it was IN_PROGRESS
-      if (formData.status === "IN_PROGRESS") {
-        const hasDifferences = formData.items.some(
-          item => item.physicalStock !== item.systemStock
-        );
-        const newStatus = hasDifferences ? "RECONCILED" : "COMPLETED";
-        setFormData(prev => ({ ...prev, status: newStatus }));
+      if (result.success) {
+        toast.success("Stok opname berhasil diperbarui");
+        router.push("/inventory/stok-opname");
+      } else {
+        toast.error(result.error || "Gagal memperbarui stok opname");
+        router.push("/inventory/stok-opname");
       }
-
-      toast.success("Stok opname berhasil diperbarui");
     } catch (error) {
       console.error("Error updating stock opname:", error);
       toast.error("Gagal memperbarui stok opname");
@@ -320,13 +309,7 @@ const EditStokOpnamePage = () => {
   };
 
   const handleDelete = async () => {
-    if (
-      !confirm(
-        "Apakah Anda yakin ingin menghapus stok opname ini? Tindakan ini tidak dapat dibatalkan."
-      )
-    ) {
-      return;
-    }
+    setIsDeleting(true);
 
     try {
       const result = await deleteStockOpname(id);
@@ -339,6 +322,9 @@ const EditStokOpnamePage = () => {
     } catch (error) {
       console.error("Error deleting stock opname:", error);
       toast.error("Gagal menghapus stok opname");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -350,7 +336,7 @@ const EditStokOpnamePage = () => {
 
   const isCompleted = formData.status === "COMPLETED";
   const isReconciled = formData.status === "RECONCILED";
-  const canEdit = !isCompleted && !isReconciled;
+  const canEdit = !isCompleted || !isReconciled;
 
   // Check if there are any differences in items
   const hasDifferences = formData.items.some(
@@ -381,38 +367,37 @@ const EditStokOpnamePage = () => {
         </div>
       )}
 
-      {/* Status Banner */}
-      {(isCompleted || isReconciled) && (
-        <div
-          className={`p-4 rounded-lg border-l-4 ${
-            isCompleted
-              ? "bg-green-50 border-green-400 text-green-700 dark:bg-green-900/20 dark:text-green-300"
-              : "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-          }`}
-        >
-          <div className="flex items-center">
-            <Check size={20} className="mr-2" />
-            <span className="font-medium">
-              {isCompleted && "Stok opname ini telah diselesaikan"}
-              {isReconciled && "Stok opname ini telah direkonsiliasi"}
-            </span>
-          </div>
-          <p className="text-sm mt-1">
-            {isCompleted && "Data hanya dapat dilihat, tidak dapat diubah."}
-            {isReconciled &&
-              "Silakan lakukan penyesuaian stok di halaman Manajemen Stok dengan memilih jenis transaksi OPNAME_ADJUSTMENT."}
-          </p>
-        </div>
-      )}
-
       <ManagementForm
         subModuleName="stok-opname"
         moduleName="inventory"
         isSubmitting={submitting}
         handleFormSubmit={handleFormSubmit}
-        handleDelete={handleDelete}
+        handleDelete={() => setShowDeleteModal(true)}
         hideDeleteButton={false}
       >
+        {/* Status Banner */}
+        {(isCompleted || isReconciled) && (
+          <div
+            className={`p-4 rounded-lg border-l-4 ${
+              isCompleted
+                ? "bg-green-50 border-green-400 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                : "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+            }`}
+          >
+            <div className="flex items-center">
+              <Check size={20} className="mr-2" />
+              <span className="font-medium">
+                {isCompleted && "Stok opname ini telah diselesaikan"}
+                {isReconciled && "Stok opname ini telah direkonsiliasi"}
+              </span>
+            </div>
+            <p className="text-sm mt-1">
+              {isCompleted && "Data hanya dapat dilihat, tidak dapat diubah."}
+              {isReconciled &&
+                "Silakan lakukan penyesuaian stok di halaman Manajemen Stok dengan memilih jenis transaksi OPNAME_ADJUSTMENT."}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             label="Tanggal Opname"
@@ -476,6 +461,7 @@ const EditStokOpnamePage = () => {
             <InputTextArea
               name="notes"
               value={formData.notes}
+              height="45px"
               onChange={e => handleInputChange("notes", e.target.value)}
               placeholder="Catatan tambahan untuk stok opname..."
               errorMessage={errors.notes}
@@ -508,7 +494,7 @@ const EditStokOpnamePage = () => {
             return (
               <div
                 key={index}
-                className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-800"
+                className="p-4 border border-gray-200 dark:border-gray-600 rounded-md space-y-4"
               >
                 <div className="flex justify-between items-center">
                   <h4 className="font-medium">Produk {index + 1}</h4>
@@ -625,6 +611,18 @@ const EditStokOpnamePage = () => {
           })}
         </div>
       </ManagementForm>
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Hapus Manajemen Stok"
+        isLoading={isDeleting}
+      >
+        <p>
+          Apakah Anda yakin ingin menghapus data manajemen stok ini? Tindakan
+          ini akan membalikkan perubahan stok dan tidak dapat dibatalkan.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 };

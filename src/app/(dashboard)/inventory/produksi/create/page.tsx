@@ -69,6 +69,8 @@ export default function CreateProductionLogPage() {
     items: [{ productId: "", quantity: 0, notes: "" }],
   });
 
+  console.log(formData);
+
   const [formErrors, setFormErrors] = useState<ProductionLogFormErrors>({});
 
   useEffect(() => {
@@ -212,7 +214,7 @@ export default function CreateProductionLogPage() {
 
       if (result.success) {
         toast.success("Production log berhasil dibuat.");
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
         const errorMessage = result.error || "Gagal membuat production log";
         toast.error(errorMessage);
@@ -237,12 +239,12 @@ export default function CreateProductionLogPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle="Tambah Produksi"
-        mainPageName={`/${data.module}/${data.subModule}`}
+        mainPageName={`/${data.module}/${data.subModule.toLowerCase()}`}
         allowedRoles={data.allowedRole}
       />
 
       <ManagementForm
-        subModuleName={data.subModule}
+        subModuleName={data.subModule.toLowerCase()}
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}

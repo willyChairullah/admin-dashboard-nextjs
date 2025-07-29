@@ -9,12 +9,12 @@ import {
   ManagementStockStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { markStockOpnameAsCompleted } from "./stockOpnames";
 
 export type ManagementStockItemFormData = {
   productId: string;
   quantity: number;
   notes?: string;
+  stockOpnameItemId?: string;
 };
 
 export type ManagementStockFormData = {
@@ -123,9 +123,12 @@ export async function createManagementStock(data: ManagementStockFormData) {
           managementDate: data.managementDate,
           status: data.status,
           notes: data.notes || null,
+          stockOpnameId: data.selectedOpnameId || null,
           producedById: data.producedById,
         },
       });
+
+      console.log(data);
 
       // Create management stock items and update stock
       for (const item of data.items) {
@@ -165,19 +168,13 @@ export async function createManagementStock(data: ManagementStockFormData) {
           throw new Error(`Invalid management stock status: ${data.status}`);
         }
 
-        // Create management stock item
-        const managementStockItem = await tx.managementStockItems.create({
+        let managementStockItem = await tx.managementStockItems.create({
           data: {
             quantity: item.quantity,
             managementStockId: managementStock.id,
             productId: item.productId,
+            notes: item.notes || null,
           },
-        });
-
-        // Update product stock
-        await tx.products.update({
-          where: { id: item.productId },
-          data: { currentStock: newStock },
         });
 
         // Create stock movement record
@@ -188,11 +185,22 @@ export async function createManagementStock(data: ManagementStockFormData) {
             previousStock: previousStock,
             newStock: newStock,
             reference: `Stock Management #${managementStock.id}`,
+            stockOpnameItemId: item.stockOpnameItemId
+              ? item.stockOpnameItemId
+              : null,
+            ManagementStockItemsId: item.stockOpnameItemId
+              ? null
+              : managementStock.id,
             productId: item.productId,
             userId: data.producedById,
-            ManagementStockItemsId: managementStockItem.id,
             notes: item.notes || null,
           },
+        });
+
+        // Update product stock
+        await tx.products.update({
+          where: { id: item.productId },
+          data: { currentStock: newStock },
         });
       }
 
@@ -322,6 +330,7 @@ export async function updateManagementStock(
             quantity: item.quantity,
             managementStockId: updatedStock.id,
             productId: item.productId,
+            notes: item.notes || null,
           },
         });
 

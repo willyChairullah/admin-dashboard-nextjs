@@ -37,7 +37,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
 
   const handleAddNewClick = () => {
     if (isOnMainPage || isOnEditPage) {
-      console.log("Navigating to:", `${pathname}/create`);
+      // console.log("Navigating to:", `${pathname}/create`);
       router.push(`${mainPage}/create`); // Navigasi ke '/me/create'
     }
   };

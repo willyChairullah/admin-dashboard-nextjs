@@ -33,10 +33,9 @@ const InputDate: React.FC<InputDateProps> = ({
 
   // Handle date selection
   const handleDateSelection = (day: number) => {
+    // Buat tanggal pada 00:00:00 UTC
     const newDate = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
+      Date.UTC(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     );
     setSelectedDate(newDate);
     if (onChange) onChange(newDate);

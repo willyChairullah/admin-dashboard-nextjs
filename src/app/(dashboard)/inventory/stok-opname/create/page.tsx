@@ -10,12 +10,11 @@ import {
   InputDate,
 } from "@/components/ui";
 import {
-  createStockOpnameAction,
+  createStockOpname,
   getProductsForOpname,
 } from "@/lib/actions/stockOpnames";
 import { getUsers } from "@/lib/actions/user";
 import { useRouter } from "next/navigation";
-import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 
@@ -84,6 +83,8 @@ const CreateStokOpnamePage = () => {
       },
     ],
   });
+
+  // console.log(formData);
 
   const [errors, setErrors] = useState<StockOpnameFormErrors>({});
 
@@ -253,25 +254,24 @@ const CreateStokOpnamePage = () => {
     setSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("opnameDate", formData.opnameDate);
-      formDataToSend.append("notes", formData.notes);
-      formDataToSend.append("conductedById", formData.conductedById);
-
-      formData.items.forEach((item, index) => {
-        formDataToSend.append(`items.${index}.productId`, item.productId);
-        formDataToSend.append(
-          `items.${index}.systemStock`,
-          item.systemStock.toString()
-        );
-        formDataToSend.append(
-          `items.${index}.physicalStock`,
-          item.physicalStock.toString()
-        );
+      const result = await createStockOpname({
+        opnameDate: new Date(formData.opnameDate),
+        notes: formData.notes || undefined,
+        conductedById: formData.conductedById,
+        items: formData.items.map(item => ({
+          productId: item.productId,
+          systemStock: item.systemStock,
+          physicalStock: item.physicalStock,
+          notes: item.notes,
+        })),
       });
 
-      await createStockOpnameAction(formDataToSend);
-      toast.success("Stok opname berhasil dibuat");
+      if (result.success) {
+        // toast.success("Stok opname berhasil dibuat");
+        router.push("/inventory/stok-opname");
+      } else {
+        toast.error(result.error || "Gagal membuat stok opname");
+      }
     } catch (error) {
       console.error("Error creating stock opname:", error);
       toast.error("Gagal membuat stok opname");

@@ -94,7 +94,7 @@ const StokOpnamePage = () => {
   const data = useSharedData();
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         allowedRoles={["OWNER", "WAREHOUSE", "ADMIN"]}
         mainPageName="/inventory/stok-opname"

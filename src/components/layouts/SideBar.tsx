@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -40,6 +40,37 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   const pathname = usePathname(); // Move hook to top level
   const hasChildren = item.children && item.children.length > 0;
   const paddingLeft = level > 0 ? `${8 + level * 16}px` : "12px";
+  const submenuRef = useRef<HTMLUListElement>(null); // Tambahkan useRef
+  const [submenuHeight, setSubmenuHeight] = useState<number | undefined>(0); // State untuk tinggi
+
+  // Gunakan useEffect untuk membuka sub-menu jika ada sub-item yang aktif
+  useEffect(() => {
+    if (
+      hasChildren &&
+      item.children.some(child => pathname.startsWith(child.href))
+    ) {
+      setIsSubMenuOpen(true);
+    }
+  }, [pathname, hasChildren, item.children]);
+
+  useEffect(() => {
+    // Jika sub-menu terbuka, atur tinggi ke tinggi asli, jika tidak, atur ke 0
+    if (isSubMenuOpen) {
+      setSubmenuHeight(submenuRef.current?.scrollHeight || 0);
+    } else {
+      setSubmenuHeight(0);
+    }
+  }, [isSubMenuOpen]);
+
+  // Juga pastikan sub-menu terbuka jika path-nya cocok
+  useEffect(() => {
+    if (
+      hasChildren &&
+      item.children.some(child => pathname.startsWith(child.href))
+    ) {
+      setIsSubMenuOpen(true);
+    }
+  }, [pathname, hasChildren, item.children]);
 
   const toggleSubMenu = () => {
     if (hasChildren) {
@@ -103,16 +134,20 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map(child => (
-            <MenuItemComponent
-              key={child.id}
-              item={child}
-              level={level + 1}
-              shouldShowExpanded={shouldShowExpanded}
-              isActive={child.href === pathname}
-              onItemClick={onItemClick}
-            />
-          ))}
+          {item.children?.map(child => {
+            const isChildActive =
+              pathname === child.href || pathname.startsWith(child.href + "/");
+            return (
+              <MenuItemComponent
+                key={child.id}
+                item={child}
+                level={level + 1}
+                shouldShowExpanded={shouldShowExpanded}
+                isActive={isChildActive}
+                onItemClick={onItemClick}
+              />
+            );
+          })}
         </ul>
       )}
     </>
@@ -522,13 +557,21 @@ export default function SideBar({
         {menuItems.length > 0 ? (
           <ul className="space-y-2 px-3">
             {menuItems.map((item: MenuItem) => {
+              // --- PERUBAHAN DIMULAI DI SINI ---
+              // Logika baru untuk isActive:
+              // 1. Cek jika pathname sama persis
+              // 2. Cek jika pathname dimulai dengan href (untuk sub-path)
               const isActive =
                 pathname === item.href ||
+                (item.href !== "#" && pathname.startsWith(item.href + "/")) ||
                 (item.children &&
                   item.children.some(
-                    (child: MenuItem) => child.href === pathname
+                    (child: MenuItem) =>
+                      child.href === pathname ||
+                      pathname.startsWith(child.href + "/")
                   )) ||
                 false;
+              // --- PERUBAHAN BERAKHIR DI SINI ---
 
               return (
                 <MenuItemComponent

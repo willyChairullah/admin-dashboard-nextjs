@@ -12,9 +12,9 @@ export default async function middleware(request: NextRequest) {
   // Get session menggunakan auth function
   const session = await auth();
 
-  console.log("🔥 Session:", session ? "Authenticated" : "Unauthenticated");
+  // console.log("🔥 Session:", session ? "Authenticated" : "Unauthenticated");
   if (session?.user) {
-    console.log("🔥 User Role:", session.user.role);
+    // console.log("🔥 User Role:", session.user.role);
     // console.log("🔥 Full Session:", JSON.stringify(session.user, null, 2));
   }
 
@@ -26,7 +26,7 @@ export default async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/") &&
     !pathname.startsWith("/_next/")
   ) {
-    console.log("🔥 REDIRECT: Unauthenticated user to /sign-in");
+    // console.log("🔥 REDIRECT: Unauthenticated user to /sign-in");
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
@@ -35,7 +35,7 @@ export default async function middleware(request: NextRequest) {
     session &&
     (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up"))
   ) {
-    console.log("🔥 REDIRECT: Authenticated user to dashboard");
+    // console.log("🔥 REDIRECT: Authenticated user to dashboard");
     return NextResponse.redirect(new URL("/management/category", request.url));
   }
 
@@ -56,16 +56,16 @@ export default async function middleware(request: NextRequest) {
 
   if (session && isProtectedPath) {
     const userRole = session.user.role;
-    console.log(`🔥 RBAC CHECK: ${userRole} accessing ${pathname}`);
+    // console.log(`🔥 RBAC CHECK: ${userRole} accessing ${pathname}`);
 
     // EXPLICIT BLOCKING untuk /management jika bukan OWNER atau ADMIN
     if (
       pathname.startsWith("/management") &&
       !["OWNER", "ADMIN"].includes(userRole)
     ) {
-      console.log(
-        `🚫 BLOCKED: ${userRole} tried to access management module: ${pathname}`
-      );
+      // console.log(
+      //   `🚫 BLOCKED: ${userRole} tried to access management module: ${pathname}`
+      // );
       return NextResponse.redirect(new URL("/", request.url));
     }
 
@@ -74,9 +74,9 @@ export default async function middleware(request: NextRequest) {
       pathname.startsWith("/settings") &&
       !["OWNER", "ADMIN"].includes(userRole)
     ) {
-      console.log(
-        `🚫 BLOCKED: ${userRole} tried to access settings module: ${pathname}`
-      );
+      // console.log(
+      //   `🚫 BLOCKED: ${userRole} tried to access settings module: ${pathname}`
+      // );
       return NextResponse.redirect(new URL("/", request.url));
     }
 
@@ -85,13 +85,13 @@ export default async function middleware(request: NextRequest) {
       pathname.startsWith("/inventory") &&
       !["OWNER", "ADMIN", "WAREHOUSE"].includes(userRole)
     ) {
-      console.log(
-        `🚫 BLOCKED: ${userRole} tried to access inventory module: ${pathname}`
-      );
+      // console.log(
+      //   `🚫 BLOCKED: ${userRole} tried to access inventory module: ${pathname}`
+      // );
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    console.log(`✅ ALLOWED: ${userRole} can access ${pathname}`);
+    // console.log(`✅ ALLOWED: ${userRole} can access ${pathname}`);
   }
 
   return NextResponse.next();
