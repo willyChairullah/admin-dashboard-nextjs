@@ -571,32 +571,32 @@ export default function ComprehensiveFinanceDashboard() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 dark:from-blue-800 dark:via-purple-800 dark:to-indigo-900"></div>
 
-        <div className="relative px-6 py-16 -mx-4 -mt-6 mb-8">
+        <div className="relative px-4 sm:px-6 py-8 sm:py-16 -mx-4 -mt-6 mb-8">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 sm:gap-8">
               <div className="flex-1">
-                <div className="flex items-center mb-6">
-                  <div className="p-4 bg-white/10 backdrop-blur-sm rounded-3xl mr-6">
-                    <BarChart3 className="h-12 w-12 text-white" />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center mb-6">
+                  <div className="p-3 sm:p-4 bg-white/10 backdrop-blur-sm rounded-2xl sm:rounded-3xl mb-4 sm:mb-0 sm:mr-6">
+                    <BarChart3 className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-6xl font-bold text-white mb-3 tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 tracking-tight">
                       Finance Hub
                     </h1>
-                    <p className="text-2xl text-white/80 font-medium">
+                    <p className="text-lg sm:text-xl md:text-2xl text-white/80 font-medium">
                       Comprehensive Business Intelligence Dashboard
                     </p>
                   </div>
                 </div>
 
                 {/* Controls */}
-                <div className="flex flex-wrap gap-4 mb-8">
-                  <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1 w-full sm:w-auto">
                     {["month", "quarter", "year"].map((range) => (
                       <button
                         key={range}
                         onClick={() => setTimeRange(range as any)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
                           timeRange === range
                             ? "bg-white text-blue-600"
                             : "text-white hover:bg-white/10"
@@ -607,7 +607,7 @@ export default function ComprehensiveFinanceDashboard() {
                     ))}
                   </div>
 
-                  <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1">
+                  <div className="flex bg-white/10 backdrop-blur-sm rounded-xl p-1 w-full sm:w-auto overflow-x-auto">
                     {[
                       "all",
                       "sales",
@@ -618,7 +618,7 @@ export default function ComprehensiveFinanceDashboard() {
                       <button
                         key={module}
                         onClick={() => setActiveModule(module as any)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
                           activeModule === module
                             ? "bg-white text-blue-600"
                             : "text-white hover:bg-white/10"
@@ -631,79 +631,85 @@ export default function ComprehensiveFinanceDashboard() {
                 </div>
 
                 {/* Comprehensive Metrics Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <DollarSign className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">
+                      <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
                           Revenue
                         </p>
-                        <p className="text-lg font-bold">
+                        <p className="text-sm sm:text-lg font-bold truncate">
                           {formatRupiah(data.overview.totalRevenue)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">Profit</p>
-                        <p className="text-lg font-bold">
+                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
+                          Profit
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold truncate">
                           {formatRupiah(data.overview.totalProfit)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">Orders</p>
-                        <p className="text-lg font-bold">
+                      <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
+                          Orders
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
                           {data.overview.totalOrders.toLocaleString()}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <Users className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
                           Customers
                         </p>
-                        <p className="text-lg font-bold">
+                        <p className="text-sm sm:text-lg font-bold">
                           {data.overview.totalCustomers}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <Package className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
                           Products
                         </p>
-                        <p className="text-lg font-bold">
+                        <p className="text-sm sm:text-lg font-bold">
                           {data.overview.totalProducts}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
+                  <div className="bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-3 rounded-xl sm:rounded-2xl">
                     <div className="flex items-center text-white">
-                      <Target className="h-5 w-5 mr-2" />
-                      <div>
-                        <p className="text-xs font-medium opacity-80">Growth</p>
-                        <p className="text-lg font-bold">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium opacity-80 truncate">
+                          Growth
+                        </p>
+                        <p className="text-sm sm:text-lg font-bold">
                           {data.overview.growthRate}%
                         </p>
                       </div>
@@ -717,23 +723,25 @@ export default function ComprehensiveFinanceDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 pb-12 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 sm:pb-12 space-y-6 sm:space-y-8">
         {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           <Link href="/management/finance/revenue-analytics">
-            <Card className="group cursor-pointer bg-gradient-to-br from-emerald-500 to-teal-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <div className="p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <TrendingUp className="h-8 w-8" />
+            <Card className="group cursor-pointer bg-gradient-to-br from-emerald-500 to-teal-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2">
+              <div className="p-4 sm:p-6 text-white">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl">
+                    <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8" />
                   </div>
-                  <ArrowUpRight className="h-6 w-6 opacity-70 group-hover:opacity-100" />
+                  <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 opacity-70 group-hover:opacity-100" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Revenue Analytics</h3>
-                <p className="text-emerald-100 opacity-90 text-sm">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">
+                  Revenue Analytics
+                </h3>
+                <p className="text-emerald-100 opacity-90 text-xs sm:text-sm">
                   {formatRupiah(data.sales.monthlyRevenue)} this month
                 </p>
-                <p className="text-emerald-100 opacity-90 text-sm">
+                <p className="text-emerald-100 opacity-90 text-xs sm:text-sm">
                   {data.sales.salesGrowth > 0 ? "+" : ""}
                   {data.sales.salesGrowth}% growth
                 </p>
@@ -742,19 +750,21 @@ export default function ComprehensiveFinanceDashboard() {
           </Link>
 
           <Link href="/management/finance/profitability">
-            <Card className="group cursor-pointer bg-gradient-to-br from-blue-500 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <div className="p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <Target className="h-8 w-8" />
+            <Card className="group cursor-pointer bg-gradient-to-br from-blue-500 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2">
+              <div className="p-4 sm:p-6 text-white">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl">
+                    <Target className="h-6 w-6 sm:h-8 sm:w-8" />
                   </div>
-                  <ArrowUpRight className="h-6 w-6 opacity-70 group-hover:opacity-100" />
+                  <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 opacity-70 group-hover:opacity-100" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Profitability</h3>
-                <p className="text-blue-100 opacity-90 text-sm">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">
+                  Profitability
+                </h3>
+                <p className="text-blue-100 opacity-90 text-xs sm:text-sm">
                   {data.overview.profitMargin}% profit margin
                 </p>
-                <p className="text-blue-100 opacity-90 text-sm">
+                <p className="text-blue-100 opacity-90 text-xs sm:text-sm">
                   {formatRupiah(data.overview.totalProfit)} total profit
                 </p>
               </div>
@@ -762,19 +772,21 @@ export default function ComprehensiveFinanceDashboard() {
           </Link>
 
           <Link href="/management/finance/kpi-metrics">
-            <Card className="group cursor-pointer bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <div className="p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <BarChart3 className="h-8 w-8" />
+            <Card className="group cursor-pointer bg-gradient-to-br from-orange-500 to-red-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2">
+              <div className="p-4 sm:p-6 text-white">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl">
+                    <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8" />
                   </div>
-                  <ArrowUpRight className="h-6 w-6 opacity-70 group-hover:opacity-100" />
+                  <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 opacity-70 group-hover:opacity-100" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">KPI Metrics</h3>
-                <p className="text-orange-100 opacity-90 text-sm">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">
+                  KPI Metrics
+                </h3>
+                <p className="text-orange-100 opacity-90 text-xs sm:text-sm">
                   {data.sales.fieldVisits.conversionRate}% conversion rate
                 </p>
-                <p className="text-orange-100 opacity-90 text-sm">
+                <p className="text-orange-100 opacity-90 text-xs sm:text-sm">
                   {data.overview.customerRetention}% customer retention
                 </p>
               </div>
@@ -782,19 +794,19 @@ export default function ComprehensiveFinanceDashboard() {
           </Link>
 
           <Link href="/management/finance/cash-flow">
-            <Card className="group cursor-pointer bg-gradient-to-br from-violet-500 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-              <div className="p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <CreditCard className="h-8 w-8" />
+            <Card className="group cursor-pointer bg-gradient-to-br from-violet-500 to-purple-600 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2">
+              <div className="p-4 sm:p-6 text-white">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 bg-white/20 rounded-lg sm:rounded-xl">
+                    <CreditCard className="h-6 w-6 sm:h-8 sm:w-8" />
                   </div>
-                  <ArrowUpRight className="h-6 w-6 opacity-70 group-hover:opacity-100" />
+                  <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 opacity-70 group-hover:opacity-100" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Cash Flow</h3>
-                <p className="text-violet-100 opacity-90 text-sm">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">Cash Flow</h3>
+                <p className="text-violet-100 opacity-90 text-xs sm:text-sm">
                   {formatRupiah(data.financial.cashFlow.net)} net flow
                 </p>
-                <p className="text-violet-100 opacity-90 text-sm">
+                <p className="text-violet-100 opacity-90 text-xs sm:text-sm">
                   {data.financial.invoices.overdue} overdue invoices
                 </p>
               </div>
@@ -803,47 +815,47 @@ export default function ComprehensiveFinanceDashboard() {
         </div>
 
         {/* Comprehensive Analytics Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
           {/* Revenue Analytics */}
           <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                   Revenue Analytics
                 </h3>
-                <div className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium">
+                <div className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-full text-xs sm:text-sm font-medium">
                   ↗ {data.sales.salesGrowth}% Growth
                 </div>
               </div>
 
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Monthly Revenue
                   </span>
-                  <span className="font-bold text-emerald-600">
+                  <span className="font-bold text-emerald-600 text-sm">
                     {formatRupiah(data.sales.monthlyRevenue)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Top Product
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-sm truncate ml-2">
                     {data.inventory.topProducts[0]?.name || "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Avg Order Value
                   </span>
-                  <span className="font-bold text-blue-600">
+                  <span className="font-bold text-blue-600 text-sm">
                     {formatRupiah(data.overview.avgOrderValue)}
                   </span>
                 </div>
               </div>
 
-              <div className="h-64">
+              <div className="h-48 sm:h-64">
                 <Line
                   data={{
                     labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
@@ -946,44 +958,44 @@ export default function ComprehensiveFinanceDashboard() {
 
           {/* Profitability Analysis */}
           <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                   Profitability
                 </h3>
-                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-xs sm:text-sm font-medium">
                   {data.overview.profitMargin}% Margin
                 </div>
               </div>
 
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Total Profit
                   </span>
-                  <span className="font-bold text-green-600">
+                  <span className="font-bold text-green-600 text-sm">
                     {formatRupiah(data.overview.totalProfit)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Total Costs
                   </span>
-                  <span className="font-bold text-red-600">
+                  <span className="font-bold text-red-600 text-sm">
                     {formatRupiah(data.inventory.totalValue * 0.7)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Profit Margin
                   </span>
-                  <span className="font-bold text-purple-600">
+                  <span className="font-bold text-purple-600 text-sm">
                     {data.overview.profitMargin}%
                   </span>
                 </div>
               </div>
 
-              <div className="h-64">
+              <div className="h-48 sm:h-64">
                 <Doughnut
                   data={{
                     labels: [
@@ -1090,18 +1102,18 @@ export default function ComprehensiveFinanceDashboard() {
           </Card>
 
           {/* KPI Metrics */}
-          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+          <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl lg:col-span-2 xl:col-span-1">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                   Key Metrics
                 </h3>
-                <div className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+                <div className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full text-xs sm:text-sm font-medium">
                   Live Data
                 </div>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -1233,49 +1245,49 @@ export default function ComprehensiveFinanceDashboard() {
         </div>
 
         {/* Cash Flow Integration */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
           <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                   Cash Flow Analysis
                 </h3>
                 <Link
                   href="/management/cash-flow"
-                  className="text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                 >
                   View Details →
                 </Link>
               </div>
 
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Cash Inflow
                   </span>
-                  <span className="font-bold text-green-600">
+                  <span className="font-bold text-green-600 text-sm">
                     {formatRupiah(data.financial.cashFlow.inflow)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Cash Outflow
                   </span>
-                  <span className="font-bold text-red-600">
+                  <span className="font-bold text-red-600 text-sm">
                     {formatRupiah(data.financial.cashFlow.outflow)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">
                     Net Cash Flow
                   </span>
-                  <span className="font-bold text-blue-600">
+                  <span className="font-bold text-blue-600 text-sm">
                     {formatRupiah(data.financial.cashFlow.net)}
                   </span>
                 </div>
               </div>
 
-              <div className="h-64">
+              <div className="h-48 sm:h-64">
                 <Line
                   data={{
                     labels: data.financial.monthlyTrends.map(
@@ -1502,24 +1514,24 @@ export default function ComprehensiveFinanceDashboard() {
 
         {/* Live Business Alerts */}
         <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-xl">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                 Live Business Alerts
               </h3>
               <div className="flex items-center space-x-2">
                 <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   Live Updates
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {data.alerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className={`p-4 rounded-xl border ${getAlertBgColor(
+                  className={`p-3 sm:p-4 rounded-xl border ${getAlertBgColor(
                     alert.type
                   )}`}
                 >
@@ -1528,8 +1540,8 @@ export default function ComprehensiveFinanceDashboard() {
                       {getAlertIcon(alert.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <h4 className="text-sm font-semibold text-gray-800 dark:text-white">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
+                        <h4 className="text-sm font-semibold text-gray-800 dark:text-white truncate">
                           {alert.title}
                         </h4>
                         <div className="flex items-center space-x-1">
@@ -1539,12 +1551,12 @@ export default function ComprehensiveFinanceDashboard() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
                         {alert.message}
                       </p>
                       <div className="flex items-center justify-between">
                         {alert.value && (
-                          <span className="text-sm font-bold text-gray-800 dark:text-white">
+                          <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-white">
                             {alert.type === "success" && alert.value > 0
                               ? "+"
                               : ""}
@@ -1570,23 +1582,25 @@ export default function ComprehensiveFinanceDashboard() {
 
         {/* Executive Summary */}
         <Card className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white border-0 shadow-xl">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-3xl font-bold">Executive Summary</h3>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+              <h3 className="text-2xl sm:text-3xl font-bold">
+                Executive Summary
+              </h3>
               <div className="flex items-center space-x-2">
-                <Briefcase className="h-6 w-6" />
-                <span className="text-sm opacity-80">
+                <Briefcase className="h-5 w-5 sm:h-6 sm:w-6" />
+                <span className="text-xs sm:text-sm opacity-80">
                   Business Intelligence
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                <h4 className="text-lg font-semibold mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="bg-white/10 backdrop-blur-sm p-3 sm:p-4 rounded-xl">
+                <h4 className="text-base sm:text-lg font-semibold mb-2">
                   Revenue Performance
                 </h4>
-                <p className="text-sm opacity-90 mb-2">
+                <p className="text-xs sm:text-sm opacity-90 mb-2">
                   Monthly revenue of {formatRupiah(data.sales.monthlyRevenue)}{" "}
                   represents a {data.sales.salesGrowth}% growth compared to
                   previous period.
@@ -1597,11 +1611,11 @@ export default function ComprehensiveFinanceDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                <h4 className="text-lg font-semibold mb-2">
+              <div className="bg-white/10 backdrop-blur-sm p-3 sm:p-4 rounded-xl">
+                <h4 className="text-base sm:text-lg font-semibold mb-2">
                   Customer Insights
                 </h4>
-                <p className="text-sm opacity-90 mb-2">
+                <p className="text-xs sm:text-sm opacity-90 mb-2">
                   {data.customers.newCustomers} new customers acquired with{" "}
                   {data.overview.customerRetention}% retention rate.
                 </p>
@@ -1613,11 +1627,11 @@ export default function ComprehensiveFinanceDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                <h4 className="text-lg font-semibold mb-2">
+              <div className="bg-white/10 backdrop-blur-sm p-3 sm:p-4 rounded-xl">
+                <h4 className="text-base sm:text-lg font-semibold mb-2">
                   Operational Efficiency
                 </h4>
-                <p className="text-sm opacity-90 mb-2">
+                <p className="text-xs sm:text-sm opacity-90 mb-2">
                   {data.inventory.turnoverRate}x inventory turnover with{" "}
                   {data.sales.fieldVisits.conversionRate}% conversion rate from
                   field visits.
@@ -1630,9 +1644,11 @@ export default function ComprehensiveFinanceDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                <h4 className="text-lg font-semibold mb-2">Financial Health</h4>
-                <p className="text-sm opacity-90 mb-2">
+              <div className="bg-white/10 backdrop-blur-sm p-3 sm:p-4 rounded-xl">
+                <h4 className="text-base sm:text-lg font-semibold mb-2">
+                  Financial Health
+                </h4>
+                <p className="text-xs sm:text-sm opacity-90 mb-2">
                   {data.overview.profitMargin}% profit margin with{" "}
                   {formatRupiah(data.financial.cashFlow.net)} positive cash
                   flow.
@@ -1646,11 +1662,11 @@ export default function ComprehensiveFinanceDashboard() {
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-white/5 rounded-xl">
-              <h4 className="text-lg font-semibold mb-2">
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-white/5 rounded-xl">
+              <h4 className="text-base sm:text-lg font-semibold mb-2">
                 Key Recommendations
               </h4>
-              <ul className="text-sm opacity-90 space-y-1">
+              <ul className="text-xs sm:text-sm opacity-90 space-y-1">
                 <li>
                   • Focus on high-margin products to increase profitability
                 </li>
