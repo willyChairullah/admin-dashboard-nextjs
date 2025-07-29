@@ -116,6 +116,40 @@ model Users {
 // MODUL PENJUALAN
 // =================================
 
+model PurchaseOrders {
+  id        String              @id @default(cuid())
+  poNumber  String              @unique
+  poDate    DateTime            @default(now())
+  status    PurchaseOrderStatus @default(PENDING)
+  notes     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  // Relasi penting
+  orderId   String              @unique // Setiap Order hanya punya satu PO internal
+  order     Orders              @relation(fields: [orderId], references: [id])
+  
+  creatorId String
+  creator   Users               @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
+  
+  items     PurchaseOrderItems[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItems {
+  id              String         @id @default(cuid())
+  quantity        Float
+
+  // Relasi penting
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  productId       String
+  product         Products       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_order_items")
+}
 
 
 model Orders {
@@ -577,4 +611,12 @@ enum ManagementStockStatus {
   IN
   OUT
   OPNAME_ADJUSTMENT
+}
+
+enum PurchaseOrderStatus {
+  PENDING             // Baru dibuat, menunggu dikerjakan gudang
+  PROCESSING          // Sedang dalam proses penyiapan barang
+  READY_FOR_DELIVERY  // Barang sudah siap untuk dikirim
+  COMPLETED           // Sudah dikirim (Surat Jalan telah dibuat)
+  CANCELLED           // Dibatalkan
 }
