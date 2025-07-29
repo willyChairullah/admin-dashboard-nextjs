@@ -3,15 +3,26 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const timeRange = searchParams.get("timeRange") as "month" | "quarter" | "year" || "month";
-    const module = searchParams.get("module") as "all" | "sales" | "inventory" | "customers" | "financial" || "all";
+    const timeRange =
+      (searchParams.get("timeRange") as "month" | "quarter" | "year") ||
+      "month";
+    const module =
+      (searchParams.get("module") as
+        | "all"
+        | "sales"
+        | "inventory"
+        | "customers"
+        | "financial") || "all";
 
     // Calculate time multipliers for different ranges
     const getTimeMultiplier = () => {
       switch (timeRange) {
-        case "quarter": return 3;
-        case "year": return 12;
-        default: return 1; // month
+        case "quarter":
+          return 3;
+        case "year":
+          return 12;
+        default:
+          return 1; // month
       }
     };
 
@@ -20,15 +31,16 @@ export async function GET(request: NextRequest) {
     const baseProfit = 196000000;
 
     // Generate time-based data
-    const monthlyData = timeRange === "month" 
-      ? ["Week 1", "Week 2", "Week 3", "Week 4"]
-      : timeRange === "quarter"
-      ? ["Month 1", "Month 2", "Month 3"]
-      : ["Q1", "Q2", "Q3", "Q4"];
+    const monthlyData =
+      timeRange === "month"
+        ? ["Week 1", "Week 2", "Week 3", "Week 4"]
+        : timeRange === "quarter"
+        ? ["Month 1", "Month 2", "Month 3"]
+        : ["Q1", "Q2", "Q3", "Q4"];
 
     const generateTrendData = (baseValue: number, volatility: number = 0.1) => {
       return monthlyData.map((_, index) => {
-        const growth = 1 + (index * 0.05) + (Math.random() - 0.5) * volatility;
+        const growth = 1 + index * 0.05 + (Math.random() - 0.5) * volatility;
         return Math.round(baseValue * growth * multiplier);
       });
     };
@@ -40,10 +52,12 @@ export async function GET(request: NextRequest) {
         totalProfit: Math.round(baseProfit * multiplier),
         totalOrders: Math.round(1847 * multiplier),
         totalCustomers: Math.round(234 + (multiplier - 1) * 50),
-        growthRate: timeRange === "month" ? 18.5 : timeRange === "quarter" ? 22.8 : 25.2,
+        growthRate:
+          timeRange === "month" ? 18.5 : timeRange === "quarter" ? 22.8 : 25.2,
         profitMargin: 20.0,
         avgOrderValue: Math.round(1760000 * (1 + (multiplier - 1) * 0.1)),
-        customerRetention: timeRange === "month" ? 89.2 : timeRange === "quarter" ? 91.5 : 93.8,
+        customerRetention:
+          timeRange === "month" ? 89.2 : timeRange === "quarter" ? 91.5 : 93.8,
         totalProducts: 156,
         activeUsers: 28,
         pendingInvoices: Math.round(67 * multiplier),
@@ -51,7 +65,8 @@ export async function GET(request: NextRequest) {
       },
       sales: {
         monthlyRevenue: Math.round(baseRevenue * multiplier),
-        salesGrowth: timeRange === "month" ? 22.3 : timeRange === "quarter" ? 28.7 : 34.5,
+        salesGrowth:
+          timeRange === "month" ? 22.3 : timeRange === "quarter" ? 28.7 : 34.5,
         topSalesReps: [
           {
             name: "Ahmad Rizki",
@@ -73,10 +88,26 @@ export async function GET(request: NextRequest) {
           },
         ],
         ordersByStatus: [
-          { status: "Completed", count: Math.round(1247 * multiplier), value: Math.round(2890000000 * multiplier) },
-          { status: "Processing", count: Math.round(234 * multiplier), value: Math.round(450000000 * multiplier) },
-          { status: "Pending", count: Math.round(156 * multiplier), value: Math.round(320000000 * multiplier) },
-          { status: "Cancelled", count: Math.round(89 * multiplier), value: Math.round(180000000 * multiplier) },
+          {
+            status: "Completed",
+            count: Math.round(1247 * multiplier),
+            value: Math.round(2890000000 * multiplier),
+          },
+          {
+            status: "Processing",
+            count: Math.round(234 * multiplier),
+            value: Math.round(450000000 * multiplier),
+          },
+          {
+            status: "Pending",
+            count: Math.round(156 * multiplier),
+            value: Math.round(320000000 * multiplier),
+          },
+          {
+            status: "Cancelled",
+            count: Math.round(89 * multiplier),
+            value: Math.round(180000000 * multiplier),
+          },
         ],
         fieldVisits: {
           total: Math.round(456 * multiplier),
@@ -89,7 +120,8 @@ export async function GET(request: NextRequest) {
         totalValue: Math.round(2450000000 * multiplier),
         totalProducts: 156,
         lowStockItems: Math.round(23 * Math.min(multiplier, 2)),
-        turnoverRate: timeRange === "month" ? 2.8 : timeRange === "quarter" ? 8.4 : 33.6,
+        turnoverRate:
+          timeRange === "month" ? 2.8 : timeRange === "quarter" ? 8.4 : 33.6,
         topProducts: [
           {
             id: "1",
@@ -117,7 +149,8 @@ export async function GET(request: NextRequest) {
       customers: {
         totalCustomers: Math.round(234 + (multiplier - 1) * 50),
         newCustomers: Math.round(47 * multiplier),
-        retentionRate: timeRange === "month" ? 89.2 : timeRange === "quarter" ? 91.5 : 93.8,
+        retentionRate:
+          timeRange === "month" ? 89.2 : timeRange === "quarter" ? 91.5 : 93.8,
         lifetimeValue: Math.round(15600000 * (1 + multiplier * 0.15)),
         topCustomers: [
           {
@@ -125,20 +158,42 @@ export async function GET(request: NextRequest) {
             name: "PT. Industri Jaya",
             orders: Math.round(45 * multiplier),
             value: Math.round(156000000 * multiplier),
-            lastOrder: timeRange === "month" ? "2 days ago" : timeRange === "quarter" ? "1 week ago" : "2 weeks ago",
+            lastOrder:
+              timeRange === "month"
+                ? "2 days ago"
+                : timeRange === "quarter"
+                ? "1 week ago"
+                : "2 weeks ago",
           },
           {
-            id: "2", 
+            id: "2",
             name: "CV. Mekanik Sejahtera",
             orders: Math.round(38 * multiplier),
             value: Math.round(134000000 * multiplier),
-            lastOrder: timeRange === "month" ? "5 days ago" : timeRange === "quarter" ? "2 weeks ago" : "1 month ago",
+            lastOrder:
+              timeRange === "month"
+                ? "5 days ago"
+                : timeRange === "quarter"
+                ? "2 weeks ago"
+                : "1 month ago",
           },
         ],
         customerSegments: [
-          { segment: "Enterprise", count: Math.round(12 + multiplier * 3), revenue: Math.round(890000000 * multiplier) },
-          { segment: "SME", count: Math.round(87 + multiplier * 15), revenue: Math.round(1240000000 * multiplier) },
-          { segment: "Individual", count: Math.round(135 + multiplier * 32), revenue: Math.round(340000000 * multiplier) },
+          {
+            segment: "Enterprise",
+            count: Math.round(12 + multiplier * 3),
+            revenue: Math.round(890000000 * multiplier),
+          },
+          {
+            segment: "SME",
+            count: Math.round(87 + multiplier * 15),
+            revenue: Math.round(1240000000 * multiplier),
+          },
+          {
+            segment: "Individual",
+            count: Math.round(135 + multiplier * 32),
+            revenue: Math.round(340000000 * multiplier),
+          },
         ],
       },
       financial: {
@@ -173,7 +228,9 @@ export async function GET(request: NextRequest) {
           id: "1",
           type: "success" as const,
           title: "Revenue Target Achieved",
-          message: `${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} revenue exceeded target by 8.5%`,
+          message: `${
+            timeRange.charAt(0).toUpperCase() + timeRange.slice(1)
+          } revenue exceeded target by 8.5%`,
           value: 8.5,
           timestamp: "2 hours ago",
           module: "Sales",
@@ -182,7 +239,9 @@ export async function GET(request: NextRequest) {
           id: "2",
           type: "warning" as const,
           title: "Low Stock Alert",
-          message: `${Math.round(23 * Math.min(multiplier, 2))} products below minimum stock level`,
+          message: `${Math.round(
+            23 * Math.min(multiplier, 2)
+          )} products below minimum stock level`,
           value: Math.round(23 * Math.min(multiplier, 2)),
           timestamp: "4 hours ago",
           module: "Inventory",
@@ -191,7 +250,9 @@ export async function GET(request: NextRequest) {
           id: "3",
           type: "info" as const,
           title: "New Customer Acquisition",
-          message: `${Math.round(47 * multiplier)} new customers acquired this ${timeRange}`,
+          message: `${Math.round(
+            47 * multiplier
+          )} new customers acquired this ${timeRange}`,
           value: Math.round(47 * multiplier),
           timestamp: "6 hours ago",
           module: "Customer",
@@ -200,7 +261,9 @@ export async function GET(request: NextRequest) {
           id: "4",
           type: "error" as const,
           title: "Overdue Invoices",
-          message: `${Math.round(22 * multiplier)} invoices are overdue for payment`,
+          message: `${Math.round(
+            22 * multiplier
+          )} invoices are overdue for payment`,
           value: Math.round(22 * multiplier),
           timestamp: "8 hours ago",
           module: "Finance",
@@ -219,23 +282,23 @@ export async function GET(request: NextRequest) {
 
       switch (module) {
         case "sales":
-          filteredData.alerts = comprehensiveData.alerts.filter(alert => 
-            alert.module.toLowerCase() === "sales"
+          filteredData.alerts = comprehensiveData.alerts.filter(
+            (alert) => alert.module.toLowerCase() === "sales"
           );
           break;
         case "inventory":
-          filteredData.alerts = comprehensiveData.alerts.filter(alert => 
-            alert.module.toLowerCase() === "inventory"
+          filteredData.alerts = comprehensiveData.alerts.filter(
+            (alert) => alert.module.toLowerCase() === "inventory"
           );
           break;
         case "customers":
-          filteredData.alerts = comprehensiveData.alerts.filter(alert => 
-            alert.module.toLowerCase() === "customer"
+          filteredData.alerts = comprehensiveData.alerts.filter(
+            (alert) => alert.module.toLowerCase() === "customer"
           );
           break;
         case "financial":
-          filteredData.alerts = comprehensiveData.alerts.filter(alert => 
-            alert.module.toLowerCase() === "finance"
+          filteredData.alerts = comprehensiveData.alerts.filter(
+            (alert) => alert.module.toLowerCase() === "finance"
           );
           break;
       }
@@ -252,7 +315,6 @@ export async function GET(request: NextRequest) {
       module,
       generatedAt: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Error in comprehensive dashboard API:", error);
     return NextResponse.json(
