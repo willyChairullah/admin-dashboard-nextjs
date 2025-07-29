@@ -13,6 +13,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 ChartJS.register(
   CategoryScale,
@@ -38,6 +39,8 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
   targetMargin,
   trend,
 }) => {
+  const isMobile = useIsMobile();
+
   // Generate realistic historical data for the past 12 months
   const generateHistoricalData = () => {
     const months = [];
@@ -89,9 +92,9 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
         position: "top" as const,
         labels: {
           usePointStyle: true,
-          padding: 20,
+          padding: isMobile ? 10 : 20,
           font: {
-            size: 12,
+            size: isMobile ? 10 : 12,
             weight: "normal" as const,
           },
         },
@@ -105,7 +108,13 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
         borderColor: "#e5e7eb",
         borderWidth: 1,
         cornerRadius: 12,
-        padding: 12,
+        padding: isMobile ? 8 : 12,
+        titleFont: {
+          size: isMobile ? 11 : 13,
+        },
+        bodyFont: {
+          size: isMobile ? 10 : 12,
+        },
         callbacks: {
           label: function (context: any) {
             const label = context.dataset.label || "";
@@ -128,10 +137,11 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
         },
         ticks: {
           font: {
-            size: 11,
+            size: isMobile ? 9 : 11,
             weight: "normal" as const,
           },
           color: "#6b7280",
+          maxTicksLimit: isMobile ? 6 : 12,
         },
       },
       y: {
@@ -144,10 +154,11 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
         },
         ticks: {
           font: {
-            size: 11,
+            size: isMobile ? 9 : 11,
             weight: "normal" as const,
           },
           color: "#6b7280",
+          maxTicksLimit: isMobile ? 6 : 8,
           callback: function (value: any) {
             return value + "%";
           },
@@ -156,8 +167,8 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
     },
     elements: {
       point: {
-        radius: 4,
-        hoverRadius: 6,
+        radius: isMobile ? 3 : 4,
+        hoverRadius: isMobile ? 5 : 6,
       },
       line: {
         tension: 0.3,
@@ -203,9 +214,9 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
 
   return (
     <div className="h-full w-full">
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+      <div className="mb-3 sm:mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-2 sm:space-y-0">
+          <h4 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">
             Margin Trend Analysis
           </h4>
           <button
@@ -230,44 +241,43 @@ export const MarginTrendChart: React.FC<MarginTrendChartProps> = ({
               a.click();
               window.URL.revokeObjectURL(url);
             }}
-            className="text-sm px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg transition-colors"
+            className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg transition-colors self-start sm:self-auto"
           >
             Export CSV
           </button>
         </div>
-        <div className="flex items-center space-x-6 text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-2 sm:space-y-0 text-xs sm:text-sm">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2 flex-shrink-0"></div>
             <span className="text-gray-600 dark:text-gray-300">
               Current: {currentMargin.toFixed(1)}%
             </span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-1 bg-green-500 mr-2"></div>
+            <div className="w-3 h-1 bg-green-500 mr-2 flex-shrink-0"></div>
             <span className="text-gray-600 dark:text-gray-300">
               Target: {targetMargin.toFixed(1)}%
             </span>
           </div>
           <div className="flex items-center">
             <span
-              className={`text-sm font-medium px-2 py-1 rounded ${
+              className={`text-xs sm:text-sm font-medium px-2 py-1 rounded flex-shrink-0 ${
                 trend > 0
                   ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                   : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
               }`}
             >
               {trend > 0 ? "↗" : "↘"} {Math.abs(trend).toFixed(1)}% vs last
-              period
             </span>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Gap to Target: {(currentMargin - targetMargin).toFixed(1)}%
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Gap: {(currentMargin - targetMargin).toFixed(1)}%
             </span>
           </div>
         </div>
       </div>
-      <div className="h-80">
+      <div className="h-64 sm:h-72 lg:h-80 min-h-0 w-full overflow-hidden">
         <Line options={options} data={data} />
       </div>
     </div>
