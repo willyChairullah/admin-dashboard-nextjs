@@ -378,6 +378,14 @@ export default function SideBar({
             roles: ["ADMIN", "OWNER"],
           },
           {
+            id: "sales-target",
+            label: "Sales Target",
+            icon: "🎯",
+            href: "/management/sales-target",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
             id: "field-visits",
             label: "Field Visit Logs",
             icon: "📍",
