@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/common";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getOrders } from "@/lib/actions/orders";
 import { getFieldVisits } from "@/lib/actions/field-visits";
+import { getCurrentMonthTarget } from "@/lib/actions/sales-targets";
 import Link from "next/link";
 import Loading from "@/components/ui/common/Loading";
 
@@ -129,11 +130,15 @@ const SalesDashboard = () => {
         setFieldVisits(visitsResult.data as FieldVisit[]);
       }
 
+      // Load current month target for this user
+      const userTarget = await getCurrentMonthTarget(user.id);
+
       // Calculate dashboard statistics
       if (ordersResult.success) {
-        calculateDashboardStats(
+        await calculateDashboardStats(
           ordersResult.data as Order[],
-          visitsResult.success ? (visitsResult.data as FieldVisit[]) : []
+          visitsResult.success ? (visitsResult.data as FieldVisit[]) : [],
+          userTarget
         );
       }
     } catch (error) {
@@ -143,9 +148,10 @@ const SalesDashboard = () => {
     }
   };
 
-  const calculateDashboardStats = (
+  const calculateDashboardStats = async (
     orderData: Order[],
-    visitData: FieldVisit[]
+    visitData: FieldVisit[],
+    userTarget: any = null
   ) => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -189,7 +195,8 @@ const SalesDashboard = () => {
         order.status === "IN_PROCESS"
     ).length;
 
-    const monthlyTarget = 50000000; // 50M default, could be fetched from user profile
+    // Use target from database if available, otherwise use default
+    const monthlyTarget = userTarget ? userTarget.targetAmount : 50000000; // 50M default
     const achievementPercentage =
       monthlyTarget > 0 ? Math.round((totalRevenue / monthlyTarget) * 100) : 0;
 
