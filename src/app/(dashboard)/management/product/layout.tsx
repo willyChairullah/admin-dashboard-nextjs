@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getCategories } from "@/lib/actions/categories";
+import { getProducts } from "@/lib/actions/products";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
@@ -16,7 +16,7 @@ export default async function RootLayout({
     module: "management",
     subModule: "product",
     allowedRole: ["OWNER", "ADMIN"],
-    data: await getCategories(),
+    data: await getProducts(),
   };
 
   return (

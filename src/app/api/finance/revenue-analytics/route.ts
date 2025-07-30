@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import db from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const timeRange = searchParams.get("timeRange") || "month";
 
-    // Generate data based on time range
-    const data = generateRevenueData(timeRange as "month" | "quarter" | "year");
+    // Fetch real data from database
+    const data = await generateRevenueData(
+      timeRange as "month" | "quarter" | "year"
+    );
 
     return NextResponse.json({
       success: true,
@@ -24,308 +27,415 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateRevenueData(timeRange: "month" | "quarter" | "year") {
+async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
+  const now = new Date();
+  let startDate: Date;
+  let endDate: Date = now;
+  let periods: { start: Date; end: Date; label: string }[] = [];
+
+  // Calculate date ranges and periods based on timeRange
   if (timeRange === "month") {
-    return {
-      monthlyTrends: [
-        { month: "January", revenue: 650000000, growth: 8.5 },
-        { month: "February", revenue: 680000000, growth: 4.6 },
-        { month: "March", revenue: 720000000, growth: 5.9 },
-        { month: "April", revenue: 750000000, growth: 4.2 },
-        { month: "May", revenue: 780000000, growth: 4.0 },
-        { month: "June", revenue: 820000000, growth: 5.1 },
-      ],
-      productPerformance: [
-        {
-          id: "1",
-          name: "Premium Engine Oil 5W-30",
-          revenue: 125000000,
-          units: 2500,
-          growth: 15.2,
-          category: "Engine Oil",
-        },
-        {
-          id: "2",
-          name: "Hydraulic Oil ISO 46",
-          revenue: 98000000,
-          units: 1960,
-          growth: 12.8,
-          category: "Hydraulic",
-        },
-        {
-          id: "3",
-          name: "Gear Oil SAE 90",
-          revenue: 87000000,
-          units: 1740,
-          growth: 9.5,
-          category: "Gear Oil",
-        },
-      ],
-      salesByRep: [
-        {
-          id: "1",
-          name: "Ahmad Wijaya",
-          revenue: 245000000,
-          deals: 156,
-          conversion: 68.5,
-        },
-        {
-          id: "2",
-          name: "Siti Nurhaliza",
-          revenue: 198000000,
-          deals: 132,
-          conversion: 71.2,
-        },
-        {
-          id: "3",
-          name: "Budi Santoso",
-          revenue: 175000000,
-          deals: 118,
-          conversion: 65.8,
-        },
-      ],
-      storePerformance: [
-        {
-          id: "1",
-          name: "Jakarta Central Store",
-          location: "Jakarta Pusat",
-          revenue: 285000000,
-          growth: 12.3,
-        },
-        {
-          id: "2",
-          name: "Surabaya Branch",
-          location: "Surabaya",
-          revenue: 198000000,
-          growth: 8.7,
-        },
-        {
-          id: "3",
-          name: "Bandung Outlet",
-          location: "Bandung",
-          revenue: 165000000,
-          growth: 15.2,
-        },
-      ],
-      avgOrderValue: {
-        current: 2750000,
-        previous: 2580000,
-        trend: 6.6,
-        breakdown: [
-          { period: "Week 1", value: 2650000 },
-          { period: "Week 2", value: 2720000 },
-          { period: "Week 3", value: 2800000 },
-          { period: "Week 4", value: 2830000 },
-        ],
-      },
-      summary: {
-        totalRevenue: 4620000000,
-        growth: 10.3,
-        bestMonth: "June 2024",
-        topProduct: "Premium Engine Oil 5W-30",
-        topSalesRep: "Ahmad Wijaya",
-      },
-    };
+    // This year: Jan to Dec
+    const currentYear = now.getFullYear();
+    startDate = new Date(currentYear, 0, 1); // Jan 1
+    endDate = new Date(currentYear, 11, 31); // Dec 31
+
+    for (let i = 0; i < 12; i++) {
+      const periodStart = new Date(currentYear, i, 1);
+      const periodEnd = new Date(currentYear, i + 1, 0);
+      periods.push({
+        start: periodStart,
+        end: periodEnd,
+        label: periodStart.toLocaleDateString("en-US", { month: "long" }),
+      });
+    }
   } else if (timeRange === "quarter") {
-    return {
-      monthlyTrends: [
-        { month: "Q1 2024", revenue: 2050000000, growth: 12.5 },
-        { month: "Q2 2024", revenue: 2350000000, growth: 14.6 },
-        { month: "Q3 2024", revenue: 2680000000, growth: 14.0 },
-        { month: "Q4 2024", revenue: 2920000000, growth: 8.9 },
-      ],
-      productPerformance: [
-        {
-          id: "1",
-          name: "Premium Engine Oil 5W-30",
-          revenue: 495000000,
-          units: 9900,
-          growth: 18.7,
-          category: "Engine Oil",
-        },
-        {
-          id: "2",
-          name: "Hydraulic Oil ISO 46",
-          revenue: 412000000,
-          units: 8240,
-          growth: 15.3,
-          category: "Hydraulic",
-        },
-        {
-          id: "3",
-          name: "Gear Oil SAE 90",
-          revenue: 348000000,
-          units: 6960,
-          growth: 11.2,
-          category: "Gear Oil",
-        },
-      ],
-      salesByRep: [
-        {
-          id: "1",
-          name: "Ahmad Wijaya",
-          revenue: 980000000,
-          deals: 624,
-          conversion: 72.8,
-        },
-        {
-          id: "2",
-          name: "Siti Nurhaliza",
-          revenue: 792000000,
-          deals: 528,
-          conversion: 74.5,
-        },
-        {
-          id: "3",
-          name: "Budi Santoso",
-          revenue: 700000000,
-          deals: 472,
-          conversion: 69.2,
-        },
-      ],
-      storePerformance: [
-        {
-          id: "1",
-          name: "Jakarta Central Store",
-          location: "Jakarta Pusat",
-          revenue: 1140000000,
-          growth: 15.7,
-        },
-        {
-          id: "2",
-          name: "Surabaya Branch",
-          location: "Surabaya",
-          revenue: 792000000,
-          growth: 11.2,
-        },
-        {
-          id: "3",
-          name: "Bandung Outlet",
-          location: "Bandung",
-          revenue: 660000000,
-          growth: 18.9,
-        },
-      ],
-      avgOrderValue: {
-        current: 3250000,
-        previous: 2980000,
-        trend: 9.1,
-        breakdown: [
-          { period: "Q1", value: 3100000 },
-          { period: "Q2", value: 3200000 },
-          { period: "Q3", value: 3300000 },
-          { period: "Q4", value: 3400000 },
-        ],
-      },
-      summary: {
-        totalRevenue: 10000000000,
-        growth: 12.5,
-        bestMonth: "Q4 2024",
-        topProduct: "Premium Engine Oil 5W-30",
-        topSalesRep: "Ahmad Wijaya",
-      },
-    };
+    // Last 4 quarters
+    startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+
+    for (let i = 3; i >= 0; i--) {
+      const quarterStart = new Date(
+        now.getFullYear(),
+        now.getMonth() - i * 3,
+        1
+      );
+      const quarterEnd = new Date(
+        now.getFullYear(),
+        now.getMonth() - i * 3 + 3,
+        0
+      );
+      const quarter = Math.floor(quarterStart.getMonth() / 3) + 1;
+      periods.push({
+        start: quarterStart,
+        end: quarterEnd,
+        label: `Q${quarter} ${quarterStart.getFullYear()}`,
+      });
+    }
   } else {
-    // Year data
-    return {
-      monthlyTrends: [
-        { month: "2019", revenue: 18500000000, growth: 8.2 },
-        { month: "2020", revenue: 16800000000, growth: -9.2 },
-        { month: "2021", revenue: 21200000000, growth: 26.2 },
-        { month: "2022", revenue: 24600000000, growth: 16.0 },
-        { month: "2023", revenue: 28300000000, growth: 15.0 },
-        { month: "2024", revenue: 32800000000, growth: 15.9 },
-      ],
-      productPerformance: [
-        {
-          id: "1",
-          name: "Premium Engine Oil 5W-30",
-          revenue: 5940000000,
-          units: 118800,
-          growth: 22.3,
-          category: "Engine Oil",
-        },
-        {
-          id: "2",
-          name: "Hydraulic Oil ISO 46",
-          revenue: 4944000000,
-          units: 98880,
-          growth: 18.7,
-          category: "Hydraulic",
-        },
-        {
-          id: "3",
-          name: "Gear Oil SAE 90",
-          revenue: 4176000000,
-          units: 83520,
-          growth: 13.8,
-          category: "Gear Oil",
-        },
-      ],
-      salesByRep: [
-        {
-          id: "1",
-          name: "Ahmad Wijaya",
-          revenue: 11760000000,
-          deals: 7488,
-          conversion: 76.2,
-        },
-        {
-          id: "2",
-          name: "Siti Nurhaliza",
-          revenue: 9504000000,
-          deals: 6336,
-          conversion: 77.8,
-        },
-        {
-          id: "3",
-          name: "Budi Santoso",
-          revenue: 8400000000,
-          deals: 5664,
-          conversion: 72.5,
-        },
-      ],
-      storePerformance: [
-        {
-          id: "1",
-          name: "Jakarta Central Store",
-          location: "Jakarta Pusat",
-          revenue: 13680000000,
-          growth: 18.9,
-        },
-        {
-          id: "2",
-          name: "Surabaya Branch",
-          location: "Surabaya",
-          revenue: 9504000000,
-          growth: 13.5,
-        },
-        {
-          id: "3",
-          name: "Bandung Outlet",
-          location: "Bandung",
-          revenue: 7920000000,
-          growth: 22.7,
-        },
-      ],
-      avgOrderValue: {
-        current: 3850000,
-        previous: 3420000,
-        trend: 12.6,
-        breakdown: [
-          { period: "2021", value: 3200000 },
-          { period: "2022", value: 3400000 },
-          { period: "2023", value: 3650000 },
-          { period: "2024", value: 3850000 },
-        ],
-      },
-      summary: {
-        totalRevenue: 32800000000,
-        growth: 15.9,
-        bestMonth: "2024",
-        topProduct: "Premium Engine Oil 5W-30",
-        topSalesRep: "Ahmad Wijaya",
-      },
-    };
+    // Last 6 years
+    startDate = new Date(now.getFullYear() - 5, 0, 1);
+
+    for (let i = 5; i >= 0; i--) {
+      const yearStart = new Date(now.getFullYear() - i, 0, 1);
+      const yearEnd = new Date(now.getFullYear() - i, 11, 31);
+      periods.push({
+        start: yearStart,
+        end: yearEnd,
+        label: yearStart.getFullYear().toString(),
+      });
+    }
   }
+
+  // Fetch monthly trends with real data
+  const monthlyTrends = await Promise.all(
+    periods.map(async (period, index) => {
+      const revenue = await db.invoices.aggregate({
+        where: {
+          invoiceDate: {
+            gte: period.start,
+            lte: period.end,
+          },
+          status: "PAID",
+        },
+        _sum: {
+          totalAmount: true,
+        },
+      });
+
+      // Calculate growth compared to previous period
+      let growth = 0;
+      if (index > 0) {
+        const prevPeriod = periods[index - 1];
+        const prevRevenue = await db.invoices.aggregate({
+          where: {
+            invoiceDate: {
+              gte: prevPeriod.start,
+              lte: prevPeriod.end,
+            },
+            status: "PAID",
+          },
+          _sum: {
+            totalAmount: true,
+          },
+        });
+
+        const currentRev = revenue._sum.totalAmount || 0;
+        const prevRev = prevRevenue._sum.totalAmount || 0;
+
+        if (prevRev > 0) {
+          growth = ((currentRev - prevRev) / prevRev) * 100;
+        }
+      }
+
+      return {
+        month: period.label,
+        revenue: revenue._sum.totalAmount || 0,
+        growth: growth,
+      };
+    })
+  );
+
+  // Fetch product performance
+  const productPerformance = await db.orderItems.groupBy({
+    by: ["productId"],
+    where: {
+      orders: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "COMPLETED",
+      },
+    },
+    _sum: {
+      quantity: true,
+      totalPrice: true,
+    },
+    orderBy: {
+      _sum: {
+        totalPrice: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  const productPerformanceData = await Promise.all(
+    productPerformance.map(async (item) => {
+      const product = await db.products.findUnique({
+        where: { id: item.productId },
+        include: {
+          category: {
+            select: { name: true },
+          },
+        },
+      });
+
+      // Calculate growth for this product (comparing to previous period)
+      let growth = 0;
+      const previousPeriodStart =
+        timeRange === "month"
+          ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
+          : timeRange === "quarter"
+          ? new Date(startDate.getFullYear() - 1, startDate.getMonth(), 1)
+          : new Date(startDate.getFullYear() - 6, 0, 1);
+
+      const prevPerformance = await db.orderItems.aggregate({
+        where: {
+          productId: item.productId,
+          orders: {
+            createdAt: {
+              gte: previousPeriodStart,
+              lt: startDate,
+            },
+            status: "COMPLETED",
+          },
+        },
+        _sum: {
+          totalPrice: true,
+        },
+      });
+
+      const currentRevenue = item._sum.totalPrice || 0;
+      const prevRevenue = prevPerformance._sum.totalPrice || 0;
+
+      if (prevRevenue > 0) {
+        growth = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+      }
+
+      return {
+        id: item.productId,
+        name: product?.name || "Unknown Product",
+        revenue: currentRevenue,
+        units: item._sum.quantity || 0,
+        growth: growth,
+        category: product?.category?.name || "Uncategorized",
+      };
+    })
+  );
+
+  // Fetch sales by representative
+  const salesByRep = await db.orders.groupBy({
+    by: ["salesId"],
+    where: {
+      createdAt: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: "COMPLETED",
+    },
+    _sum: {
+      totalAmount: true,
+    },
+    _count: {
+      id: true,
+    },
+    orderBy: {
+      _sum: {
+        totalAmount: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  const salesByRepData = await Promise.all(
+    salesByRep.map(async (item) => {
+      const user = await db.users.findUnique({
+        where: { id: item.salesId },
+      });
+
+      // Calculate conversion rate
+      const totalOrders = await db.orders.count({
+        where: {
+          salesId: item.salesId,
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      });
+
+      const completedOrders = item._count.id;
+      const conversion =
+        totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+
+      return {
+        id: item.salesId,
+        name: user?.name || "Unknown Sales Rep",
+        revenue: item._sum.totalAmount || 0,
+        deals: completedOrders,
+        conversion: conversion,
+      };
+    })
+  );
+
+  // Fetch store performance (using customers' cities as "stores")
+  const storePerformance = await db.orders.groupBy({
+    by: ["customerId"],
+    where: {
+      createdAt: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: "COMPLETED",
+    },
+    _sum: {
+      totalAmount: true,
+    },
+    orderBy: {
+      _sum: {
+        totalAmount: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  const storePerformanceData = await Promise.all(
+    storePerformance.map(async (item) => {
+      const customer = await db.customers.findUnique({
+        where: { id: item.customerId },
+      });
+
+      // Calculate growth for this location
+      let growth = 0;
+      const previousPeriodStart =
+        timeRange === "month"
+          ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
+          : timeRange === "quarter"
+          ? new Date(startDate.getFullYear() - 1, startDate.getMonth(), 1)
+          : new Date(startDate.getFullYear() - 6, 0, 1);
+
+      const prevPerformance = await db.orders.aggregate({
+        where: {
+          customerId: item.customerId,
+          createdAt: {
+            gte: previousPeriodStart,
+            lt: startDate,
+          },
+          status: "COMPLETED",
+        },
+        _sum: {
+          totalAmount: true,
+        },
+      });
+
+      const currentRevenue = item._sum.totalAmount || 0;
+      const prevRevenue = prevPerformance._sum.totalAmount || 0;
+
+      if (prevRevenue > 0) {
+        growth = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+      }
+
+      return {
+        id: item.customerId,
+        name: customer?.name || "Unknown Customer",
+        location: customer?.city || "Unknown Location",
+        revenue: currentRevenue,
+        growth: growth,
+      };
+    })
+  );
+
+  // Calculate average order value
+  const currentPeriodOrders = await db.orders.aggregate({
+    where: {
+      createdAt: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: "COMPLETED",
+    },
+    _avg: {
+      totalAmount: true,
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  const previousPeriodOrders = await db.orders.aggregate({
+    where: {
+      createdAt: {
+        gte:
+          timeRange === "month"
+            ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
+            : timeRange === "quarter"
+            ? new Date(startDate.getFullYear() - 1, startDate.getMonth(), 1)
+            : new Date(startDate.getFullYear() - 6, 0, 1),
+        lt: startDate,
+      },
+      status: "COMPLETED",
+    },
+    _avg: {
+      totalAmount: true,
+    },
+  });
+
+  const currentAOV = currentPeriodOrders._avg.totalAmount || 0;
+  const previousAOV = previousPeriodOrders._avg.totalAmount || 0;
+  const aovTrend =
+    previousAOV > 0 ? ((currentAOV - previousAOV) / previousAOV) * 100 : 0;
+
+  // Generate AOV breakdown by periods
+  const aovBreakdown = await Promise.all(
+    periods.slice(-4).map(async (period) => {
+      const orders = await db.orders.aggregate({
+        where: {
+          createdAt: {
+            gte: period.start,
+            lte: period.end,
+          },
+          status: "COMPLETED",
+        },
+        _avg: {
+          totalAmount: true,
+        },
+      });
+
+      return {
+        period: period.label,
+        value: orders._avg.totalAmount || 0,
+      };
+    })
+  );
+
+  // Calculate summary data
+  const totalRevenue = await db.invoices.aggregate({
+    where: {
+      invoiceDate: {
+        gte: startDate,
+        lte: endDate,
+      },
+      status: "PAID",
+    },
+    _sum: {
+      totalAmount: true,
+    },
+  });
+
+  const summary = {
+    totalRevenue: totalRevenue._sum.totalAmount || 0,
+    growth:
+      monthlyTrends.length > 1
+        ? monthlyTrends[monthlyTrends.length - 1].growth
+        : 0,
+    bestMonth: monthlyTrends.reduce((best, current) =>
+      current.revenue > best.revenue ? current : best
+    ).month,
+    topProduct: productPerformanceData[0]?.name || "No data",
+    topSalesRep: salesByRepData[0]?.name || "No data",
+  };
+
+  return {
+    monthlyTrends,
+    productPerformance: productPerformanceData,
+    salesByRep: salesByRepData,
+    storePerformance: storePerformanceData,
+    avgOrderValue: {
+      current: currentAOV,
+      previous: previousAOV,
+      trend: aovTrend,
+      breakdown: aovBreakdown,
+    },
+    summary,
+  };
 }
