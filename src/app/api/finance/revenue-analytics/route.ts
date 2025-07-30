@@ -51,19 +51,12 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
     }
   } else if (timeRange === "quarter") {
     // Last 4 quarters
-    startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1);
 
-    for (let i = 3; i >= 0; i--) {
-      const quarterStart = new Date(
-        now.getFullYear(),
-        now.getMonth() - i * 3,
-        1
-      );
-      const quarterEnd = new Date(
-        now.getFullYear(),
-        now.getMonth() - i * 3 + 3,
-        0
-      );
+    const currentYear = now.getFullYear();
+    startDate = new Date(currentYear - 1, 0, 1);
+    for (let i = 0; i < 4; i++) {
+      const quarterStart = new Date(currentYear, i * 3, 1);
+      const quarterEnd = new Date(currentYear, i * 3 + 3, 0);
       const quarter = Math.floor(quarterStart.getMonth() / 3) + 1;
       periods.push({
         start: quarterStart,

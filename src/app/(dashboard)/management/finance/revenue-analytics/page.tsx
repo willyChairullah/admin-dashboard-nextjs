@@ -119,7 +119,9 @@ export default function RevenueAnalytics() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <p className="text-red-600 font-medium mb-4">Failed to load revenue analytics data</p>
+            <p className="text-red-600 font-medium mb-4">
+              Failed to load revenue analytics data
+            </p>
             <p className="text-gray-500 text-sm mb-4">
               Please check your database connection and try again.
             </p>
