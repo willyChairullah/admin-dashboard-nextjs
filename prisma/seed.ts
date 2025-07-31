@@ -30,10 +30,10 @@ async function main() {
 
     console.log("👥 Creating 4 users with proper roles...");
 
-    // Create users with proper UserRole enum values
+    // Create users with consistent IDs for easier testing
     const usersToCreate = [
       {
-        id: uuid(),
+        id: "264e1a62-c61b-4583-9baf-2c518fce0a4d", // Fixed ID for owner
         email: "owner@indana.com",
         name: "Owner User",
         password: "password123",
@@ -44,7 +44,7 @@ async function main() {
         updatedAt: new Date(),
       },
       {
-        id: uuid(),
+        id: "364e1a62-c61b-4583-9baf-2c518fce0a4d", // Fixed ID for admin
         email: "admin@indana.com",
         name: "Admin User",
         password: "password123",
@@ -55,7 +55,7 @@ async function main() {
         updatedAt: new Date(),
       },
       {
-        id: uuid(),
+        id: "464e1a62-c61b-4583-9baf-2c518fce0a4d", // Fixed ID for warehouse
         email: "warehouse@indana.com",
         name: "Warehouse User",
         password: "password123",
@@ -66,7 +66,7 @@ async function main() {
         updatedAt: new Date(),
       },
       {
-        id: uuid(),
+        id: "564e1a62-c61b-4583-9baf-2c518fce0a4d", // Fixed ID for sales
         email: "sales@indana.com",
         name: "Sales User",
         password: "password123",

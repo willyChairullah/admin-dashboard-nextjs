@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/common/Card";
 import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
+import { TargetForm } from "@/components/ui/TargetForm";
+import { getTargetsForChart, createSalesTarget } from "@/lib/actions/sales-targets";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   TrendingUp,
   ArrowLeft,
@@ -17,6 +20,7 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { toast } from "sonner";
 
 interface RevenueData {
   monthlyTrends: Array<{ month: string; revenue: number; growth: number }>;
@@ -58,14 +62,95 @@ interface RevenueData {
 }
 
 export default function RevenueAnalytics() {
+  const { user, loading: userLoading } = useCurrentUser();
   const [data, setData] = useState<RevenueData | null>(null);
+  const [targets, setTargets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTargets, setLoadingTargets] = useState(false);
   const [timeRange, setTimeRange] = useState<"month" | "quarter" | "year">(
     "month"
   );
   const [activeTab, setActiveTab] = useState<
     "trends" | "products" | "sales" | "stores" | "aov"
   >("trends");
+
+  // Debug logging
+  useEffect(() => {
+    console.log("RevenueAnalytics: user state changed", {
+      user: user,
+      userLoading: userLoading,
+      userId: user?.id
+    });
+  }, [user, userLoading]);
+
+  const fetchTargets = async () => {
+    console.log("fetchTargets called with:", { userId: user?.id, timeRange });
+    
+    if (!user?.id) {
+      console.log("fetchTargets: No user ID, skipping");
+      return;
+    }
+
+    try {
+      setLoadingTargets(true);
+      const targetType =
+        timeRange === "month"
+          ? "MONTHLY"
+          : timeRange === "quarter"
+          ? "QUARTERLY"
+          : "YEARLY";
+      
+      console.log("fetchTargets: Calling getTargetsForChart with:", {
+        userId: user.id,
+        targetType
+      });
+      
+      const targetData = await getTargetsForChart(user.id, targetType);
+      
+      console.log("fetchTargets: Received target data:", targetData);
+      
+      setTargets(targetData);
+    } catch (error) {
+      console.error("Error fetching targets:", error);
+      toast.error("Failed to load targets");
+    } finally {
+      setLoadingTargets(false);
+    }
+  };
+
+  const handleTargetSuccess = () => {
+    console.log("handleTargetSuccess called - refreshing targets");
+    toast.success("Target added successfully! Refreshing data...");
+    fetchTargets(); // Refresh targets after adding new one
+  };
+
+  // Debug function to test target creation
+  const debugCreateTarget = async () => {
+    if (!user?.id) return;
+    
+    console.log("🧪 Debug: Testing target creation...");
+    try {
+      const result = await createSalesTarget({
+        userId: user.id,
+        targetType: "MONTHLY",
+        targetPeriod: "2025-07",
+        targetAmount: 5000000,
+        isActive: true
+      });
+      
+      console.log("🧪 Debug: Create result:", result);
+      
+      if (result.success) {
+        toast.success("Debug target created!");
+        fetchTargets();
+      } else {
+        toast.error("Debug failed: " + result.error);
+      }
+    } catch (error) {
+      console.error("🧪 Debug error:", error);
+      toast.error("Debug error occurred");
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -91,7 +176,57 @@ export default function RevenueAnalytics() {
     };
 
     loadData();
-  }, [timeRange]);
+    fetchTargets(); // Also load targets when timeRange changes
+  }, [timeRange, user?.id]);
+
+  // Show loading if user is still loading
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="flex items-center justify-center h-96">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BarChart3 className="h-8 w-8 text-emerald-600 animate-pulse" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <p className="text-emerald-600 font-medium">
+              Loading User Session...
+            </p>
+            <p className="text-gray-500 text-sm">Authenticating user</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <Users className="h-10 w-10 text-red-600" />
+            </div>
+            <p className="text-red-600 font-medium mb-4">
+              Authentication Required
+            </p>
+            <p className="text-gray-500 text-sm mb-4">
+              Please sign in to access revenue analytics.
+            </p>
+            <Link
+              href="/sign-in"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -175,6 +310,26 @@ export default function RevenueAnalytics() {
 
               {/* Right side - Controls */}
               <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 lg:gap-4 lg:flex-shrink-0">
+                {/* Debug Button - Remove after testing */}
+                {user?.id && (
+                  <button
+                    onClick={debugCreateTarget}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    🧪 Debug Test
+                  </button>
+                )}
+
+                {/* Target Form */}
+                {user?.id && (
+                  <div className="flex-shrink-0">
+                    <TargetForm
+                      userId={user.id}
+                      onSuccess={handleTargetSuccess}
+                    />
+                  </div>
+                )}
+
                 {/* Time range buttons */}
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl lg:rounded-2xl p-1 sm:p-2">
                   <div className="grid grid-cols-3 gap-1 sm:flex sm:space-x-1 lg:space-x-2">
@@ -390,9 +545,75 @@ export default function RevenueAnalytics() {
               ))}
             </div>
 
+            {/* Targets Overview */}
+            {targets.length > 0 && (
+              <div className="mb-8">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Revenue Targets Overview
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {targets.slice(0, 6).map((target) => (
+                    <div
+                      key={target.period}
+                      className="bg-white/50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          {target.period}
+                        </span>
+                        <span
+                          className={`text-sm font-bold px-2 py-1 rounded-full ${
+                            target.percentage >= 100
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : target.percentage >= 80
+                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
+                        >
+                          {target.percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Target: {formatRupiah(target.target)}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Achieved: {formatRupiah(target.achieved)}
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              target.percentage >= 100
+                                ? "bg-green-500"
+                                : target.percentage >= 80
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                            }`}
+                            style={{
+                              width: `${Math.min(target.percentage, 100)}%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {!loadingTargets && targets.length === 0 && user?.id && (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p className="mb-2">No revenue targets set yet.</p>
+                    <p className="text-sm">
+                      Use the "Add Target" button above to create your first
+                      target.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Interactive Revenue Trend Chart */}
             <RevenueTrendChart
               data={data.monthlyTrends}
+              targets={targets}
               timeRange={timeRange}
             />
           </Card>

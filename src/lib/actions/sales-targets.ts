@@ -100,8 +100,28 @@ export async function getCurrentMonthTarget(userId: string): Promise<SalesTarget
 
 // Create new sales target
 export async function createSalesTarget(data: SalesTargetFormData) {
+  console.log("🎯 createSalesTarget called with data:", data);
+  
   try {
+    // First, check if the user exists
+    console.log("🔍 Checking if user exists:", data.userId);
+    const userExists = await db.users.findUnique({
+      where: { id: data.userId },
+      select: { id: true, name: true, email: true }
+    });
+
+    console.log("👤 User exists check result:", userExists);
+
+    if (!userExists) {
+      console.log("❌ User not found");
+      return { 
+        success: false, 
+        error: "User tidak ditemukan. Silakan login ulang atau hubungi administrator." 
+      };
+    }
+
     // Check if target already exists for this user and period
+    console.log("🔍 Checking for existing target:", { userId: data.userId, targetPeriod: data.targetPeriod });
     const existingTarget = await db.salesTargets.findFirst({
       where: {
         userId: data.userId,
@@ -109,13 +129,17 @@ export async function createSalesTarget(data: SalesTargetFormData) {
       },
     });
 
+    console.log("📊 Existing target check result:", existingTarget);
+
     if (existingTarget) {
+      console.log("❌ Target already exists for this period");
       return { 
         success: false, 
         error: "Target untuk periode ini sudah ada. Silakan edit target yang sudah ada." 
       };
     }
 
+    console.log("💾 Creating target in database...");
     const target = await db.salesTargets.create({
       data: {
         userId: data.userId,
@@ -126,11 +150,33 @@ export async function createSalesTarget(data: SalesTargetFormData) {
       },
     });
 
+    console.log("✅ Target created successfully:", target);
+
     revalidatePath("/management/sales-target");
+    revalidatePath("/management/finance/revenue-analytics");
     return { success: true, data: target };
   } catch (error) {
-    console.error("Error creating sales target:", error);
-    return { success: false, error: "Failed to create sales target" };
+    console.error("💥 Error creating sales target:", error);
+    console.error("💥 Error type:", typeof error);
+    console.error("💥 Error constructor:", error?.constructor?.name);
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      console.error("💥 Error message:", error.message);
+      console.error("💥 Error stack:", error.stack);
+      
+      if (error.message.includes('Foreign key constraint')) {
+        return { 
+          success: false, 
+          error: "User tidak valid. Silakan login ulang atau hubungi administrator." 
+        };
+      }
+    }
+    
+    return { 
+      success: false, 
+      error: `Failed to create sales target: ${error instanceof Error ? error.message : String(error)}` 
+    };
   }
 }
 
@@ -283,5 +329,34 @@ export async function getSalesUsers() {
   } catch (error) {
     console.error("Error fetching sales users:", error);
     throw new Error("Failed to fetch sales users");
+  }
+}
+
+// Get targets for chart display
+export async function getTargetsForChart(userId?: string, targetType: TargetType = "MONTHLY") {
+  try {
+    const where = userId ? { userId } : {};
+    
+    const targets = await db.salesTargets.findMany({
+      where: {
+        ...where,
+        targetType,
+        isActive: true,
+      },
+      orderBy: {
+        targetPeriod: 'asc',
+      },
+    });
+
+    // Transform to chart format
+    return targets.map(target => ({
+      period: target.targetPeriod,
+      target: target.targetAmount,
+      achieved: target.achievedAmount,
+      percentage: target.targetAmount > 0 ? (target.achievedAmount / target.targetAmount) * 100 : 0,
+    }));
+  } catch (error) {
+    console.error("Error fetching targets for chart:", error);
+    throw new Error("Failed to fetch chart data");
   }
 }

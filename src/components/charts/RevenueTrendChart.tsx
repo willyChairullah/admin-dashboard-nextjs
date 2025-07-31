@@ -32,13 +32,22 @@ interface RevenueTrendData {
   growth: number;
 }
 
+interface TargetData {
+  period: string;
+  target: number;
+  achieved: number;
+  percentage: number;
+}
+
 interface RevenueTrendChartProps {
   data: RevenueTrendData[];
+  targets?: TargetData[];
   timeRange?: "month" | "quarter" | "year";
 }
 
 export function RevenueTrendChart({
   data,
+  targets = [],
   timeRange = "month",
 }: RevenueTrendChartProps) {
   // Generate target revenue line based on average growth
@@ -46,8 +55,28 @@ export function RevenueTrendChart({
     data.reduce((sum, item) => sum + item.growth, 0) / data.length;
   const baseRevenue = data[0]?.revenue || 0;
 
-  const targetData = data.map((_, index) => {
-    const targetGrowth = Math.max(avgGrowth * 1.1, 5); // Target 10% higher than average or 5% minimum
+  // Use actual targets if provided, otherwise generate based on growth
+  const targetData = data.map((item, index) => {
+    // Convert month name to YYYY-MM format for matching
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const monthIndex = monthNames.findIndex(name => name.toLowerCase() === item.month.toLowerCase());
+    if (monthIndex !== -1) {
+      const currentYear = new Date().getFullYear();
+      const periodFormat = `${currentYear}-${(monthIndex + 1).toString().padStart(2, "0")}`;
+      
+      const matchingTarget = targets.find((t) => t.period === periodFormat);
+      if (matchingTarget) {
+        console.log(`Found target for ${item.month} (${periodFormat}):`, matchingTarget);
+        return matchingTarget.target;
+      }
+    }
+
+    // Fallback to calculated target
+    const targetGrowth = Math.max(avgGrowth * 1.1, 5);
     return baseRevenue * Math.pow(1 + targetGrowth / 100, index);
   });
 
