@@ -108,6 +108,7 @@ model Users {
   stockOpnames          StockOpnames[] // Tambahan: Siapa yang melakukan Stok Opname
   processedSalesReturns SalesReturns[]      @relation("AdminProcessor") // Tambahan: Admin yg proses retur
   requestedSalesReturns SalesReturns[]      @relation("SalesRequester") // Tambahan: Sales yg request retur
+  salesTargets            SalesTargets[]        // Sales targets assigned to this user
   ProductionLogs        ProductionLogs[]
   ManagementStocks      ManagementStocks[]
   PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
