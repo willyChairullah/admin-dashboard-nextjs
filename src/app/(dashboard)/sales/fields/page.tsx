@@ -350,10 +350,10 @@ export default function SalesFieldPage() {
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                ID Sales
+                Username
               </p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {user.id}
+                {user.name}
               </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">

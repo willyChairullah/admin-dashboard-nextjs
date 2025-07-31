@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/common";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getOrders } from "@/lib/actions/orders";
 import { getFieldVisits } from "@/lib/actions/field-visits";
+import { getCurrentMonthTarget } from "@/lib/actions/sales-targets";
 import Link from "next/link";
 import Loading from "@/components/ui/common/Loading";
 
@@ -24,7 +25,7 @@ interface Order {
   createdAt: Date;
   updatedAt: Date;
   salesId: string;
-  order_items: OrderItem[];
+  orderItems: OrderItem[];
   customer: {
     name: string;
     email?: string | null;
@@ -92,7 +93,7 @@ const SalesDashboard = () => {
     totalRevenue: 0,
     completedOrders: 0,
     pendingOrders: 0,
-    monthlyTarget: 50000000, // 50M default target
+    monthlyTarget: 0, // 50M default target
     achievementPercentage: 0,
     totalVisits: 0,
     recentVisits: 0,
@@ -129,11 +130,15 @@ const SalesDashboard = () => {
         setFieldVisits(visitsResult.data as FieldVisit[]);
       }
 
+      // Load current month target for this user
+      const userTarget = await getCurrentMonthTarget(user.id);
+
       // Calculate dashboard statistics
       if (ordersResult.success) {
-        calculateDashboardStats(
+        await calculateDashboardStats(
           ordersResult.data as Order[],
-          visitsResult.success ? (visitsResult.data as FieldVisit[]) : []
+          visitsResult.success ? (visitsResult.data as FieldVisit[]) : [],
+          userTarget
         );
       }
     } catch (error) {
@@ -143,9 +148,10 @@ const SalesDashboard = () => {
     }
   };
 
-  const calculateDashboardStats = (
+  const calculateDashboardStats = async (
     orderData: Order[],
-    visitData: FieldVisit[]
+    visitData: FieldVisit[],
+    userTarget: any = null
   ) => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -168,11 +174,11 @@ const SalesDashboard = () => {
       );
     });
 
-    // Filter recent visits (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Filter recent visits (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentVisits = visitData.filter(
-      (visit) => new Date(visit.visitDate) >= sevenDaysAgo
+      (visit) => new Date(visit.visitDate) >= thirtyDaysAgo
     );
 
     const totalRevenue = currentMonthOrders.reduce(
@@ -189,9 +195,16 @@ const SalesDashboard = () => {
         order.status === "IN_PROCESS"
     ).length;
 
-    const monthlyTarget = 50000000; // 50M default, could be fetched from user profile
+    // Use target from database if available, otherwise use default
+    const monthlyTarget = userTarget ? userTarget.targetAmount : 0; // 50M default
     const achievementPercentage =
-      monthlyTarget > 0 ? Math.round((totalRevenue / monthlyTarget) * 100) : 0;
+      monthlyTarget > 0 ? (totalRevenue / monthlyTarget) * 100 : 0;
+
+    // Round to 1 decimal place for small percentages, whole number for larger ones
+    const displayPercentage =
+      achievementPercentage < 1
+        ? Math.round(achievementPercentage * 10) / 10
+        : Math.round(achievementPercentage);
 
     setDashboardStats({
       totalOrders: currentMonthOrders.length,
@@ -199,7 +212,7 @@ const SalesDashboard = () => {
       completedOrders,
       pendingOrders,
       monthlyTarget,
-      achievementPercentage,
+      achievementPercentage: displayPercentage,
       totalVisits: currentMonthVisits.length,
       recentVisits: recentVisits.length,
     });
@@ -399,7 +412,7 @@ const SalesDashboard = () => {
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300 mb-1 ">
-                  Kunjungan 7hr
+                  Kunjungan 30hr
                 </p>
                 <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-purple-900 dark:text-purple-100">
                   {dashboardStats.recentVisits}
@@ -790,7 +803,7 @@ const SalesDashboard = () => {
                 Performa & Target Pencapaian Saya
               </h3>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-1 gap-4 sm:gap-6">
                 {/* Sales Performance Card */}
                 <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg">
                   <div className="flex items-center mb-4">
@@ -824,9 +837,12 @@ const SalesDashboard = () => {
                       <div
                         className="bg-blue-600 h-3 rounded-full transition-all duration-500"
                         style={{
-                          width: `${Math.min(
-                            dashboardStats.achievementPercentage,
-                            100
+                          width: `${Math.max(
+                            Math.min(
+                              dashboardStats.achievementPercentage || 0,
+                              100
+                            ),
+                            dashboardStats.achievementPercentage > 0 ? 0.5 : 0
                           )}%`,
                         }}
                       ></div>
@@ -856,68 +872,6 @@ const SalesDashboard = () => {
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Total Order
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Activity Performance Card */}
-                <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 shadow-lg">
-                  <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-lg">
-                      <span className="text-lg sm:text-xl">🚶</span>
-                    </div>
-                    <div className="ml-3 sm:ml-4 min-w-0 flex-1">
-                      <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                        Aktivitas Lapangan
-                      </h4>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                        Kunjungan & Follow-up
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Kunjungan Bulan Ini
-                      </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {dashboardStats.totalVisits} kunjungan
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                      <div
-                        className="bg-green-600 h-3 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.min(
-                            (dashboardStats.totalVisits / 20) * 100,
-                            100
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      <span>{dashboardStats.totalVisits} selesai</span>
-                      <span>Target: 20 kunjungan</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {dashboardStats.recentVisits}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        7 Hari Terakhir
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {Math.round((dashboardStats.totalVisits / 20) * 100)}%
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Target Kunjungan
                       </p>
                     </div>
                   </div>
@@ -1043,25 +997,36 @@ const SalesDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {selectedOrder.order_items.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                              {item.products?.name ||
-                                `Product ${item.productId}`}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                              {item.quantity}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                              {formatCurrency(
-                                item.products?.price || item.price
-                              )}
-                            </td>
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                              {formatCurrency(item.totalPrice)}
+                        {(selectedOrder.orderItems || []).length > 0 ? (
+                          (selectedOrder.orderItems || []).map((item: any) => (
+                            <tr key={item.id}>
+                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                                {item.products?.name ||
+                                  `Product ${item.productId}`}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                                {item.quantity}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                                {formatCurrency(
+                                  item.products?.price || item.price
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
+                                {formatCurrency(item.totalPrice)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                            >
+                              Tidak ada item dalam order ini
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1089,9 +1054,6 @@ const SalesDashboard = () => {
                   }}
                 >
                   Lihat di Order History
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  Print Detail
                 </Button>
               </div>
             </div>
@@ -1203,9 +1165,6 @@ const SalesDashboard = () => {
                   }}
                 >
                   Lihat di Field Visit
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  Print Report
                 </Button>
               </div>
             </div>
