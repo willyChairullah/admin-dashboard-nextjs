@@ -196,7 +196,7 @@ const SalesDashboard = () => {
     ).length;
 
     // Use target from database if available, otherwise use default
-    const monthlyTarget = userTarget ? userTarget.targetAmount : 50000000; // 50M default
+    const monthlyTarget = userTarget ? userTarget.targetAmount : 0; // 50M default
     const achievementPercentage =
       monthlyTarget > 0 ? (totalRevenue / monthlyTarget) * 100 : 0;
 
@@ -1055,9 +1055,6 @@ const SalesDashboard = () => {
                 >
                   Lihat di Order History
                 </Button>
-                <Button variant="outline" className="flex-1">
-                  Print Detail
-                </Button>
               </div>
             </div>
           </Modal>
@@ -1168,9 +1165,6 @@ const SalesDashboard = () => {
                   }}
                 >
                   Lihat di Field Visit
-                </Button>
-                <Button variant="outline" className="flex-1">
-                  Print Report
                 </Button>
               </div>
             </div>
