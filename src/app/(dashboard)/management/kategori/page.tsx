@@ -6,6 +6,7 @@ import { useSharedData } from "@/contexts/StaticData";
 import React from "react"; // Essential for JSX
 
 const columns = [
+  { header: "Kode", accessor: "code" },
   { header: "Nama", accessor: "name" },
   { header: "Deskripsi", accessor: "description" },
   {

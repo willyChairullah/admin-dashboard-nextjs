@@ -16,6 +16,7 @@ export type ProductionLogItemFormData = {
 };
 
 export type ProductionLogFormData = {
+  code: string;
   productionDate: Date;
   notes?: string;
   producedById: string;
@@ -60,7 +61,7 @@ export async function getProductionLogs(): Promise<ProductionLogWithDetails[]> {
         },
       },
       orderBy: {
-        productionDate: "desc",
+        code: "desc",
       },
     });
 
@@ -113,6 +114,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
       // Create production log
       const productionLog = await tx.productionLogs.create({
         data: {
+          code: data.code,
           productionDate: data.productionDate,
           notes: data.notes || null,
           producedById: data.producedById,

@@ -23,6 +23,7 @@ import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { ManagementStockStatus } from "@prisma/client";
+import { generateCodeByTable } from "@/utils/getCode"; // Import fungsi generateCodeByTable
 
 interface ManagementStockItemFormData {
   productId: string;
@@ -32,6 +33,7 @@ interface ManagementStockItemFormData {
 }
 
 interface ManagementStockFormData {
+  code: string; // Tambahkan kolom code
   managementDate: string;
   status: ManagementStockStatus;
   notes: string;
@@ -41,6 +43,7 @@ interface ManagementStockFormData {
 }
 
 interface ManagementStockFormErrors {
+  code?: string; // Tambahkan error untuk code
   managementDate?: string;
   status?: string;
   notes?: string;
@@ -71,6 +74,7 @@ interface User {
 
 interface ReconciledOpname {
   id: string;
+  code: string;
   opnameDate: Date;
   notes: string | null;
   conductedBy: {
@@ -91,8 +95,6 @@ interface ReconciledOpname {
   }[];
 }
 
-// ... (bagian atas kode tetap sama)
-
 export default function CreateManagementStockPage() {
   const data = useSharedData();
   const router = useRouter();
@@ -105,6 +107,7 @@ export default function CreateManagementStockPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [formData, setFormData] = useState<ManagementStockFormData>({
+    code: "", // Inisialisasi kosong, akan diisi di useEffect
     managementDate: new Date().toISOString().split("T")[0],
     status: ManagementStockStatus.IN,
     notes: "",
@@ -127,6 +130,13 @@ export default function CreateManagementStockPage() {
         setAvailableProducts(products);
         setAvailableUsers(users);
         setReconciledOpnames(opnames);
+
+        // Generate code saat data awal dimuat
+        const generatedCode = await generateCodeByTable("ManagementStocks"); // Gunakan nama tabel yang relevan untuk manajemen stok
+        setFormData(prev => ({
+          ...prev,
+          code: generatedCode,
+        }));
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
@@ -166,6 +176,10 @@ export default function CreateManagementStockPage() {
 
   const validateForm = (): boolean => {
     const errors: ManagementStockFormErrors = {};
+
+    if (!formData.code) {
+      errors.code = "Kode wajib diisi";
+    }
 
     if (!formData.managementDate) {
       errors.managementDate = "Tanggal manajemen wajib diisi";
@@ -294,6 +308,7 @@ export default function CreateManagementStockPage() {
 
     try {
       const result = await createManagementStock({
+        code: formData.code, // Tambahkan code ke payload
         managementDate: new Date(formData.managementDate),
         status: formData.status,
         notes: formData.notes || undefined,
@@ -339,13 +354,10 @@ export default function CreateManagementStockPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
-               {" "}
         <div className="text-center">
-                   {" "}
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Memuat data...</p>       {" "}
+          <p className="mt-4 text-gray-600">Memuat data...</p>
         </div>
-             {" "}
       </div>
     );
   }
@@ -365,8 +377,20 @@ export default function CreateManagementStockPage() {
         handleFormSubmit={handleFormSubmit}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Input Code */}
+          <FormField label="Kode" htmlFor="code" errorMessage={formErrors.code}>
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              readOnly
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+            />
+          </FormField>
+
           <FormField
             label="Tanggal Manajemen"
+            required
             errorMessage={formErrors.managementDate}
           >
             <InputDate
@@ -384,7 +408,11 @@ export default function CreateManagementStockPage() {
             />
           </FormField>
 
-          <FormField label="Tipe Manajemen" errorMessage={formErrors.status}>
+          <FormField
+            required
+            label="Tipe Manajemen"
+            errorMessage={formErrors.status}
+          >
             <select
               value={formData.status}
               onChange={e =>
@@ -412,36 +440,8 @@ export default function CreateManagementStockPage() {
             </select>
           </FormField>
 
-          {/* Dropdown untuk memilih Stock Opname yang sudah RECONCILED */}
-          {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT && (
-            <FormField
-              label="Pilih Stok Opname"
-              errorMessage={formErrors.selectedOpnameId}
-            >
-              <select
-                value={formData.selectedOpnameId || ""}
-                onChange={e =>
-                  handleInputChange("selectedOpnameId", e.target.value)
-                }
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                  formErrors.selectedOpnameId
-                    ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                    : "border-gray-300 dark:border-gray-600"
-                }`}
-              >
-                <option value="">Pilih Stok Opname</option>
-                {reconciledOpnames.map(opname => (
-                  <option key={opname.id} value={opname.id}>
-                    {new Date(opname.opnameDate).toLocaleDateString("id-ID")} -
-                    Oleh: {opname.conductedBy.name} -
-                    {opname.stockOpnameItems.length} item dengan selisih
-                  </option>
-                ))}
-              </select>
-            </FormField>
-          )}
-
           <FormField
+            required
             label="User yang Melakukan"
             errorMessage={formErrors.producedById}
           >
@@ -463,6 +463,33 @@ export default function CreateManagementStockPage() {
             </select>
           </FormField>
         </div>
+        {/* Dropdown untuk memilih Stock Opname yang sudah RECONCILED */}
+        {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT && (
+          <FormField
+            required
+            label="Pilih Stok Opname"
+            errorMessage={formErrors.selectedOpnameId}
+          >
+            <select
+              value={formData.selectedOpnameId || ""}
+              onChange={e =>
+                handleInputChange("selectedOpnameId", e.target.value)
+              }
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
+                formErrors.selectedOpnameId
+                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
+                  : "border-gray-300 dark:border-gray-600"
+              }`}
+            >
+              <option value="">Pilih Stok Opname</option>
+              {reconciledOpnames.map(opname => (
+                <option key={opname.id} value={opname.id}>
+                  {opname.code} - Oleh: {opname.conductedBy.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        )}
         <FormField label="Catatan" errorMessage={formErrors.notes}>
           <InputTextArea
             name="notes"
@@ -514,12 +541,14 @@ export default function CreateManagementStockPage() {
                         className="p-1 text-red-500 hover:text-red-700 transition-colors"
                       >
                         <Trash2 size={16} />
+                        Hapus
                       </button>
                     )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
+                    required
                     label="Produk"
                     errorMessage={formErrors.items?.[index]?.productId}
                   >
@@ -554,6 +583,7 @@ export default function CreateManagementStockPage() {
                   </FormField>
 
                   <FormField
+                    required
                     label={`${
                       formData.status ===
                       ManagementStockStatus.OPNAME_ADJUSTMENT
@@ -683,25 +713,6 @@ export default function CreateManagementStockPage() {
                 ) : (
                   ""
                 )}
-                {/* {formData.selectedOpnameId && (
-                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Detail Item dengan Selisih:
-                    </p>
-                    {reconciledOpnames
-                      .find(opname => opname.id === formData.selectedOpnameId)
-                      ?.stockOpnameItems.map(item => (
-                        <div
-                          key={item.id}
-                          className="text-xs text-gray-600 dark:text-gray-400 mb-1"
-                        >
-                          {item.product.name}: Selisih{" "}
-                          {item.difference > 0 ? "+" : ""}
-                          {item.difference} {item.product.unit}
-                        </div>
-                      ))}
-                  </div>
-                )} */}
               </div>
             );
           })}

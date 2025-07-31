@@ -18,6 +18,7 @@ export type ManagementStockItemFormData = {
 };
 
 export type ManagementStockFormData = {
+  code: string;
   managementDate: Date;
   status: ManagementStockStatus;
   notes?: string;
@@ -120,6 +121,7 @@ export async function createManagementStock(data: ManagementStockFormData) {
       // Create management stock
       const managementStock = await tx.managementStocks.create({
         data: {
+          code: data.code,
           managementDate: data.managementDate,
           status: data.status,
           notes: data.notes || null,

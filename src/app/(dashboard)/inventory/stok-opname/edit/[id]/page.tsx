@@ -19,9 +19,9 @@ import { getUsers } from "@/lib/actions/user";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2, Plus, Check } from "lucide-react";
-import { OpnameStatus } from "@prisma/client";
+import { OpnameStatus } from "@prisma/client"; // Pastikan OpnameStatus diimpor
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
-import { format } from "node:url";
+// Tidak perlu mengimpor generateCodeByTable di halaman edit
 
 interface StockOpnameItemFormData {
   productId: string;
@@ -31,6 +31,7 @@ interface StockOpnameItemFormData {
 }
 
 interface StockOpnameFormData {
+  code: string; // [PERUBAHAN] Tambahkan 'code' ke interface
   opnameDate: string;
   notes: string;
   conductedById: string;
@@ -39,6 +40,7 @@ interface StockOpnameFormData {
 }
 
 interface StockOpnameFormErrors {
+  code?: string; // [PERUBAHAN] Tambahkan 'code' ke interface error
   opnameDate?: string;
   notes?: string;
   conductedById?: string;
@@ -72,20 +74,21 @@ interface User {
 const EditStokOpnamePage = () => {
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = params.id as string; // ID stok opname yang akan diedit
 
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Status loading keseluruhan halaman
   const [submitting, setSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [formData, setFormData] = useState<StockOpnameFormData>({
+    code: "", // [PERUBAHAN] Default kosong, akan diisi dari data yang diambil
     opnameDate: "",
     notes: "",
     conductedById: "",
-    status: "IN_PROGRESS",
+    status: "IN_PROGRESS", // Default awal, akan ditimpa dari data
     items: [],
   });
 
@@ -94,10 +97,12 @@ const EditStokOpnamePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true); // Mulai loading
+
         const [stockOpnameData, productsData, usersData] = await Promise.all([
-          getStockOpnameById(id),
-          getProductsForOpname(),
-          getUsers(),
+          getStockOpnameById(id), // Ambil data stok opname berdasarkan ID
+          getProductsForOpname(), // Ambil produk
+          getUsers(), // Ambil user
         ]);
 
         if (!stockOpnameData) {
@@ -113,8 +118,9 @@ const EditStokOpnamePage = () => {
           )
         );
 
-        // Populate form data
+        // Populate form data dengan nilai yang ada dari database
         setFormData({
+          code: stockOpnameData.code, // [PERUBAHAN] Ambil code dari data yang ada
           opnameDate: stockOpnameData.opnameDate.toISOString().split("T")[0],
           notes: stockOpnameData.notes || "",
           conductedById: stockOpnameData.conductedById,
@@ -128,17 +134,17 @@ const EditStokOpnamePage = () => {
         });
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Gagal memuat data");
-        router.push("/inventory/stok-opname");
+        toast.error("Gagal memuat data.");
+        router.push("/inventory/stok-opname"); // Redirect jika gagal memuat data
       } finally {
-        setLoading(false);
+        setLoading(false); // Selesai loading
       }
     };
 
     if (id) {
       fetchData();
     }
-  }, [id, router]);
+  }, [id, router]); // Dependensi id dan router
 
   const handleInputChange = (
     field: keyof StockOpnameFormData,
@@ -149,8 +155,9 @@ const EditStokOpnamePage = () => {
       [field]: value,
     }));
 
-    // Clear error when user types
-    if (field !== "status" && field !== "items" && errors[field]) {
+    // Clear error for the field if it exists
+    if (field !== "status" && errors[field]) {
+      // 'items' is handled separately for nested errors
       setErrors(prev => ({
         ...prev,
         [field]: undefined,
@@ -210,6 +217,10 @@ const EditStokOpnamePage = () => {
         },
       ],
     }));
+    // Clear any general item errors when a new item is added
+    if (errors.items && Object.keys(errors.items).length > 0) {
+      setErrors(prev => ({ ...prev, items: undefined }));
+    }
   };
 
   const removeItem = (index: number) => {
@@ -218,11 +229,27 @@ const EditStokOpnamePage = () => {
         ...prev,
         items: prev.items.filter((_, i) => i !== index),
       }));
+      // Remove errors for the deleted item
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        if (newErrors.items) {
+          delete newErrors.items[index];
+          if (Object.keys(newErrors.items).length === 0) {
+            newErrors.items = undefined; // Set to undefined if no item errors left
+          }
+        }
+        return newErrors;
+      });
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: StockOpnameFormErrors = {};
+
+    // [PERUBAHAN] Validasi untuk code (pastikan tidak kosong)
+    if (!formData.code.trim()) {
+      newErrors.code = "Kode stok opname tidak boleh kosong.";
+    }
 
     // Validate main fields
     if (!formData.opnameDate) {
@@ -282,9 +309,15 @@ const EditStokOpnamePage = () => {
     setSubmitting(true);
 
     try {
+      // Perhitungan status otomatis sebelum update
+      const newStatus: OpnameStatus = hasDifferences
+        ? "RECONCILED"
+        : "COMPLETED";
+
       const result = await updateStockOpname(id, {
         opnameDate: new Date(formData.opnameDate),
         notes: formData.notes || undefined,
+        status: newStatus, // Set status berdasarkan kondisi
         items: formData.items.map(item => ({
           productId: item.productId,
           systemStock: item.systemStock,
@@ -294,15 +327,26 @@ const EditStokOpnamePage = () => {
       });
 
       if (result.success) {
-        toast.success("Stok opname berhasil diperbarui");
+        toast.success("Stok opname berhasil diperbarui.");
         router.push("/inventory/stok-opname");
       } else {
         toast.error(result.error || "Gagal memperbarui stok opname");
-        router.push("/inventory/stok-opname");
+        // Set specific error if code is duplicate
+        setErrors(prevErrors => ({
+          ...prevErrors,
+          code: result.error?.includes("duplicate")
+            ? "Kode ini sudah ada. Harap coba lagi."
+            : undefined,
+          general: result.error, // Fallback for other errors
+        }));
       }
     } catch (error) {
       console.error("Error updating stock opname:", error);
       toast.error("Gagal memperbarui stok opname");
+      setErrors(prevErrors => ({
+        ...prevErrors,
+        general: "Terjadi kesalahan yang tidak terduga.",
+      }));
     } finally {
       setSubmitting(false);
     }
@@ -314,14 +358,14 @@ const EditStokOpnamePage = () => {
     try {
       const result = await deleteStockOpname(id);
       if (result.success) {
-        toast.success("Stok opname berhasil dihapus");
+        toast.success("Stok opname berhasil dihapus.");
         router.push("/inventory/stok-opname");
       } else {
         toast.error(result.error || "Gagal menghapus stok opname");
       }
     } catch (error) {
       console.error("Error deleting stock opname:", error);
-      toast.error("Gagal menghapus stok opname");
+      toast.error("Gagal menghapus stok opname.");
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -330,13 +374,16 @@ const EditStokOpnamePage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">Memuat...</div>
+      <div className="flex justify-center items-center h-64 bg-white dark:bg-gray-950 rounded-lg shadow-sm">
+        <div className="text-gray-500 dark:text-gray-400">Memuat data...</div>
+      </div>
     );
   }
 
+  // Cek apakah form bisa diedit berdasarkan status
   const isCompleted = formData.status === "COMPLETED";
   const isReconciled = formData.status === "RECONCILED";
-  const canEdit = !isCompleted || !isReconciled;
+  const canEdit = !(isCompleted || isReconciled); // Bisa diedit jika tidak COMPLETED dan tidak RECONCILED
 
   // Check if there are any differences in items
   const hasDifferences = formData.items.some(
@@ -373,7 +420,7 @@ const EditStokOpnamePage = () => {
         isSubmitting={submitting}
         handleFormSubmit={handleFormSubmit}
         handleDelete={() => setShowDeleteModal(true)}
-        hideDeleteButton={false}
+        hideDeleteButton={false} // Atur ini berdasarkan role atau status jika diperlukan
       >
         {/* Status Banner */}
         {(isCompleted || isReconciled) && (
@@ -399,6 +446,22 @@ const EditStokOpnamePage = () => {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* [BARU] Input Field untuk Kode Stok Opname (Read-Only) */}
+          <FormField
+            label="Kode Stok Opname"
+            htmlFor="code"
+            required
+            errorMessage={errors.code}
+          >
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              readOnly // Penting: Kode tidak boleh diubah di halaman edit
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+            />
+          </FormField>
+
           <FormField
             label="Tanggal Opname"
             errorMessage={errors.opnameDate}
@@ -412,64 +475,59 @@ const EditStokOpnamePage = () => {
               }}
               errorMessage={errors.opnameDate}
               placeholder="Pilih tanggal opname"
-              disabled={!canEdit}
             />
-          </FormField>
-
-          <FormField
-            label="Pelaksana"
-            errorMessage={errors.conductedById}
-            required
-          >
-            <select
-              value={formData.conductedById}
-              onChange={e => handleInputChange("conductedById", e.target.value)}
-              disabled={!canEdit}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 disabled:cursor-not-allowed dark:disabled:bg-gray-600 ${
-                errors.conductedById
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih Pelaksana</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
           </FormField>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Status">
+        <FormField
+          label="Pelaksana"
+          errorMessage={errors.conductedById}
+          required
+        >
+          <select
+            value={formData.conductedById}
+            onChange={e => handleInputChange("conductedById", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 ${
+              errors.conductedById
+                ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
+                : "border-gray-300 dark:border-gray-600"
+            }`}
+          >
+            <option value="">Pilih Pelaksana</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>
+                {user.name} ({user.role})
+              </option>
+            ))}
+          </select>
+        </FormField>
+
+        {/* <FormField label="Status">
             <select
               value={formData.status}
               onChange={e =>
                 handleInputChange("status", e.target.value as OpnameStatus)
               }
-              disabled={!canEdit}
+              disabled={true} // [PERUBAHAN]: Status di halaman edit tidak boleh diubah manual.
+              // Akan otomatis diset di handleFormSubmit atau dari data awal.
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed dark:disabled:bg-gray-600"
             >
               <option value="IN_PROGRESS">Dalam Proses</option>
               <option value="COMPLETED">Selesai</option>
               <option value="RECONCILED">Direkonsiliasi</option>
             </select>
-          </FormField>
+          </FormField> */}
 
-          <FormField label="Catatan" errorMessage={errors.notes}>
-            <InputTextArea
-              name="notes"
-              value={formData.notes}
-              height="45px"
-              onChange={e => handleInputChange("notes", e.target.value)}
-              placeholder="Catatan tambahan untuk stok opname..."
-              errorMessage={errors.notes}
-              rows={3}
-              disabled={!canEdit}
-            />
-          </FormField>
-        </div>
+        <FormField label="Catatan" errorMessage={errors.notes}>
+          <InputTextArea
+            name="notes"
+            value={formData.notes}
+            height="45px"
+            onChange={e => handleInputChange("notes", e.target.value)}
+            placeholder="Catatan tambahan untuk stok opname..."
+            rows={3}
+          />
+        </FormField>
 
         {/* Items Section */}
         <div className="space-y-4">
@@ -520,7 +578,6 @@ const EditStokOpnamePage = () => {
                       onChange={e =>
                         handleItemChange(index, "productId", e.target.value)
                       }
-                      disabled={!canEdit}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 disabled:cursor-not-allowed dark:disabled:bg-gray-600 ${
                         errors.items?.[index]?.productId
                           ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -530,8 +587,7 @@ const EditStokOpnamePage = () => {
                       <option value="">Pilih Produk</option>
                       {products.map(product => (
                         <option key={product.id} value={product.id}>
-                          {product.name} ({product.category.name}) -{" "}
-                          {product.currentStock} {product.unit}
+                          {product.name}
                         </option>
                       ))}
                     </select>
@@ -577,9 +633,7 @@ const EditStokOpnamePage = () => {
                         )
                       }
                       placeholder="Stok fisik yang dihitung"
-                      errorMessage={errors.items?.[index]?.physicalStock}
                       min="0"
-                      disabled={!canEdit}
                     />
                     {difference !== 0 && (
                       <p
@@ -603,7 +657,6 @@ const EditStokOpnamePage = () => {
                     }
                     placeholder="Catatan untuk item ini..."
                     rows={2}
-                    disabled={!canEdit}
                   />
                 </FormField>
               </div>
@@ -619,8 +672,9 @@ const EditStokOpnamePage = () => {
         isLoading={isDeleting}
       >
         <p>
-          Apakah Anda yakin ingin menghapus data manajemen stok ini? Tindakan
-          ini akan membalikkan perubahan stok dan tidak dapat dibatalkan.
+          Apakah Anda yakin ingin menghapus data manajemen stok{" "}
+          <strong>{formData.code}</strong> ini? Tindakan ini akan membalikkan
+          perubahan stok dan tidak dapat dibatalkan.
         </p>
       </ConfirmationModal>
     </div>

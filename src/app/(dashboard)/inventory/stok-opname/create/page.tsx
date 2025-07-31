@@ -17,6 +17,8 @@ import { getUsers } from "@/lib/actions/user";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
+// [PERUBAHAN] Impor generateCodeByTable
+import { generateCodeByTable } from "@/utils/getCode"; // Pastikan path ini benar
 
 interface StockOpnameItemFormData {
   productId: string;
@@ -26,6 +28,7 @@ interface StockOpnameItemFormData {
 }
 
 interface StockOpnameFormData {
+  code: string; // [PERUBAHAN] Tambahkan 'code' ke interface
   opnameDate: string;
   notes: string;
   conductedById: string;
@@ -33,6 +36,7 @@ interface StockOpnameFormData {
 }
 
 interface StockOpnameFormErrors {
+  code?: string; // [PERUBAHAN] Tambahkan 'code' ke interface error
   opnameDate?: string;
   notes?: string;
   conductedById?: string;
@@ -69,8 +73,13 @@ const CreateStokOpnamePage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // [BARU] State untuk error generate code
+  const [errorGeneratingCode, setErrorGeneratingCode] = useState<string | null>(
+    null
+  );
 
   const [formData, setFormData] = useState<StockOpnameFormData>({
+    code: "", // [PERUBAHAN] Default kosong, akan diisi useEffect
     opnameDate: new Date().toISOString().split("T")[0],
     notes: "",
     conductedById: "",
@@ -84,44 +93,74 @@ const CreateStokOpnamePage = () => {
     ],
   });
 
-  // console.log(formData);
+  // console.log(formData); // Anda bisa aktifkan ini untuk debugging
 
   const [errors, setErrors] = useState<StockOpnameFormErrors>({});
 
+  // [PERUBAHAN] useEffect untuk fetch data dan generate code
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDataAndGenerateCode = async () => {
       try {
-        const [productsData, usersData] = await Promise.all([
+        setLoading(true);
+        setErrorGeneratingCode(null); // Reset error code generation
+
+        // [PERUBAHAN] Gunakan Promise.all untuk mengambil semua data dan kode secara paralel
+        const [productsData, usersData, newCode] = await Promise.all([
           getProductsForOpname(),
           getUsers(),
+          generateCodeByTable("StockOpnames"), // [PERUBAHAN] Panggil generateCodeByTable
         ]);
+
         setProducts(productsData);
         setUsers(
           usersData.filter(user =>
             ["OWNER", "WAREHOUSE", "ADMIN"].includes(user.role)
           )
         );
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Gagal memuat data");
+
+        // [PERUBAHAN] Set kode yang digenerate ke formData
+        setFormData(prev => ({
+          ...prev,
+          code: newCode,
+          // Jika ada producedById default dari user login, Anda bisa set di sini juga
+          // producedById: someDefaultUserId,
+        }));
+      } catch (error: any) {
+        // Menggunakan 'any' untuk mengakses error.message
+        console.error("Error fetching data or generating code:", error);
+        setErrorGeneratingCode(
+          error.message || "Gagal memuat data atau menghasilkan kode."
+        );
+        toast.error(
+          error.message || "Gagal memuat data atau menghasilkan kode."
+        );
+        // Opsi: reset formData atau set default jika ada error fatal
+        setFormData({
+          code: "", // Set ke kosong jika gagal
+          opnameDate: new Date().toISOString().split("T")[0],
+          notes: "",
+          conductedById: "",
+          items: [
+            { productId: "", systemStock: 0, physicalStock: 0, notes: "" },
+          ],
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchDataAndGenerateCode();
+  }, []); // Array dependensi kosong agar hanya berjalan sekali saat komponen mount
 
   const handleInputChange = (
     field: keyof StockOpnameFormData,
-    value: string
+    value: string // Ubah ini jika 'value' bisa selain string (misal number untuk price/cost)
   ) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
 
-    // Clear error when user types
     if (errors[field]) {
       setErrors(prev => ({
         ...prev,
@@ -141,7 +180,6 @@ const CreateStokOpnamePage = () => {
       [field]: value,
     };
 
-    // Auto-populate system stock when product is selected
     if (field === "productId" && typeof value === "string") {
       const selectedProduct = products.find(p => p.id === value);
       if (selectedProduct) {
@@ -154,7 +192,6 @@ const CreateStokOpnamePage = () => {
       items: updatedItems,
     }));
 
-    // Clear item errors
     if (errors.items?.[index]?.[field as keyof StockOpnameItemFormData]) {
       setErrors(prev => ({
         ...prev,
@@ -186,17 +223,28 @@ const CreateStokOpnamePage = () => {
 
   const removeItem = (index: number) => {
     if (formData.items.length > 1) {
+      const newItems = formData.items.filter((_, i) => i !== index);
       setFormData(prev => ({
         ...prev,
-        items: prev.items.filter((_, i) => i !== index),
+        items: newItems,
       }));
+      // Hapus error terkait item yang dihapus
+      const newErrors = { ...errors };
+      if (newErrors.items) {
+        delete newErrors.items[index];
+      }
+      setErrors(newErrors);
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: StockOpnameFormErrors = {};
 
-    // Validate main fields
+    // [PERUBAHAN] Validasi untuk code
+    if (!formData.code.trim()) {
+      newErrors.code = "Kode stok opname harus diisi.";
+    }
+
     if (!formData.opnameDate) {
       newErrors.opnameDate = "Tanggal opname harus diisi";
     }
@@ -205,7 +253,6 @@ const CreateStokOpnamePage = () => {
       newErrors.conductedById = "Pelaksana harus dipilih";
     }
 
-    // Validate items
     const itemErrors: { [key: number]: any } = {};
     formData.items.forEach((item, index) => {
       const itemError: any = {};
@@ -227,7 +274,6 @@ const CreateStokOpnamePage = () => {
       newErrors.items = itemErrors;
     }
 
-    // Check for duplicate products
     const productIds = formData.items
       .map(item => item.productId)
       .filter(id => id);
@@ -236,6 +282,7 @@ const CreateStokOpnamePage = () => {
     );
     if (duplicateProducts.length > 0) {
       toast.error("Tidak boleh ada produk yang sama dalam satu opname");
+      // Optionally, mark which items are duplicates in errors.items
       return false;
     }
 
@@ -255,6 +302,7 @@ const CreateStokOpnamePage = () => {
 
     try {
       const result = await createStockOpname({
+        code: formData.code, // [PERUBAHAN] Kirimkan kode yang sudah digenerate
         opnameDate: new Date(formData.opnameDate),
         notes: formData.notes || undefined,
         conductedById: formData.conductedById,
@@ -267,22 +315,55 @@ const CreateStokOpnamePage = () => {
       });
 
       if (result.success) {
-        // toast.success("Stok opname berhasil dibuat");
+        toast.success("Stok opname berhasil dibuat.");
         router.push("/inventory/stok-opname");
       } else {
         toast.error(result.error || "Gagal membuat stok opname");
+        // Contoh: Set error ke field 'code' jika ada konflik kode
+        setErrors(prevErrors => ({
+          ...prevErrors,
+          code: result.error?.includes("duplicate")
+            ? "Kode ini sudah ada. Harap coba lagi."
+            : undefined,
+          general: result.error, // Atau error umum lainnya
+        }));
       }
     } catch (error) {
       console.error("Error creating stock opname:", error);
       toast.error("Gagal membuat stok opname");
+      setErrors(prevErrors => ({
+        ...prevErrors,
+        general: "Terjadi kesalahan yang tidak terduga.",
+      }));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: `${user.name} (${user.role})`,
+  }));
+
+  // [PERUBAHAN] Conditional rendering untuk loading atau error
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">Memuat...</div>
+      <div className="flex justify-center items-center h-64 bg-white dark:bg-gray-950 rounded-lg shadow-sm">
+        <div className="text-gray-500 dark:text-gray-400">
+          Memuat data dan menghasilkan kode...
+        </div>
+      </div>
+    );
+  }
+
+  if (errorGeneratingCode) {
+    // Tampilkan error khusus jika generasi kode gagal
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+        <p className="text-red-500 dark:text-red-400">
+          Error: {errorGeneratingCode}. Harap muat ulang halaman.
+        </p>
+      </div>
     );
   }
 
@@ -301,6 +382,22 @@ const CreateStokOpnamePage = () => {
         handleFormSubmit={handleSubmit}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* [BARU] Input Field untuk Kode Stok Opname */}
+          <FormField
+            label="Kode Stok Opname"
+            htmlFor="code"
+            required
+            errorMessage={errors.code}
+          >
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              readOnly // Kode digenerate otomatis, tidak bisa diubah manual
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-not-allowed dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+            />
+          </FormField>
+
           <FormField
             label="Tanggal Opname"
             errorMessage={errors.opnameDate}
@@ -316,30 +413,30 @@ const CreateStokOpnamePage = () => {
               placeholder="Pilih tanggal opname"
             />
           </FormField>
-
-          <FormField
-            label="Pelaksana"
-            errorMessage={errors.conductedById}
-            required
-          >
-            <select
-              value={formData.conductedById}
-              onChange={e => handleInputChange("conductedById", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                errors.conductedById
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih Pelaksana</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
-          </FormField>
         </div>
+
+        <FormField
+          label="Pelaksana"
+          errorMessage={errors.conductedById}
+          required
+        >
+          <select
+            value={formData.conductedById}
+            onChange={e => handleInputChange("conductedById", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
+              errors.conductedById
+                ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
+                : "border-gray-300 dark:border-gray-600"
+            }`}
+          >
+            <option value="">Pilih Pelaksana</option>
+            {userOptions.map(user => (
+              <option key={user.value} value={user.value}>
+                {user.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
 
         <FormField label="Catatan" errorMessage={errors.notes}>
           <InputTextArea

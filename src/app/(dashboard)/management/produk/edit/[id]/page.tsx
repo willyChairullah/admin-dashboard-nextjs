@@ -23,6 +23,7 @@ import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { toast } from "sonner";
 
 interface ProductFormData {
+  code: string;
   name: string;
   description: string;
   unit: string;
@@ -63,6 +64,7 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
+    code: "",
     name: "",
     description: "",
     unit: "",
@@ -93,6 +95,7 @@ export default function EditProductPage() {
         if (productData) {
           setProduct(productData);
           setFormData({
+            code: productData.code,
             name: productData.name,
             description: productData.description || "",
             unit: productData.unit,
@@ -183,6 +186,7 @@ export default function EditProductPage() {
 
     try {
       const result = await updateProduct(productId, {
+        code: formData.code,
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         unit: formData.unit.trim(),
@@ -296,6 +300,15 @@ export default function EditProductPage() {
         hideDeleteButton={false}
         handleDelete={() => setIsDeleteModalOpen(true)}
       >
+        <FormField label="Kode Kategori" htmlFor="code" required>
+          <Input
+            type="text"
+            name="code"
+            value={formData.code}
+            readOnly // Kode digenerate otomatis, tidak bisa diubah manual
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+          />
+        </FormField>
         <FormField
           label="Nama Produk"
           htmlFor="name"
@@ -416,7 +429,7 @@ export default function EditProductPage() {
             />
           </FormField>
           <FormField
-            label="Stok Saat Ini"
+            label="Stok awal (Tambahkan di modul management)"
             htmlFor="currentStock"
             required
             errorMessage={formErrors.currentStock}
@@ -424,6 +437,7 @@ export default function EditProductPage() {
             <Input
               type="number"
               name="currentStock"
+              readOnly
               placeholder="0"
               value={formData.currentStock.toString()}
               onChange={e =>

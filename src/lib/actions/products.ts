@@ -5,6 +5,7 @@ import { Products } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export type ProductFormData = {
+  code: string;
   name: string;
   description?: string;
   unit: string;
@@ -69,6 +70,7 @@ export async function createProduct(data: ProductFormData) {
   try {
     const product = await db.products.create({
       data: {
+        code: data.code,
         name: data.name,
         description: data.description || null,
         unit: data.unit,

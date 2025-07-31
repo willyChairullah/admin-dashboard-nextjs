@@ -137,7 +137,7 @@ async function main() {
     const oilCategory = await prisma.categories.create({
       data: {
         id: uuid(),
-        code: "OIL",
+        code: "KTG/04/2025/0001",
         name: "Minyak",
         description: "Berbagai jenis minyak goreng",
         isActive: true,
@@ -149,6 +149,7 @@ async function main() {
     const productsToCreate = [
       {
         id: uuid(),
+        code: "PDK/04/2025/0001",
         name: "Minyak Indana 250 ml",
         description: "Minyak goreng Indana kemasan 250 ml",
         unit: "Pcs",
@@ -162,6 +163,7 @@ async function main() {
       },
       {
         id: uuid(),
+        code: "PDK/04/2025/0002",
         name: "Minyak Indana 500 ml",
         description: "Minyak goreng Indana kemasan 500 ml",
         unit: "Pcs",
@@ -175,6 +177,7 @@ async function main() {
       },
       {
         id: uuid(),
+        code: "PDK/04/2025/0003",
         name: "Minyak Indana 800 ml",
         description: "Minyak goreng Indana kemasan 800 ml",
         unit: "Pcs",
@@ -188,6 +191,7 @@ async function main() {
       },
       {
         id: uuid(),
+        code: "PDK/04/2025/0004",
         name: "Minyak Indana 900 ml",
         description: "Minyak goreng Indana kemasan 900 ml",
         unit: "Pcs",
@@ -201,6 +205,7 @@ async function main() {
       },
       {
         id: uuid(),
+        code: "PDK/04/2025/0005",
         name: "Minyak Indana 1 Liter",
         description: "Minyak goreng Indana kemasan 1 liter",
         unit: "Pcs",
@@ -214,6 +219,7 @@ async function main() {
       },
       {
         id: uuid(),
+        code: "PDK/04/2025/0006",
         name: "Minyak Kita 1 Liter",
         description: "Minyak goreng merek Minyak Kita kemasan 1 liter",
         unit: "Pcs",

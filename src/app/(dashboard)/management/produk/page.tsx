@@ -3,11 +3,11 @@
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
-import { getCategoryById } from "@/lib/actions/categories";
 import { formatRupiah } from "@/utils/formatRupiah";
 import React from "react"; // Essential for JSX
 
 const columns = [
+  { header: "Kode", accessor: "code" },
   { header: "Nama", accessor: "name" },
   {
     header: "Harga",

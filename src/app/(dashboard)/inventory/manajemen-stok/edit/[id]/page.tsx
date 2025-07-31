@@ -33,6 +33,7 @@ interface ManagementStockItemFormData {
 }
 
 interface ManagementStockFormData {
+  code: string; // Tambahkan kolom code
   managementDate: string;
   status: ManagementStockStatus;
   notes: string;
@@ -42,6 +43,7 @@ interface ManagementStockFormData {
 }
 
 interface ManagementStockFormErrors {
+  code?: string; // Tambahkan error untuk code
   managementDate?: string;
   status?: string;
   notes?: string;
@@ -113,6 +115,7 @@ export default function EditManagementStockPage() {
 
   // Initial state formData diperbarui
   const [formData, setFormData] = useState<ManagementStockFormData>({
+    code: "", // Tambahkan inisialisasi code
     managementDate: new Date().toISOString().split("T")[0],
     status: ManagementStockStatus.IN,
     notes: "",
@@ -152,6 +155,7 @@ export default function EditManagementStockPage() {
           // 4. Setelah semua data terkumpul, atur state untuk form.
           setOriginalStatus(stock.status);
           setFormData({
+            code: stock.code, // Set nilai code dari data yang diambil
             managementDate: new Date(stock.managementDate)
               .toISOString()
               .split("T")[0],
@@ -182,6 +186,10 @@ export default function EditManagementStockPage() {
   // VALIDASI FORM DI-COPY DARI CREATE UNTUK KONSISTENSI
   const validateForm = (): boolean => {
     const errors: ManagementStockFormErrors = {};
+    if (!formData.code) {
+      // Tambahkan validasi untuk code
+      errors.code = "Kode manajemen wajib diisi";
+    }
     if (!formData.managementDate) {
       errors.managementDate = "Tanggal manajemen wajib diisi";
     }
@@ -297,6 +305,7 @@ export default function EditManagementStockPage() {
     try {
       // Payload diperbarui sesuai dengan schema
       const result = await updateManagementStock(params.id as string, {
+        code: formData.code, // Tambahkan code ke payload
         managementDate: new Date(formData.managementDate),
         status: formData.status,
         notes: formData.notes || undefined,
@@ -372,6 +381,19 @@ export default function EditManagementStockPage() {
         } // Tombol delete disembunyikan jika tipe opname
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Tambahkan FormField untuk Kode Manajemen */}
+          <FormField label="Kode Manajemen" errorMessage={formErrors.code}>
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={e => handleInputChange("code", e.target.value)}
+              errorMessage={formErrors.code}
+              placeholder="Kode manajemen"
+              disabled // Kode harusnya tidak bisa diubah di halaman edit
+            />
+          </FormField>
+
           <FormField
             label="Tanggal Manajemen"
             errorMessage={formErrors.managementDate}
@@ -433,7 +455,7 @@ export default function EditManagementStockPage() {
                 {reconciledOpnames.map(opname => (
                   <option key={opname.id} value={opname.id}>
                     {new Date(opname.opnameDate).toLocaleDateString("id-ID")} -
-                    Oleh: {opname.conductedBy.name} -
+                    Oleh: {opname.conductedBy.name} -{" "}
                     {opname.stockOpnameItems.length} item dengan selisih
                   </option>
                 ))}
@@ -448,7 +470,7 @@ export default function EditManagementStockPage() {
             <select
               value={formData.producedById}
               onChange={e => handleInputChange("producedById", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white  ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white  ${
                 formErrors.producedById
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
                   : "border-gray-300 dark:border-gray-600"
@@ -517,6 +539,7 @@ export default function EditManagementStockPage() {
                       className="p-1 text-red-500 hover:text-red-700 transition-colors"
                     >
                       <Trash2 size={16} />
+                      Hapus
                     </button>
                   )}
                 </div>

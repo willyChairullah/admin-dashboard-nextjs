@@ -7,6 +7,7 @@ import { OpnameStatus } from "@prisma/client";
 // Types
 export interface StockOpnameWithDetails {
   id: string;
+  code: string;
   opnameDate: Date;
   status: OpnameStatus;
   notes: string | null;
@@ -33,6 +34,7 @@ export interface StockOpnameWithDetails {
 }
 
 export interface CreateStockOpnameData {
+  code: string;
   opnameDate: Date;
   notes?: string;
   conductedById: string;
@@ -152,6 +154,7 @@ export async function createStockOpname(data: CreateStockOpnameData) {
       // Create main stock opname record
       const stockOpname = await tx.stockOpnames.create({
         data: {
+          code: data.code,
           opnameDate: data.opnameDate,
           notes: data.notes,
           conductedById: data.conductedById,

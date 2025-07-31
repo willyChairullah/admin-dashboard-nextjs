@@ -7,6 +7,7 @@ import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
 
 const columns = [
+  { header: "Kode", accessor: "code" },
   {
     header: "Tanggal Manajemen",
     accessor: "managementDate",

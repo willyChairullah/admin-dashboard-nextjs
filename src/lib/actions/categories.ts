@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export type CategoryFormData = {
   name: string;
-  code?: string;
+  code: string;
   description?: string;
   isActive: boolean;
 };
@@ -29,7 +29,7 @@ export async function getCategories(): Promise<CategoryWithProducts[]> {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        code: "desc",
       },
     });
 
@@ -37,6 +37,31 @@ export async function getCategories(): Promise<CategoryWithProducts[]> {
   } catch (error) {
     console.error("Error fetching categories:", error);
     throw new Error("Failed to fetch categories");
+  }
+}
+
+export async function getActiveCategories(): Promise<CategoryWithProducts[]> {
+  try {
+    const categories = await db.categories.findMany({
+      where: {
+        isActive: true, // [PERUBAHAN]: Hanya ambil kategori yang isActive: true
+      },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+      orderBy: {
+        code: "desc",
+      },
+    });
+
+    return categories;
+  } catch (error) {
+    console.error("Error fetching active categories:", error);
+    throw new Error("Failed to fetch active categories");
   }
 }
 
@@ -60,7 +85,7 @@ export async function createCategory(data: CategoryFormData) {
     const category = await db.categories.create({
       data: {
         name: data.name,
-        code: data.code || null ,
+        code: data.code,
         description: data.description || null,
         isActive: data.isActive,
       },

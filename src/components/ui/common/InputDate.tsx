@@ -131,6 +131,7 @@ const InputDate: React.FC<InputDateProps> = ({
           readOnly
           disabled={disabled}
           className={`
+            cursor-pointer
             w-full px-3 py-2 
             border rounded-lg 
             text-sm

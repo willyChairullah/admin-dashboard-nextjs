@@ -11,18 +11,10 @@ interface NavbarProps {
 
 export default function Navbar({ onSidebarToggle }: NavbarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [notificationCount] = useState(3); // Mock notification count
 
   // Get current user data from session
   const { data: session } = useSession();
-  const { user } = useCurrentUser();
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle search logic here
-    console.log("Searching for:", searchQuery);
-  };
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/sign-in" });

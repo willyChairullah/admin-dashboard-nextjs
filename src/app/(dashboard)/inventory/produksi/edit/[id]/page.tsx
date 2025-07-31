@@ -22,20 +22,24 @@ import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 
-interface ProductionLogItemFormData {
-  productId: string;
-  quantity: number;
-  notes?: string;
-}
-
+// [PERUBAHAN] Tambahkan 'code' ke ProductionLogFormData
 interface ProductionLogFormData {
+  code: string; // Kode akan diambil dari data yang sudah ada
   productionDate: string;
   notes: string;
   producedById: string;
   items: ProductionLogItemFormData[];
 }
 
+interface ProductionLogItemFormData {
+  productId: string;
+  quantity: number;
+  notes?: string;
+}
+
+// [PERUBAHAN] Tambahkan 'code' ke ProductionLogFormErrors
 interface ProductionLogFormErrors {
+  code?: string;
   productionDate?: string;
   notes?: string;
   producedById?: string;
@@ -61,17 +65,17 @@ export default function EditProductionLogPage() {
   const data = useSharedData();
   const router = useRouter();
   const params = useParams();
-  const productionId = params.id as string;
+  const productionLogId = params.id as string; // Gunakan ini sebagai ID unik
 
-  const productionLogId = params.id as string;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Status loading keseluruhan halaman
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [formData, setFormData] = useState<ProductionLogFormData>({
+    code: "", // [PERUBAHAN] Default kosong, akan diisi dari data yang diambil
     productionDate: "",
     notes: "",
     producedById: "",
@@ -83,6 +87,8 @@ export default function EditProductionLogPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true); // Mulai loading
+
         const [productionLog, products, users] = await Promise.all([
           getProductionLogById(productionLogId),
           getAvailableProducts(),
@@ -98,8 +104,9 @@ export default function EditProductionLogPage() {
         setAvailableProducts(products);
         setAvailableUsers(users);
 
-        // Set form data with existing values
+        // Set form data with existing values from productionLog
         setFormData({
+          code: productionLog.code, // [PERUBAHAN] Ambil code dari data yang ada
           productionDate: new Date(productionLog.productionDate)
             .toISOString()
             .split("T")[0],
@@ -108,15 +115,16 @@ export default function EditProductionLogPage() {
           items: productionLog.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            notes: item.notes || "", // Note: items don't have individual notes in the current schema
+            notes: (item as any).notes || "", // Pastikan notes ada di ProductionLogItem jika digunakan
           })),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Gagal memuat data");
+        toast.error("Gagal memuat data.");
+        // Redirect if data loading fails critically
         router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Selesai loading
       }
     };
 
@@ -127,6 +135,11 @@ export default function EditProductionLogPage() {
 
   const validateForm = (): boolean => {
     const errors: ProductionLogFormErrors = {};
+
+    // [PERUBAHAN] Validasi untuk code (pastikan tidak kosong)
+    if (!formData.code.trim()) {
+      errors.code = "Kode produksi tidak boleh kosong.";
+    }
 
     if (!formData.productionDate) {
       errors.productionDate = "Tanggal produksi wajib diisi";
@@ -162,6 +175,10 @@ export default function EditProductionLogPage() {
           itemError.quantity = "Quantity harus lebih dari 0";
         }
 
+        // if (item.notes && item.notes.length > 500) { // Contoh validasi notes jika ada
+        //   itemError.notes = "Catatan item tidak boleh melebihi 500 karakter";
+        // }
+
         if (Object.keys(itemError).length > 0) {
           itemErrors[index] = itemError;
         }
@@ -183,7 +200,7 @@ export default function EditProductionLogPage() {
     setFormData({ ...formData, [field]: value });
 
     if (formErrors[field]) {
-      setFormErrors({ ...formErrors, [field]: undefined });
+      setFormErrors(prevErrors => ({ ...prevErrors, [field]: undefined }));
     }
   };
 
@@ -219,6 +236,12 @@ export default function EditProductionLogPage() {
     if (formData.items.length > 1) {
       const newItems = formData.items.filter((_, i) => i !== index);
       setFormData({ ...formData, items: newItems });
+      // Hapus error terkait item yang dihapus
+      const newErrors = { ...formErrors };
+      if (newErrors.items) {
+        delete newErrors.items[index];
+      }
+      setFormErrors(newErrors);
     }
   };
 
@@ -226,7 +249,7 @@ export default function EditProductionLogPage() {
     setIsDeleting(true);
 
     try {
-      const result = await deleteProductionLog(productionId);
+      const result = await deleteProductionLog(productionLogId);
 
       if (result.success) {
         toast.success("Produksi berhasil dihapus.");
@@ -255,6 +278,7 @@ export default function EditProductionLogPage() {
 
     try {
       const result = await updateProductionLog(productionLogId, {
+        code: formData.code, // [PERUBAHAN] Kirimkan kode yang sudah ada
         productionDate: new Date(formData.productionDate),
         notes: formData.notes || undefined,
         producedById: formData.producedById,
@@ -271,6 +295,13 @@ export default function EditProductionLogPage() {
       } else {
         const errorMessage = result.error || "Gagal memperbarui production log";
         toast.error(errorMessage);
+        setFormErrors(prevErrors => ({
+          ...prevErrors,
+          code: result.error?.includes("duplicate")
+            ? "Kode ini sudah ada. Harap coba lagi."
+            : undefined, // Contoh error handling duplikat kode
+          general: errorMessage, // Contoh error umum
+        }));
       }
     } catch (error) {
       console.error(
@@ -278,15 +309,26 @@ export default function EditProductionLogPage() {
         error
       );
       toast.error("Terjadi kesalahan yang tidak terduga.");
+      setFormErrors(prevErrors => ({
+        ...prevErrors,
+        general: "Terjadi kesalahan yang tidak terduga.",
+      }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const userOptions = availableUsers.map(user => ({
+    value: user.id,
+    label: `${user.name} (${user.role})`,
+  }));
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <div className="text-gray-500">Memuat data...</div>
+      <div className="flex justify-center items-center p-8 bg-white dark:bg-gray-950 rounded-lg shadow-sm">
+        <div className="text-gray-500 dark:text-gray-400">
+          Memuat data produksi...
+        </div>
       </div>
     );
   }
@@ -308,18 +350,32 @@ export default function EditProductionLogPage() {
         handleDelete={() => setIsDeleteModalOpen(true)}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* [BARU] Field Kode Produksi (READ-ONLY) */}
+          <FormField
+            label="Kode Produksi"
+            htmlFor="code"
+            required
+            errorMessage={formErrors.code}
+          >
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              readOnly // Penting: Kode tidak boleh diubah
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+            />
+          </FormField>
+
           <FormField
             label="Tanggal Produksi"
             errorMessage={formErrors.productionDate}
           >
             <InputDate
-              // 1. Konversi string state menjadi objek Date untuk value prop
               value={
                 formData.productionDate
                   ? new Date(formData.productionDate)
                   : null
               }
-              // 2. Konversi objek Date dari komponen kembali menjadi string untuk state
               onChange={date => {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("productionDate", dateString);
@@ -327,38 +383,27 @@ export default function EditProductionLogPage() {
               errorMessage={formErrors.productionDate}
               placeholder="Pilih tanggal produksi"
             />
-            {/* <Input
-              type="date"
-              name="productionDate"
-              value={formData.productionDate}
-              onChange={e =>
-                handleInputChange("productionDate", e.target.value)
-              }
-              errorMessage={formErrors.productionDate}
-              className="w-full"
-            /> */}
-            InputDate
-          </FormField>
-
-          <FormField label="Dibuat Oleh" errorMessage={formErrors.producedById}>
-            <select
-              value={formData.producedById}
-              onChange={e => handleInputChange("producedById", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                formErrors.producedById
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
           </FormField>
         </div>
+
+        <FormField label="Dibuat Oleh" errorMessage={formErrors.producedById}>
+          <select
+            value={formData.producedById}
+            onChange={e => handleInputChange("producedById", e.target.value)}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
+              formErrors.producedById
+                ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
+                : "border-gray-300 dark:border-gray-600"
+            }`}
+          >
+            <option value="">Pilih User</option>
+            {userOptions.map(user => (
+              <option key={user.value} value={user.value}>
+                {user.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
 
         <FormField label="Catatan" errorMessage={formErrors.notes}>
           <InputTextArea
@@ -474,7 +519,6 @@ export default function EditProductionLogPage() {
           ))}
         </div>
       </ManagementForm>
-      {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -484,8 +528,7 @@ export default function EditProductionLogPage() {
       >
         <p>
           Apakah Anda yakin ingin menghapus Produksi{" "}
-          <strong>{formData.notes}</strong>? Tindakan ini tidak dapat
-          dibatalkan.
+          <strong>{formData.code}</strong>? Tindakan ini tidak dapat dibatalkan.
         </p>
       </ConfirmationModal>
     </div>

@@ -13,7 +13,7 @@ datasource db {
 
 model Categories {
   id          String     @id @default(cuid())
-  code        String?
+  code        String     @unique
   name        String
   description String?
   isActive    Boolean    @default(true)
@@ -62,6 +62,7 @@ model Customers {
 
 model Products {
   id                   String                 @id @default(cuid())
+  code                 String                 @unique
   name                 String
   description          String?
   unit                 String
@@ -120,7 +121,7 @@ model Users {
 
 model PurchaseOrders {
   id        String              @id @default(cuid())
-  // poNumber  String              @unique
+  code      String              @unique
   poDate    DateTime            @default(now())
   dateline  DateTime            @default(now())
   status    PurchaseOrderStatus @default(PENDING)
@@ -221,7 +222,7 @@ model DeliveryNotes {
 
 model Invoices {
   id              String         @id @default(cuid())
-  invoiceNumber   String         @unique
+  code            String         @unique
   invoiceDate     DateTime       @default(now())
   dueDate         DateTime
   status          InvoiceStatus  @default(DRAFT)
@@ -265,6 +266,7 @@ model InvoiceItems {
 
 model Payments {
   id          String   @id @default(cuid())
+  // code        String   @unique
   paymentDate DateTime @default(now())
   amount      Float
   method      String
@@ -342,6 +344,7 @@ model StockMovements {
 
 model StockOpnames {
   id               String             @id @default(cuid())
+  code             String             @unique
   opnameDate       DateTime           @default(now())
   status           OpnameStatus       @default(RECONCILED)
   notes            String?
@@ -400,7 +403,7 @@ model SalesReturnItems {
 
 model ProductionLogs {
   id             String               @id @default(cuid())
-  // batchNumber    String               @unique
+  code           String               @unique
   productionDate DateTime             @default(now())
   status         ProductionStatus     @default(COMPLETED)
   notes          String?
@@ -426,7 +429,7 @@ model ProductionLogItems {
 
 model ManagementStocks {
   id             String                 @id @default(cuid())
-  // batchNumber    String               @unique
+  code           String                 @unique
   managementDate DateTime               @default(now())
   status         ManagementStockStatus  @default(IN)
   notes          String?

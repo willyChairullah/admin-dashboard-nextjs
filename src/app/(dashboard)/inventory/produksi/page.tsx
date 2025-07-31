@@ -7,6 +7,7 @@ import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
 
 const columns = [
+  { header: "Kode", accessor: "code" },
   {
     header: "Tanggal Produksi",
     accessor: "productionDate",
@@ -81,11 +82,7 @@ const columns = [
   },
 ];
 
-const excludedAccessors = [
-  "productionDate",
-  "status",
-  "notes",
-];
+const excludedAccessors = ["productionDate", "status", "notes"];
 
 export default function ManajemenStokPage() {
   const data = useSharedData();

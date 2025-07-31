@@ -230,6 +230,14 @@ export default function SideBar({
             children: [],
             roles: ["OWNER", "ADMIN"],
           },
+          {
+            id: "daftar-po",
+            label: "Daftar PO",
+            icon: "📋",
+            href: "/sales/daftar-po",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
+          },
         ],
       },
       {
@@ -265,7 +273,7 @@ export default function SideBar({
           },
           {
             id: "manajemen-stok",
-            label: "Stock Management",
+            label: "Stok Manajemen",
             icon: "⚖️",
             href: "/inventory/manajemen-stok",
             children: [],
