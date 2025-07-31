@@ -7,6 +7,7 @@ import {
   getSalesTargets,
   SalesTargetWithUser,
 } from "@/lib/actions/sales-targets";
+import { getOrders } from "@/lib/actions/orders";
 import { toast } from "sonner";
 
 const columns = [
@@ -48,11 +49,15 @@ const columns = [
           ? "text-blue-600 bg-blue-100"
           : "text-red-600 bg-red-100";
 
+      // Display with 1 decimal place if needed
+      const displayPercentage =
+        percentage % 1 === 0 ? percentage.toString() : percentage.toFixed(1);
+
       return (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}
         >
-          {percentage}%
+          {displayPercentage}%
         </span>
       );
     },
@@ -116,17 +121,38 @@ export default function SalesTargetPage() {
         setError(null);
         const targets = await getSalesTargets();
 
-        // Add computed fields for display
-        const targetsWithPercentage = targets.map((target) => ({
-          ...target,
-          userName: target.user?.name || "N/A",
-          achievementPercentage:
-            target.targetAmount > 0
-              ? Math.round((target.achievedAmount / target.targetAmount) * 100)
-              : 0,
-        }));
+        // Calculate real achieved amounts for each target
+        const targetsWithRealAchievedAmount = await Promise.all(
+          targets.map(async (target) => {
+            const realAchievedAmount = await calculateAchievedAmount(
+              target.userId,
+              target.targetPeriod,
+              target.targetType
+            );
 
-        setSalesTargets(targetsWithPercentage);
+            const percentage =
+              target.targetAmount > 0
+                ? Number(
+                    ((realAchievedAmount / target.targetAmount) * 100).toFixed(
+                      1
+                    )
+                  )
+                : 0;
+
+            console.log(
+              `User: ${target.user?.name}, Target: ${target.targetAmount}, Achieved: ${realAchievedAmount}, Percentage: ${percentage}%`
+            );
+
+            return {
+              ...target,
+              userName: target.user?.name || "N/A",
+              achievedAmount: realAchievedAmount, // Override with real data
+              achievementPercentage: percentage,
+            };
+          })
+        );
+
+        setSalesTargets(targetsWithRealAchievedAmount);
       } catch (error) {
         console.error("Error loading sales targets:", error);
         setError("Gagal memuat data sales target");
@@ -139,22 +165,105 @@ export default function SalesTargetPage() {
     loadSalesTargets();
   }, []);
 
+  // Function to calculate real achieved amount from orders
+  const calculateAchievedAmount = async (
+    userId: string,
+    targetPeriod: string,
+    targetType: string
+  ): Promise<number> => {
+    try {
+      // Get all orders for this sales user
+      const ordersResult = await getOrders({ salesId: userId });
+      if (!ordersResult.success) {
+        console.log(`No orders found for user ${userId}`);
+        return 0;
+      }
+
+      const orders = ordersResult.data as any[];
+      console.log(`Found ${orders.length} orders for user ${userId}`);
+
+      // Filter orders based on target period and type
+      const filteredOrders = orders.filter((order) => {
+        const orderDate = new Date(order.orderDate);
+
+        if (targetType === "MONTHLY") {
+          // Format: YYYY-MM
+          const orderPeriod = `${orderDate.getFullYear()}-${String(
+            orderDate.getMonth() + 1
+          ).padStart(2, "0")}`;
+          return orderPeriod === targetPeriod;
+        } else if (targetType === "QUARTERLY") {
+          // Format: YYYY-Q1, YYYY-Q2, etc.
+          const year = orderDate.getFullYear();
+          const quarter = Math.ceil((orderDate.getMonth() + 1) / 3);
+          const orderPeriod = `${year}-Q${quarter}`;
+          return orderPeriod === targetPeriod;
+        } else if (targetType === "YEARLY") {
+          // Format: YYYY
+          const orderPeriod = orderDate.getFullYear().toString();
+          return orderPeriod === targetPeriod;
+        }
+
+        return false;
+      });
+
+      console.log(
+        `Filtered orders for period ${targetPeriod}:`,
+        filteredOrders.length
+      );
+
+      // Calculate total amount from completed/delivered orders
+      const completedOrders = filteredOrders.filter(
+        (order) => order.status === "COMPLETED" || order.status === "DELIVERED"
+      );
+
+      console.log(`Completed orders:`, completedOrders.length);
+
+      const achievedAmount = completedOrders.reduce(
+        (total, order) => total + (order.totalAmount || 0),
+        0
+      );
+
+      console.log(
+        `Calculated achieved amount for user ${userId}, period ${targetPeriod}:`,
+        achievedAmount
+      );
+
+      return achievedAmount;
+    } catch (error) {
+      console.error("Error calculating achieved amount:", error);
+      return 0;
+    }
+  };
+
   // Refresh data function for after CRUD operations
   const refreshData = async () => {
     try {
       const targets = await getSalesTargets();
 
-      // Add computed fields for display
-      const targetsWithPercentage = targets.map((target) => ({
-        ...target,
-        userName: target.user?.name || "N/A",
-        achievementPercentage:
-          target.targetAmount > 0
-            ? Math.round((target.achievedAmount / target.targetAmount) * 100)
-            : 0,
-      }));
+      // Calculate real achieved amounts for each target
+      const targetsWithRealAchievedAmount = await Promise.all(
+        targets.map(async (target) => {
+          const realAchievedAmount = await calculateAchievedAmount(
+            target.userId,
+            target.targetPeriod,
+            target.targetType
+          );
 
-      setSalesTargets(targetsWithPercentage);
+          const percentage = target.targetAmount > 0
+            ? Number(((realAchievedAmount / target.targetAmount) * 100).toFixed(1))
+            : 0;
+
+          return {
+            ...target,
+            userName: target.user?.name || "N/A",
+            achievedAmount: realAchievedAmount, // Override with real data
+            achievementPercentage: percentage,
+          };
+        })
+      );
+
+      setSalesTargets(targetsWithRealAchievedAmount);
       toast.success("Data berhasil diperbarui");
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -195,7 +304,9 @@ export default function SalesTargetPage() {
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"
         emptyMessage={
-          isLoading ? "Loading sales targets..." : "No sales targets found"
+          isLoading
+            ? "Loading sales targets and calculating achievements..."
+            : "No sales targets found"
         }
         linkPath={`/${staticData.module}/${staticData.subModule}`}
       />
