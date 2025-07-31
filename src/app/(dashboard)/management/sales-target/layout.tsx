@@ -11,15 +11,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Data defined or fetched on the server side
+  // Get sales users for form dropdowns only
+  const salesUsers = await getSalesUsers();
+
   const myStaticData = {
     module: "management",
     subModule: "sales-target",
     allowedRole: ["OWNER", "ADMIN"],
-    data: await getSalesTargets(),
-    salesUsers: await getSalesUsers(), // Get sales users for form dropdowns
+    salesUsers: salesUsers, // Only sales users for form dropdowns
   };
-
   return (
     // Wrap children with your DataProvider
     <DataProvider data={myStaticData}>

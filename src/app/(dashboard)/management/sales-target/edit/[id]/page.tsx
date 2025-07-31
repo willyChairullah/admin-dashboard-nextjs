@@ -14,9 +14,9 @@ import {
   deleteSalesTarget,
   toggleSalesTargetStatus,
   generateTargetPeriod,
+  getSalesUsers,
 } from "@/lib/actions/sales-targets";
 import { useRouter, useParams } from "next/navigation";
-import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { TargetType } from "@prisma/client";
@@ -46,6 +46,7 @@ export default function EditSalesTargetPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [target, setTarget] = useState<any>(null);
+  const [salesUsers, setSalesUsers] = useState<any[]>([]);
   const [formData, setFormData] = useState<SalesTargetFormData>({
     userId: "",
     targetType: "MONTHLY" as TargetType,
@@ -54,15 +55,27 @@ export default function EditSalesTargetPage() {
     isActive: true,
   });
 
-  const data = useSharedData();
+  // Static configuration
+  const config = {
+    module: "management",
+    subModule: "sales-target",
+    allowedRole: ["OWNER", "ADMIN"],
+  };
 
   const [formErrors, setFormErrors] = useState<SalesTargetFormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  // Load target data
+  // Load target data and sales users
   useEffect(() => {
-    const loadTarget = async () => {
+    const loadData = async () => {
       try {
+        setIsLoading(true);
+
+        // Load sales users
+        const users = await getSalesUsers();
+        setSalesUsers(users);
+
+        // Load target data
         const targetData = await getSalesTargetById(targetId);
         if (targetData) {
           setTarget(targetData);
@@ -75,27 +88,27 @@ export default function EditSalesTargetPage() {
           });
         } else {
           toast.error("Sales target tidak ditemukan.");
-          router.push(`/${data.module}/${data.subModule}`);
+          router.push(`/${config.module}/${config.subModule}`);
         }
       } catch (error) {
-        console.error("Error loading Sales Target:", error);
-        toast.error("Gagal memuat data sales target.");
-        router.push(`/${data.module}/${data.subModule}`);
+        console.error("Error loading data:", error);
+        toast.error("Gagal memuat data.");
+        router.push(`/${config.module}/${config.subModule}`);
       } finally {
         setIsLoading(false);
       }
     };
 
     if (targetId) {
-      loadTarget();
+      loadData();
     }
-  }, [targetId, router, data.module, data.subModule]);
+  }, [targetId, router, config.module, config.subModule]);
 
   // Generate target period automatically when target type changes
   useEffect(() => {
     if (formData.targetType && !isLoading) {
-      generateTargetPeriod(formData.targetType).then(newPeriod => {
-        setFormData(prev => ({ ...prev, targetPeriod: newPeriod }));
+      generateTargetPeriod(formData.targetType).then((newPeriod) => {
+        setFormData((prev) => ({ ...prev, targetPeriod: newPeriod }));
       });
     }
   }, [formData.targetType, isLoading]);
@@ -155,7 +168,7 @@ export default function EditSalesTargetPage() {
 
       if (result.success) {
         toast.success("Sales target berhasil diperbarui.");
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${config.module}/${config.subModule}`);
       } else {
         const errorMessage = result.error || "Gagal memperbarui sales target";
         toast.error(errorMessage);
@@ -179,7 +192,7 @@ export default function EditSalesTargetPage() {
       const result = await deleteSalesTarget(targetId);
       if (result.success) {
         toast.success("Sales target berhasil dihapus.");
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${config.module}/${config.subModule}`);
       } else {
         toast.error(result.error || "Gagal menghapus sales target");
       }
@@ -197,8 +210,12 @@ export default function EditSalesTargetPage() {
       const result = await toggleSalesTargetStatus(targetId);
       if (result.success) {
         setTarget((prev: any) => ({ ...prev, isActive: !prev.isActive }));
-        setFormData(prev => ({ ...prev, isActive: !prev.isActive }));
-        toast.success(`Status berhasil diubah menjadi ${formData.isActive ? "Nonaktif" : "Aktif"}`);
+        setFormData((prev) => ({ ...prev, isActive: !prev.isActive }));
+        toast.success(
+          `Status berhasil diubah menjadi ${
+            formData.isActive ? "Nonaktif" : "Aktif"
+          }`
+        );
       } else {
         toast.error(result.error || "Gagal mengubah status");
       }
@@ -228,8 +245,7 @@ export default function EditSalesTargetPage() {
     );
   }
 
-  // Get sales users for dropdown
-  const salesUsers = (data as any).salesUsers || [];
+  // salesUsers is already loaded in state from useEffect above
 
   const targetTypeOptions = [
     { value: "", label: "Pilih Tipe Target" },
@@ -241,14 +257,16 @@ export default function EditSalesTargetPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={`Edit ${data.subModule.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
-        mainPageName={`/${data.module}/${data.subModule}`}
-        allowedRoles={data.allowedRole}
+        headerTittle={`Edit ${config.subModule
+          .replace("-", " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase())}`}
+        mainPageName={`/${config.module}/${config.subModule}`}
+        allowedRoles={config.allowedRole}
       />
 
       <ManagementForm
-        subModuleName={data.subModule}
-        moduleName={data.module}
+        subModuleName={config.subModule}
+        moduleName={config.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >
@@ -261,9 +279,17 @@ export default function EditSalesTargetPage() {
           >
             <Select
               value={formData.userId}
-              onChange={(selectedValue: string) => handleInputChange("userId", selectedValue)}
+              onChange={(selectedValue: string) =>
+                handleInputChange("userId", selectedValue)
+              }
               options={[
-                { value: "", label: "Pilih Sales User" },
+                {
+                  value: "",
+                  label:
+                    salesUsers.length === 0
+                      ? "Tidak ada sales user tersedia"
+                      : "Pilih Sales User",
+                },
                 ...salesUsers.map((user: any) => ({
                   value: user.id,
                   label: `${user.name} (${user.email})`,
@@ -280,7 +306,9 @@ export default function EditSalesTargetPage() {
           >
             <Select
               value={formData.targetType}
-              onChange={(selectedValue: string) => handleInputChange("targetType", selectedValue as TargetType)}
+              onChange={(selectedValue: string) =>
+                handleInputChange("targetType", selectedValue as TargetType)
+              }
               options={targetTypeOptions}
             />
           </FormField>
@@ -298,11 +326,14 @@ export default function EditSalesTargetPage() {
               name="targetPeriod"
               placeholder="Contoh: 2024-01, 2024-Q1, 2024"
               value={formData.targetPeriod}
-              onChange={e => handleInputChange("targetPeriod", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("targetPeriod", e.target.value)
+              }
               maxLength={20}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Format: YYYY-MM untuk bulanan, YYYY-Q1 untuk kuartalan, YYYY untuk tahunan
+              Format: YYYY-MM untuk bulanan, YYYY-Q1 untuk kuartalan, YYYY untuk
+              tahunan
             </p>
           </FormField>
 
@@ -317,7 +348,12 @@ export default function EditSalesTargetPage() {
               name="targetAmount"
               placeholder="0"
               value={formData.targetAmount.toString()}
-              onChange={e => handleInputChange("targetAmount", parseFloat(e.target.value) || 0)}
+              onChange={(e) =>
+                handleInputChange(
+                  "targetAmount",
+                  parseFloat(e.target.value) || 0
+                )
+              }
               min="0"
               step="0.01"
             />
@@ -331,7 +367,7 @@ export default function EditSalesTargetPage() {
         >
           <InputCheckbox
             checked={formData.isActive}
-            onChange={e => handleInputChange("isActive", e.target.checked)}
+            onChange={(e) => handleInputChange("isActive", e.target.checked)}
             label="Aktif (target akan digunakan untuk tracking)"
           />
         </FormField>
@@ -366,8 +402,8 @@ export default function EditSalesTargetPage() {
         isLoading={isDeleting}
       >
         <p>
-          Apakah Anda yakin ingin menghapus sales target untuk periode {formData.targetPeriod}? 
-          Tindakan ini tidak dapat dibatalkan.
+          Apakah Anda yakin ingin menghapus sales target untuk periode{" "}
+          {formData.targetPeriod}? Tindakan ini tidak dapat dibatalkan.
         </p>
       </ConfirmationModal>
     </div>

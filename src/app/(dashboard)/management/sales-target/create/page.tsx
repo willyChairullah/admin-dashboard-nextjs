@@ -8,9 +8,12 @@ import {
   ManagementForm,
   Select,
 } from "@/components/ui";
-import { createSalesTarget, generateTargetPeriod } from "@/lib/actions/sales-targets";
+import {
+  createSalesTarget,
+  generateTargetPeriod,
+  getSalesUsers,
+} from "@/lib/actions/sales-targets";
 import { useRouter } from "next/navigation";
-import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { TargetType } from "@prisma/client";
 
@@ -31,9 +34,10 @@ interface SalesTargetFormErrors {
 }
 
 export default function CreateSalesTargetPage() {
-  const data = useSharedData();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [salesUsers, setSalesUsers] = useState<any[]>([]);
   const [formData, setFormData] = useState<SalesTargetFormData>({
     userId: "",
     targetType: "MONTHLY" as TargetType,
@@ -42,13 +46,38 @@ export default function CreateSalesTargetPage() {
     isActive: true,
   });
 
+  // Static configuration
+  const config = {
+    module: "management",
+    subModule: "sales-target",
+    allowedRole: ["OWNER", "ADMIN"],
+  };
+
   const [formErrors, setFormErrors] = useState<SalesTargetFormErrors>({});
 
+  // Load sales users
+  useEffect(() => {
+    const loadSalesUsers = async () => {
+      try {
+        setIsLoading(true);
+        const users = await getSalesUsers();
+        setSalesUsers(users);
+      } catch (error) {
+        console.error("Error loading sales users:", error);
+        toast.error("Gagal memuat data sales users");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSalesUsers();
+  }, []);
+
   // Generate target period automatically when target type changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (formData.targetType) {
-      generateTargetPeriod(formData.targetType).then(newPeriod => {
-        setFormData(prev => ({ ...prev, targetPeriod: newPeriod }));
+      generateTargetPeriod(formData.targetType).then((newPeriod) => {
+        setFormData((prev) => ({ ...prev, targetPeriod: newPeriod }));
       });
     }
   }, [formData.targetType]);
@@ -108,16 +137,16 @@ export default function CreateSalesTargetPage() {
 
       if (result.success) {
         toast.success(`Sales target berhasil dibuat.`);
-        router.push(`/${data.module}/${data.subModule}`);
+        router.push(`/${config.module}/${config.subModule}`);
       } else {
-        const errorMessage = result.error || `Gagal membuat ${data.subModule}`;
+        const errorMessage = result.error || `Gagal membuat sales target`;
         toast.error(errorMessage);
         setFormErrors({
           userId: errorMessage,
         });
       }
     } catch (error) {
-      console.error(`Terjadi kesalahan saat membuat ${data.subModule}:`, error);
+      console.error(`Terjadi kesalahan saat membuat sales target:`, error);
       const errorMessage = "Terjadi kesalahan yang tidak terduga";
       toast.error(errorMessage);
       setFormErrors({ userId: errorMessage });
@@ -126,8 +155,7 @@ export default function CreateSalesTargetPage() {
     }
   };
 
-  // Get sales users for dropdown
-  const salesUsers = (data as any).salesUsers || [];
+  // salesUsers is already loaded in state above
 
   const targetTypeOptions = [
     { value: "", label: "Pilih Tipe Target" },
@@ -136,17 +164,29 @@ export default function CreateSalesTargetPage() {
     { value: "YEARLY", label: "Tahunan" },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={`Buat ${data.subModule.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
-        mainPageName={`/${data.module}/${data.subModule}`}
-        allowedRoles={data.allowedRole}
+        headerTittle={`Buat ${config.subModule
+          .replace("-", " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase())}`}
+        mainPageName={`/${config.module}/${config.subModule}`}
+        allowedRoles={config.allowedRole}
       />
 
       <ManagementForm
-        subModuleName={data.subModule}
-        moduleName={data.module}
+        subModuleName={config.subModule}
+        moduleName={config.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >
@@ -159,7 +199,9 @@ export default function CreateSalesTargetPage() {
           >
             <Select
               value={formData.userId}
-              onChange={(selectedValue: string) => handleInputChange("userId", selectedValue)}
+              onChange={(selectedValue: string) =>
+                handleInputChange("userId", selectedValue)
+              }
               options={[
                 { value: "", label: "Pilih Sales User" },
                 ...salesUsers.map((user: any) => ({
@@ -178,7 +220,9 @@ export default function CreateSalesTargetPage() {
           >
             <Select
               value={formData.targetType}
-              onChange={(selectedValue: string) => handleInputChange("targetType", selectedValue as TargetType)}
+              onChange={(selectedValue: string) =>
+                handleInputChange("targetType", selectedValue as TargetType)
+              }
               options={targetTypeOptions}
             />
           </FormField>
@@ -196,11 +240,14 @@ export default function CreateSalesTargetPage() {
               name="targetPeriod"
               placeholder="Contoh: 2024-01, 2024-Q1, 2024"
               value={formData.targetPeriod}
-              onChange={e => handleInputChange("targetPeriod", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("targetPeriod", e.target.value)
+              }
               maxLength={20}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Format: YYYY-MM untuk bulanan, YYYY-Q1 untuk kuartalan, YYYY untuk tahunan
+              Format: YYYY-MM untuk bulanan, YYYY-Q1 untuk kuartalan, YYYY untuk
+              tahunan
             </p>
           </FormField>
 
@@ -215,7 +262,12 @@ export default function CreateSalesTargetPage() {
               name="targetAmount"
               placeholder="0"
               value={formData.targetAmount.toString()}
-              onChange={e => handleInputChange("targetAmount", parseFloat(e.target.value) || 0)}
+              onChange={(e) =>
+                handleInputChange(
+                  "targetAmount",
+                  parseFloat(e.target.value) || 0
+                )
+              }
               min="0"
               step="0.01"
             />
@@ -229,7 +281,7 @@ export default function CreateSalesTargetPage() {
         >
           <InputCheckbox
             checked={formData.isActive}
-            onChange={e => handleInputChange("isActive", e.target.checked)}
+            onChange={(e) => handleInputChange("isActive", e.target.checked)}
             label="Aktif (target akan digunakan untuk tracking)"
           />
         </FormField>
