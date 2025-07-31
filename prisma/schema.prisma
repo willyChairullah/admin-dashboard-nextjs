@@ -113,6 +113,7 @@ model Users {
   ManagementStocks      ManagementStocks[]
   PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
 
+
   @@map("users")
 }
 
