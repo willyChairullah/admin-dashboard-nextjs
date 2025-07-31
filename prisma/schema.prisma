@@ -115,6 +115,22 @@ model Users {
   @@map("users")
 }
 
+model SalesTargets {
+  id          String   @id @default(cuid())
+  userId      String
+  targetType  TargetType @default(MONTHLY)
+  targetPeriod String  // Format: YYYY-MM for monthly, YYYY-Q1 for quarterly, YYYY for yearly
+  targetAmount Float
+  achievedAmount Float @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetPeriod])
+  @@map("sales_targets")
+}
+
 // =================================
 // MODUL PENJUALAN
 // =================================
@@ -606,6 +622,12 @@ enum OpnameStatus {
   IN_PROGRESS
   COMPLETED
   RECONCILED
+}
+
+enum TargetType {
+  MONTHLY
+  QUARTERLY
+  YEARLY
 }
 
 // Enum ini tidak berubah

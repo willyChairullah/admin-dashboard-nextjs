@@ -196,14 +196,17 @@ export default function OrderHistoryPage() {
   };
 
   const getOrderProgress = (status: string) => {
-    const steps = ["NEW", "PENDING_CONFIRMATION", "IN_PROCESS", "COMPLETED"];
-    const currentStep = steps.indexOf(status);
-    const totalSteps = steps.length - 1;
-
     if (status === "CANCELED") return { percent: 0, color: "bg-red-500" };
+    if (status === "COMPLETED") return { percent: 100, color: "bg-green-500" };
 
-    const percent = ((currentStep + 1) / totalSteps) * 100;
-    const color = status === "COMPLETED" ? "bg-green-500" : "bg-blue-500";
+    const steps = ["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"];
+    const currentStep = steps.indexOf(status);
+
+    if (currentStep === -1) return { percent: 0, color: "bg-gray-500" };
+
+    // Calculate percentage for non-completed statuses (0-75%)
+    const percent = ((currentStep + 1) / steps.length) * 75;
+    const color = "bg-blue-500";
 
     return { percent, color };
   };

@@ -8,7 +8,9 @@ interface MySharedData {
   module: string;
   subModule: string;
   allowedRole: string[];
-  data: any[]; // Use a more specific type if you know the structure of categoriesData
+  data?: any[]; // Optional - for components that still use static data
+  salesUsers?: any[]; // Optional sales users for forms
+  [key: string]: any; // Allow additional dynamic properties
 }
 
 // 2. Create the Context with the defined type
@@ -28,6 +30,9 @@ export function DataProvider({ data, children }: SharedDataProviderProps) {
     </SharedDataContext.Provider>
   );
 }
+
+// Export alias for backward compatibility
+export const StaticDataProvider = DataProvider;
 
 // Rename the hook to be descriptive (e.g., useSharedData)
 export function useSharedData(): MySharedData {

@@ -429,6 +429,14 @@ export default function SideBar({
             roles: ["ADMIN", "OWNER"],
           },
           {
+            id: "sales-target",
+            label: "Sales Target",
+            icon: "🎯",
+            href: "/management/sales-target",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
             id: "field-visits",
             label: "Field Visit Logs",
             icon: "📍",
@@ -521,25 +529,31 @@ export default function SideBar({
       <div className="h-18 p-4 border-gray-200 dark:border-gray-700 flex items-center bg-white dark:bg-gray-900">
         {shouldShowExpanded ? (
           <div className="flex items-center">
-            <Image
-              src="/favicon.ico"
-              alt="Indana ERP Logo"
-              width={32}
-              height={32}
-              className="mr-3"
-            />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-600 mr-3">
+              <Image
+                src="/logocv.svg"
+                alt="Indana ERP Logo"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
             <h1 className="text-xl font-bold text-gray-800 dark:text-white">
               Indana ERP
             </h1>
           </div>
         ) : (
           <div className="flex justify-center w-full">
-            <Image
-              src="/favicon.ico"
-              alt="Indana ERP Logo"
-              width={30}
-              height={30}
-            />
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-600">
+              <Image
+                src="/logocv.svg"
+                alt="Indana ERP Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
         )}
       </div>
