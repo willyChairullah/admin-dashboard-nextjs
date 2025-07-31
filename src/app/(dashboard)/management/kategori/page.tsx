@@ -45,7 +45,7 @@ export default function CategoryPage() {
         allowedRoles={data.allowedRole}
       />
       <ManagementContent
-        sampleData={data.data}
+        sampleData={data.data || []}
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"

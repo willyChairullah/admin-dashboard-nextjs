@@ -1,59 +1,94 @@
-Berdasarkan analisis skema Prisma dan kode form, ada beberapa kekurangan pada sistem Purchase Order (PO) Anda, baik dari sisi data maupun fungsionalitas.
+I want to create a CRUD page from this database:
 
-Secara singkat, PO Anda terlalu kaku, kurang memiliki data finansial historis, dan tidak fleksibel untuk beberapa skenario gudang yang umum terjadi.
+## Database
+```
+model Invoices {
+  id                  String          @id @default(cuid())
+  code                String          @unique
+  invoiceDate         DateTime        @default(now())
+  dueDate             DateTime
+  status              InvoiceStatus   @default(DRAFT)      // Status dokumen: DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  paymentStatus       PaymentStatus   @default(UNPAID)     // <--- Tambahan: Enum Status Pembayaran
+  isProforma          Boolean         @default(false)      // <--- Tambahan: Untuk Proforma Invoice
+  subtotal            Float           @default(0)
+  tax                 Float           @default(0)
+  discount            Float           @default(0)          // <--- Tambahan: Diskon level Invoice
+  totalAmount         Float           @default(0)
+  paidAmount          Float           @default(0)
+  remainingAmount     Float           @default(0)
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  createdBy           String?                               // <--- Tambahan: ID User Pembuat Invoice
+  updatedBy           String?                               // <--- Tambahan: ID User Update Terakhir Invoice
+  customerId          String
+  orderId             String?         @unique
+  invoiceItems        InvoiceItems[]
+  customer            Customers       @relation(fields: [customerId], references: [id])
+  order               Orders?         @relation(fields: [orderId], references: [id])
+  payments            Payments[]
+  salesReturns        SalesReturns[]
 
-Kekurangan pada Skema & Data
-Kekurangan ini berkaitan dengan cara data disimpan di database, yang berdampak pada pelaporan dan keakuratan data jangka panjang.
+  creator             Users?          @relation("InvoiceCreator", fields: [createdBy], references: [id])
+  updater             Users?          @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
 
-Tidak Menyimpan Harga & Total per Item (Price Snapshot) 📸
+  @@map("invoices")
+}
 
-Kekurangan: Model PurchaseOrderItems Anda hanya menyimpan quantity dan productId. Harga (price) tidak disimpan, melainkan hanya ditampilkan di antarmuka dengan mengambil data dari Order asli.
+model InvoiceItems {
+  id         String   @id @default(cuid())
+  quantity   Float
+  price      Float
+  discount   Float    @default(0) // <--- Tambahan: Diskon per item
+  totalPrice Float    // Ini akan dihitung sebagai (quantity * price) - discount
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  invoiceId  String
+  productId  String
+  invoices   Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products   Products @relation(fields: [productId], references: [id])
 
-Risiko: Jika harga produk pada Order asli atau di master data Products berubah di masa depan, Anda akan kehilangan data harga historis saat PO ini dibuat. PO seharusnya menjadi dokumen yang "membekukan" detail transaksi pada satu waktu.
+  @@map("invoice_items")
+}
+```
 
-Solusi: Tambahkan field price dan totalPrice di model PurchaseOrderItems.
+## Reference
 
-Tidak Menyimpan Total Nilai PO 💰
+Consistance layout and style will reference the folder page "/inventori/produksi"
+Use custom UI from component
 
-Kekurangan: Model PurchaseOrders Anda tidak memiliki kolom untuk menyimpan total nilai dari PO tersebut (misalnya totalAmount). Total nilai hanya dihitung di front-end untuk ditampilkan.
+## application flow:
 
-Risiko: Anda tidak bisa melakukan query atau membuat laporan untuk melihat total nilai dari semua PO yang sedang PENDING atau PROCESSING langsung dari database.
+1.Sales Order Created.
+2.PO Created.
+3.Warehouse Confirms Stock (PO/Order): Check the availability of quantity in the system. Stock has not decreased yet.
+4.Invoice Created.
+5.Warehouse Confirms Readiness of Goods (After Invoice): Goods are prepared physically and the warehouse marks them as "Ready to Ship." Stock has not decreased yet.
+6.Delivery Note Created: At this stage, the actual stock of Products will decrease. You will create a StockMovement entry of type SALES_OUT that references this Delivery Note.
 
-Solusi: Tambahkan field totalAmount di model PurchaseOrders.
+## I want to make flow number 4
 
-Relasi Terlalu Kaku (Satu Order untuk Satu PO) ⛓️
+In the Sidebar Page, it will be named the Invoice module. The page created will be placed at the path "sales/invoice" and read on layout.tsx will contain this data:
+const myStaticData = {
+module: "sales",
+subModule: "invoice",
+allowedRole: ["OWNER", "ADMIN"],
+data: await getCategories(), // adjust according to the data retrieval
+};
 
-Kekurangan: Anda menggunakan @unique pada orderId di model PurchaseOrders. Ini berarti satu Order hanya bisa dibuatkan satu PO.
+### Main Features:
 
-Risiko: Ini tidak fleksibel. Bagaimana jika satu Order besar dari pelanggan perlu diproses dalam dua pengiriman terpisah? Anda tidak bisa membuat dua PO terpisah untuk satu Order yang sama.
+Add Invoice into database
 
-Solusi: Hapus @unique dari orderId jika Anda ingin memungkinkan skenario pemisahan pemenuhan pesanan.
+Invoice Form with the following the database column:
 
-Kekurangan pada Fungsionalitas & Alur Kerja
-Kekurangan ini berkaitan dengan pengalaman pengguna (UX) dan batasan alur kerja pada form yang Anda buat.
+### Data Storage:
 
-Item PO Tidak Bisa Diubah ✏️
+Save to Invoice
+Save details to InvoiceItems
 
-Kekurangan: Form Anda secara otomatis mengambil semua item dari Order yang dipilih, dan pengguna tidak bisa mengubah jumlah (quantity) atau menghapus item.
+### Example Scenarios:
 
-Skenario Masalah: Staf gudang melihat ada 10 item di Order, tapi stok yang tersedia hanya 8. Mereka tidak bisa membuat PO hanya untuk 8 item yang tersedia. Form memaksa untuk memproses "semua atau tidak sama sekali".
+Admin can create Invoice if PurchaseOrdes status is PROCESSING and StockConfirmationStatus is not WAITING_CONFIRMATION
 
-PO Wajib Berasal dari Order Pelanggan 📦
-
-Kekurangan: Alur kerja Anda mengharuskan setiap PO dibuat dari Order yang sudah ada.
-
-Skenario Masalah: Anda tidak bisa membuat PO untuk kebutuhan internal yang tidak terkait Order pelanggan, misalnya:
-
-Membuat PO untuk transfer stok antar gudang.
-
-Membuat PO untuk menyiapkan stok berdasarkan ramalan penjualan (forecast).
-
-Tidak Menampilkan Informasi Stok 📊
-
-Kekurangan: Saat item-item dari Order ditampilkan, tidak ada informasi currentStock (stok saat ini) untuk setiap produk.
-
-Manfaat Jika Ada: Menampilkan stok saat ini akan sangat membantu staf gudang untuk langsung mengetahui ketersediaan barang tanpa perlu mengecek di halaman lain.
-
-Validasi Tanggal Kurang Lengkap 🗓️
-
-Kekurangan: Tidak ada validasi yang memastikan tanggal dateline tidak lebih awal dari poDate. Pengguna bisa saja salah memasukkan tanggal.
+Make everything complete so that it can CRUD the data.

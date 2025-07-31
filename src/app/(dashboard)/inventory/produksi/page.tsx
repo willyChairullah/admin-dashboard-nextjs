@@ -95,7 +95,7 @@ export default function ManajemenStokPage() {
         allowedRoles={data.allowedRole}
       />
       <ManagementContent
-        sampleData={data.data}
+        sampleData={data.data || []}
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="productionDate"

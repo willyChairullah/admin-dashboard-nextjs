@@ -46,7 +46,7 @@ const excludedAccessors = [""];
 
 export default function ProductPage() {
   const data = useSharedData();
-  console.log(data.data[0].category.name);
+  console.log(data.data?.[0]?.category?.name);
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -56,7 +56,7 @@ export default function ProductPage() {
         allowedRoles={data.allowedRole}
       />
       <ManagementContent
-        sampleData={data.data}
+        sampleData={data.data || []}
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"

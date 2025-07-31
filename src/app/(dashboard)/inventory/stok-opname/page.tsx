@@ -102,7 +102,7 @@ const StokOpnamePage = () => {
         headerTittle="Stok Opname"
       />
       <ManagementContent
-        sampleData={data.data}
+        sampleData={data.data || []}
         columns={columns}
         excludedAccessors={["id", "conductedById"]}
         linkPath="/inventory/stok-opname"
