@@ -52,22 +52,22 @@ Add PO into database
 
 PurchaseOrders Form with the following options:
 
-Type: Purchase Orders 
+Type: Purchase Orders
 PO Date  
 Deadline  
 Choose User
 Choose Orders data  
 Automatically show List of OrderItems that can :
 
-Will show quantity  
-  
+Will show quantity
+
 Data Storage:
 
-Save to PurchaseOrders 
-Save details to PurchaseOrderItems  
+Save to PurchaseOrders
+Save details to PurchaseOrderItems
 
 Example Scenarios:
 
-Admin only can fill PO Date, Deadline, Choose User, Choose Orders data 
+Admin only can fill PO Date, Deadline, Choose User, Choose Orders data
 
 Make everything complete so that it can CRUD the data.

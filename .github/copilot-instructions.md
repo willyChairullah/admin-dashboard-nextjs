@@ -1,73 +1,59 @@
-I want to create a CRUD page from this database:
+Berdasarkan analisis skema Prisma dan kode form, ada beberapa kekurangan pada sistem Purchase Order (PO) Anda, baik dari sisi data maupun fungsionalitas.
 
-model PurchaseOrders {
-id String @id @default(cuid())
-poNumber String @unique
-poDate DateTime @default(now())
-dateline DateTime @default(now())
-status PurchaseOrderStatus @default(PENDING)
-notes String?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+Secara singkat, PO Anda terlalu kaku, kurang memiliki data finansial historis, dan tidak fleksibel untuk beberapa skenario gudang yang umum terjadi.
 
-// Relasi penting
-orderId String @unique // Setiap Order hanya punya satu PO internal
-order Orders @relation(fields: [orderId], references: [id])
+Kekurangan pada Skema & Data
+Kekurangan ini berkaitan dengan cara data disimpan di database, yang berdampak pada pelaporan dan keakuratan data jangka panjang.
 
-creatorId String
-creator Users @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
+Tidak Menyimpan Harga & Total per Item (Price Snapshot) 📸
 
-items PurchaseOrderItems[]
+Kekurangan: Model PurchaseOrderItems Anda hanya menyimpan quantity dan productId. Harga (price) tidak disimpan, melainkan hanya ditampilkan di antarmuka dengan mengambil data dari Order asli.
 
-@@map("purchase_orders")
-}
+Risiko: Jika harga produk pada Order asli atau di master data Products berubah di masa depan, Anda akan kehilangan data harga historis saat PO ini dibuat. PO seharusnya menjadi dokumen yang "membekukan" detail transaksi pada satu waktu.
 
-model PurchaseOrderItems {
-id String @id @default(cuid())
-quantity Float
+Solusi: Tambahkan field price dan totalPrice di model PurchaseOrderItems.
 
-// Relasi penting
-purchaseOrderId String
-purchaseOrder PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+Tidak Menyimpan Total Nilai PO 💰
 
-productId String
-product Products @relation(fields: [productId], references: [id])
+Kekurangan: Model PurchaseOrders Anda tidak memiliki kolom untuk menyimpan total nilai dari PO tersebut (misalnya totalAmount). Total nilai hanya dihitung di front-end untuk ditampilkan.
 
-@@map("purchase_order_items")
-}
+Risiko: Anda tidak bisa melakukan query atau membuat laporan untuk melihat total nilai dari semua PO yang sedang PENDING atau PROCESSING langsung dari database.
 
-Will reference the folder page "/inventori/produksi"
+Solusi: Tambahkan field totalAmount di model PurchaseOrders.
 
-In the Sidebar Page, it will be named the Daftar PO module. The page created will be placed at the path "sales/daftar-po" and read on layout.tsx will contain this data:
-const myStaticData = {
-module: "sales",
-subModule: "daftar-po",
-allowedRole: ["OWNER", "ADMIN"],
-data: await getCategories(), // adjust according to the data retrieval
-};
+Relasi Terlalu Kaku (Satu Order untuk Satu PO) ⛓️
 
-Main Features:
+Kekurangan: Anda menggunakan @unique pada orderId di model PurchaseOrders. Ini berarti satu Order hanya bisa dibuatkan satu PO.
 
-Add PO into database
+Risiko: Ini tidak fleksibel. Bagaimana jika satu Order besar dari pelanggan perlu diproses dalam dua pengiriman terpisah? Anda tidak bisa membuat dua PO terpisah untuk satu Order yang sama.
 
-PurchaseOrders Form with the following options:
+Solusi: Hapus @unique dari orderId jika Anda ingin memungkinkan skenario pemisahan pemenuhan pesanan.
 
-Type: Purchase Orders
-PO Date  
-Deadline  
-Choose User
-Choose Orders data  
-Automatically show List of OrderItems that can :
+Kekurangan pada Fungsionalitas & Alur Kerja
+Kekurangan ini berkaitan dengan pengalaman pengguna (UX) dan batasan alur kerja pada form yang Anda buat.
 
-Will show quantity
+Item PO Tidak Bisa Diubah ✏️
 
-Data Storage:
+Kekurangan: Form Anda secara otomatis mengambil semua item dari Order yang dipilih, dan pengguna tidak bisa mengubah jumlah (quantity) atau menghapus item.
 
-Save to PurchaseOrders
-Save details to PurchaseOrderItems
+Skenario Masalah: Staf gudang melihat ada 10 item di Order, tapi stok yang tersedia hanya 8. Mereka tidak bisa membuat PO hanya untuk 8 item yang tersedia. Form memaksa untuk memproses "semua atau tidak sama sekali".
 
-Example Scenarios:
+PO Wajib Berasal dari Order Pelanggan 📦
 
-Admin only can fill PO Date, Deadline, Choose User, Choose Orders data
+Kekurangan: Alur kerja Anda mengharuskan setiap PO dibuat dari Order yang sudah ada.
 
-Make everything complete so that it can CRUD the data.
+Skenario Masalah: Anda tidak bisa membuat PO untuk kebutuhan internal yang tidak terkait Order pelanggan, misalnya:
+
+Membuat PO untuk transfer stok antar gudang.
+
+Membuat PO untuk menyiapkan stok berdasarkan ramalan penjualan (forecast).
+
+Tidak Menampilkan Informasi Stok 📊
+
+Kekurangan: Saat item-item dari Order ditampilkan, tidak ada informasi currentStock (stok saat ini) untuk setiap produk.
+
+Manfaat Jika Ada: Menampilkan stok saat ini akan sangat membantu staf gudang untuk langsung mengetahui ketersediaan barang tanpa perlu mengecek di halaman lain.
+
+Validasi Tanggal Kurang Lengkap 🗓️
+
+Kekurangan: Tidak ada validasi yang memastikan tanggal dateline tidak lebih awal dari poDate. Pengguna bisa saja salah memasukkan tanggal.

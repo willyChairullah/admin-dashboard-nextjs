@@ -12,6 +12,8 @@ import { revalidatePath } from "next/cache";
 export type PurchaseOrderItemFormData = {
   productId: string;
   quantity: number;
+  price: number; // Harga per unit saat PO dibuat
+  totalPrice: number; // Total harga untuk item ini
 };
 
 export type PurchaseOrderFormData = {
@@ -20,7 +22,8 @@ export type PurchaseOrderFormData = {
   dateline: Date;
   notes?: string;
   creatorId: string;
-  orderId: string;
+  orderId: string; // Optional untuk PO yang tidak berasal dari Order
+  totalAmount: number; // Total nilai PO
   items: PurchaseOrderItemFormData[];
 };
 
@@ -29,14 +32,14 @@ export type PurchaseOrderWithDetails = PurchaseOrders & {
     id: string;
     name: string;
   };
-  order: {
+  order?: {
     id: string;
     orderNumber: string;
     customer: {
       id: string;
       name: string;
     };
-  };
+  } | null;
   items: (PurchaseOrderItems & {
     product: {
       id: string;
@@ -156,12 +159,15 @@ export async function getAvailableOrders(currentPoId?: string) {
         },
         OR: [
           {
-            PurchaseOrders: null, // Orders that don't have any PO yet (perhatikan 'PurchaseOrders' huruf kecil)
+            purchaseOrders: {
+              none: {}, // Orders yang belum punya PO
+            },
           },
           {
-            PurchaseOrders: {
-              // Mengacu langsung pada objek PurchaseOrder terkait
-              id: currentPoId, // Filter berdasarkan ID PurchaseOrder yang terhubung
+            purchaseOrders: {
+              some: {
+                id: currentPoId,
+              },
             },
           },
         ],
@@ -225,20 +231,42 @@ export async function getAvailableUsers() {
   }
 }
 
+// Get products with stock information
+export async function getProductsWithStock() {
+  try {
+    const products = await db.products.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        unit: true,
+        price: true,
+        currentStock: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.error("Error getting products with stock:", error);
+    throw new Error("Failed to fetch products with stock");
+  }
+}
+
 // Create purchase order
 export async function createPurchaseOrder(
   data: PurchaseOrderFormData
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
-    // Check if order already has a PO
-    const existingPO = await db.purchaseOrders.findUnique({
-      where: { orderId: data.orderId },
-    });
-
-    if (existingPO) {
+    // Validasi tanggal
+    if (data.dateline < data.poDate) {
       return {
         success: false,
-        error: "Order ini sudah memiliki Purchase Order",
+        error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
       };
     }
 
@@ -253,6 +281,7 @@ export async function createPurchaseOrder(
           notes: data.notes,
           creatorId: data.creatorId,
           orderId: data.orderId,
+          totalAmount: data.totalAmount,
           status: "PENDING",
         },
       });
@@ -263,6 +292,8 @@ export async function createPurchaseOrder(
           purchaseOrderId: purchaseOrder.id,
           productId: item.productId,
           quantity: item.quantity,
+          price: item.price,
+          totalPrice: item.totalPrice,
         })),
       });
 
@@ -286,15 +317,11 @@ export async function updatePurchaseOrder(
   data: PurchaseOrderFormData
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
-    // Check if order already has a different PO
-    const existingPO = await db.purchaseOrders.findUnique({
-      where: { orderId: data.orderId },
-    });
-
-    if (existingPO && existingPO.id !== id) {
+    // Validasi tanggal
+    if (data.dateline < data.poDate) {
       return {
         success: false,
-        error: "Order ini sudah memiliki Purchase Order lain",
+        error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
       };
     }
 
@@ -309,6 +336,7 @@ export async function updatePurchaseOrder(
           notes: data.notes,
           creatorId: data.creatorId,
           orderId: data.orderId,
+          totalAmount: data.totalAmount,
         },
       });
 
@@ -323,6 +351,8 @@ export async function updatePurchaseOrder(
           purchaseOrderId: id,
           productId: item.productId,
           quantity: item.quantity,
+          price: item.price,
+          totalPrice: item.totalPrice,
         })),
       });
 

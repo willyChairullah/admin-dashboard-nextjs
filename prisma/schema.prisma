@@ -120,18 +120,18 @@ model Users {
 // =================================
 
 model PurchaseOrders {
-  id        String              @id @default(cuid())
-  code      String              @unique
-  poDate    DateTime            @default(now())
-  dateline  DateTime            @default(now())
-  status    PurchaseOrderStatus @default(PENDING)
-  notes     String?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id          String              @id @default(cuid())
+  code        String              @unique
+  poDate      DateTime            @default(now())
+  dateline    DateTime            @default(now())
+  status      PurchaseOrderStatus @default(PENDING)
+  notes       String?
+  totalAmount Float               @default(0) // Total nilai PO untuk pelaporan
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  // Relasi penting
-  orderId String @unique // Setiap Order hanya punya satu PO internal
-  order   Orders @relation(fields: [orderId], references: [id])
+  orderId String
+  order   Orders? @relation(fields: [orderId], references: [id])
 
   creatorId String
   creator   Users  @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
@@ -142,8 +142,10 @@ model PurchaseOrders {
 }
 
 model PurchaseOrderItems {
-  id       String @id @default(cuid())
-  quantity Float
+  id         String @id @default(cuid())
+  quantity   Float
+  price      Float  @default(0) // Harga per unit saat PO dibuat (price snapshot)
+  totalPrice Float  @default(0) // Total harga untuk item ini (quantity * price)
 
   // Relasi penting
   purchaseOrderId String
@@ -180,7 +182,7 @@ model Orders {
   sales                Users            @relation(fields: [salesId], references: [id])
   salesReturns         SalesReturns[] // Tambahan untuk Retur
   StockMovements       StockMovements[]
-  PurchaseOrders       PurchaseOrders?
+  purchaseOrders       PurchaseOrders[] // One-to-many relation
 
   @@map("orders")
 }

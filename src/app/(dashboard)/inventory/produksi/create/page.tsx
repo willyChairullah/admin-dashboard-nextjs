@@ -344,7 +344,7 @@ export default function CreateProductionLogPage() {
               name="code"
               value={formData.code}
               readOnly // Kode digenerate otomatis, tidak bisa diubah manual
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"
             />
           </FormField>
 
