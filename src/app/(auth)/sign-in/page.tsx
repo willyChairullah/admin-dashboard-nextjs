@@ -36,38 +36,38 @@ const Page = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
-      {/* Animated Oil & Energy Background Elements */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-950 relative overflow-hidden">
+      {/* Animated Dark Green & Energy Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Oil Drop Animations */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-amber-500/20 to-orange-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-32 left-32 w-80 h-80 bg-gradient-to-tr from-yellow-500/15 to-amber-600/25 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 right-1/3 w-96 h-96 bg-gradient-to-r from-orange-400/10 to-red-500/15 rounded-full blur-3xl animate-slow-spin"></div>
+        {/* Dark Green Energy Animations */}
+        <div className="absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-green-800/15 to-emerald-900/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-32 left-32 w-80 h-80 bg-gradient-to-tr from-emerald-800/10 to-green-900/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 right-1/3 w-96 h-96 bg-gradient-to-r from-green-900/8 to-emerald-800/12 rounded-full blur-3xl animate-slow-spin"></div>
 
         {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(34,197,94,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
 
-        {/* Oil Pipeline Graphics */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-amber-500/30 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-orange-500/30 to-transparent"></div>
+        {/* Dark Green Pipeline Graphics */}
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-green-800/20 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-emerald-800/20 to-transparent"></div>
       </div>
 
       {/* Main Container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Premium Glassmorphism Card */}
-          <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-3xl shadow-2xl shadow-amber-500/5 p-8 space-y-8 relative overflow-hidden">
+          <div className="backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl shadow-green-900/20 p-8 space-y-8 relative overflow-hidden">
             {/* Card Inner Glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-green-800/10 to-emerald-800/10 rounded-3xl"></div>
 
             {/* Header Section */}
             <div className="relative text-center space-y-6">
               {/* Company Branding */}
               <div className="space-y-4">
-                <h1 className="text-4xl font-black bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 bg-clip-text text-transparent tracking-tight">
+                <h1 className="text-4xl font-black bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-600 bg-clip-text text-transparent tracking-tight">
                   CV HM JAYABERKAH
                 </h1>
-                <div className="w-24 h-1 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto rounded-full"></div>
+                <div className="w-24 h-1 bg-gradient-to-r from-emerald-500 to-green-500 mx-auto rounded-full"></div>
                 <h2 className="text-xl font-semibold text-white/90">
                   Enterprise Dashboard
                 </h2>
@@ -141,7 +141,7 @@ const Page = () => {
                     className={`w-full h-12 px-4 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed ${
                       fieldErrors.email
                         ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                        : "border-white/20 focus:ring-amber-500/50 focus:border-amber-500/50"
+                        : "border-white/20 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                     }`}
                     onChange={() =>
                       setFieldErrors((prev) => ({ ...prev, email: undefined }))
@@ -151,7 +151,7 @@ const Page = () => {
                     className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none ${
                       fieldErrors.email
                         ? "bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0"
-                        : "bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0"
+                        : "bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-green-500/0"
                     }`}
                   ></div>
                 </div>
@@ -189,7 +189,7 @@ const Page = () => {
                     className={`w-full h-12 px-4 pr-12 bg-white/10 border rounded-xl text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm group-hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed ${
                       fieldErrors.password
                         ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                        : "border-white/20 focus:ring-amber-500/50 focus:border-amber-500/50"
+                        : "border-white/20 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                     }`}
                     onChange={() =>
                       setFieldErrors((prev) => ({
@@ -202,7 +202,7 @@ const Page = () => {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isPending}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-400 transition-colors duration-200 disabled:opacity-50"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-emerald-400 transition-colors duration-200 disabled:opacity-50"
                   >
                     {showPassword ? (
                       <svg
@@ -244,7 +244,7 @@ const Page = () => {
                     className={`absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none ${
                       fieldErrors.password
                         ? "bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0"
-                        : "bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-orange-500/0"
+                        : "bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-green-500/0"
                     }`}
                   ></div>
                 </div>
@@ -270,7 +270,7 @@ const Page = () => {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-2xl shadow-amber-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-amber-500/40 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full h-12 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-xl shadow-2xl shadow-emerald-500/25 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-emerald-500/40 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 <span className="relative z-10 flex items-center justify-center gap-2">
@@ -315,7 +315,7 @@ const Page = () => {
 
             {/* Security Badge */}
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-400 text-xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-xs">
                 <svg
                   className="w-3 h-3"
                   fill="currentColor"
