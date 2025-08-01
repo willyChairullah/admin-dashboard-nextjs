@@ -7,6 +7,7 @@ interface OrderItem {
   productName: string;
   quantity: number;
   price: number;
+  discount?: number; // Diskon per item
 }
 
 export async function createOrder({
@@ -19,6 +20,11 @@ export async function createOrder({
   customerPhone,
   items,
   notes,
+  deliveryAddress,
+  discountType,
+  discount,
+  shippingCost,
+  paymentDeadline,
   requiresConfirmation = false,
 }: {
   salesId: string;
@@ -30,6 +36,11 @@ export async function createOrder({
   customerPhone?: string;
   items: OrderItem[];
   notes?: string;
+  deliveryAddress?: string;
+  discountType?: string;
+  discount?: number;
+  shippingCost?: number;
+  paymentDeadline?: Date;
   requiresConfirmation?: boolean;
 }) {
   try {
@@ -67,10 +78,16 @@ export async function createOrder({
       };
     }
 
-    // Calculate total amount
-    const totalAmount = items.reduce((sum: number, item: OrderItem) => {
-      return sum + item.quantity * item.price;
+    // Calculate total amount with discounts
+    let subtotal = items.reduce((sum: number, item: OrderItem) => {
+      const itemTotal = item.quantity * item.price;
+      const itemDiscount = discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0;
+      return sum + (itemTotal - itemDiscount);
     }, 0);
+
+    // Apply total discount if applicable
+    const totalDiscount = discountType === "TOTAL" ? discount || 0 : 0;
+    const totalAmount = subtotal - totalDiscount + (shippingCost || 0);
 
     let finalStoreId: string = storeId || "";
 
@@ -139,7 +156,13 @@ export async function createOrder({
         requiresConfirmation,
         notes: notes || null,
         orderDate: new Date(),
-        deliveryAddress: storeAddress || "Alamat belum ditentukan",
+        dueDate: paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days from now
+        deliveryAddress:
+          deliveryAddress || storeAddress || "Alamat belum ditentukan",
+        discount: discountType === "TOTAL" ? (discount || 0) : 0,
+        discountType: (discountType as any) || "TOTAL",
+        shippingCost: shippingCost || 0,
+        paymentDeadline: paymentDeadline || null,
         updatedAt: new Date(),
       },
     });
@@ -177,13 +200,15 @@ export async function createOrder({
       }
 
       // Create order item
+      const itemDiscount = discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0;
       const orderItem = await db.orderItems.create({
         data: {
           orderId: order.id,
           productId: product.id,
           quantity: item.quantity,
           price: item.price,
-          totalPrice: item.quantity * item.price,
+          discount: item.discount || 0, // Store per-piece discount value
+          totalPrice: item.quantity * item.price - itemDiscount,
         },
       });
 

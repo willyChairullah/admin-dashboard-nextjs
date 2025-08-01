@@ -210,7 +210,9 @@ model Orders {
   
   // Tambahan berdasarkan diskusi
   discount             Float            @default(0) // Diskon di level order
+  discountType         DiscountType?    @default(TOTAL) // Jenis diskon: PER_ITEM atau TOTAL  
   shippingCost         Float            @default(0) // Biaya pengiriman di level order
+  paymentDeadline      DateTime?        // Tenggat pembayaran
   deliveryAddress      String           // Alamat pengiriman spesifik untuk order ini
   deliveryCity         String?          // Kota pengiriman (opsional)
   deliveryPostalCode   String?          // Kode pos pengiriman (opsional)
@@ -231,6 +233,7 @@ model OrderItems {
   id         String   @id @default(cuid())
   quantity   Float
   price      Float
+  discount   Float    @default(0) // Diskon per item
   totalPrice Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -702,4 +705,9 @@ enum PreparationStatus {
   PREPARING           // Sedang disiapkan
   READY_FOR_DELIVERY  // Barang sudah disiapkan & siap kirim
   CANCELLED_PREPARATION // Pembatalan persiapan
+}
+
+enum DiscountType {
+  PER_ITEM // Diskon per item
+  TOTAL    // Diskon total order
 }
