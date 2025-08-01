@@ -323,7 +323,9 @@ export default function CreateInvoicePage() {
         />
         <div className="p-6">
           <div className="flex justify-center items-center h-32">
-            <div className="text-gray-500">Memuat data...</div>
+            <div className="text-gray-500 dark:text-gray-400">
+              Memuat data...
+            </div>
           </div>
         </div>
       </div>
@@ -340,7 +342,9 @@ export default function CreateInvoicePage() {
         />
         <div className="p-6">
           <div className="flex justify-center items-center h-32">
-            <div className="text-red-500">{errorLoadingData}</div>
+            <div className="text-red-500 dark:text-red-400">
+              {errorLoadingData}
+            </div>
           </div>
         </div>
       </div>
@@ -411,7 +415,7 @@ export default function CreateInvoicePage() {
             <select
               value={formData.status}
               onChange={e => handleInputChange("status", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
             >
               <option value="DRAFT">Draft</option>
               <option value="SENT">Terkirim</option>
@@ -428,7 +432,7 @@ export default function CreateInvoicePage() {
               onChange={e =>
                 handleInputChange("purchaseOrderId", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
             >
               <option value="">
                 Pilih Purchase Order (Manual jika kosong)
@@ -450,7 +454,7 @@ export default function CreateInvoicePage() {
             <select
               value={formData.customerId}
               onChange={e => handleInputChange("customerId", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
               disabled={!!formData.purchaseOrderId} // Disabled if purchase order is selected
             >
               <option value="">Pilih Customer</option>
@@ -471,7 +475,7 @@ export default function CreateInvoicePage() {
             <select
               value={formData.createdBy}
               onChange={e => handleInputChange("createdBy", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
             >
               <option value="">Pilih User</option>
               {availableUsers.map(user => (
@@ -491,9 +495,11 @@ export default function CreateInvoicePage() {
                 onChange={e =>
                   handleInputChange("isProforma", e.target.checked)
                 }
-                className="mr-2"
+                className="mr-2 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-800"
               />
-              Invoice Proforma
+              <span className="text-gray-900 dark:text-gray-300">
+                Invoice Proforma
+              </span>
             </label>
           </FormField>
         </div>
@@ -501,13 +507,13 @@ export default function CreateInvoicePage() {
         {/* Invoice Items */}
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">
               Item Invoice
             </h3>
             <button
               type="button"
               onClick={addItem}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
             >
               <Plus className="w-4 h-4 mr-1" />
               Tambah Item
@@ -515,14 +521,16 @@ export default function CreateInvoicePage() {
           </div>
 
           {formErrors.items && (
-            <div className="text-red-500 text-sm mb-4">{formErrors.items}</div>
+            <div className="text-red-500 dark:text-red-400 text-sm mb-4">
+              {formErrors.items}
+            </div>
           )}
 
           <div className="space-y-4">
             {formData.items.map((item, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg"
+                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800"
               >
                 {/* Product */}
                 <div className="md:col-span-2">
@@ -543,7 +551,7 @@ export default function CreateInvoicePage() {
                           );
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-300"
                     >
                       <option value="">Pilih Produk</option>
                       {availableProducts.map(product => (
@@ -629,7 +637,7 @@ export default function CreateInvoicePage() {
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      className="ml-2 p-2 text-red-600 hover:text-red-800"
+                      className="ml-2 p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -694,7 +702,7 @@ export default function CreateInvoicePage() {
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
           >
             Batal
           </button>
@@ -702,7 +710,7 @@ export default function CreateInvoicePage() {
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 disabled:opacity-50"
           >
             {isSubmitting ? "Menyimpan..." : "Simpan"}
           </button>
