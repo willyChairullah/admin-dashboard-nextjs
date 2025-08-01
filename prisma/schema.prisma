@@ -192,6 +192,7 @@ model Orders {
   id                   String           @id @default(cuid())
   orderNumber          String           @unique
   orderDate            DateTime         @default(now())
+  dueDate              DateTime
   deliveryDate         DateTime?
   status               OrderStatus      @default(NEW)
   totalAmount          Float            @default(0)
