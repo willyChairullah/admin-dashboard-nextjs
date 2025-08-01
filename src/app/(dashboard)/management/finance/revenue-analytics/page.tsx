@@ -858,7 +858,7 @@ export default function RevenueAnalytics() {
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-2 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 p-6 rounded-2xl">
+              <div className="lg:col-span-3 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 p-6 rounded-2xl">
                 <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
                   Current vs Previous Period
                 </h4>
@@ -896,27 +896,6 @@ export default function RevenueAnalytics() {
                     {Math.abs(data.avgOrderValue.trend).toFixed(1)}%{" "}
                     {data.avgOrderValue.trend > 0 ? "increase" : "decrease"}
                   </span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-2xl">
-                <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                  Breakdown
-                </h4>
-                <div className="space-y-3">
-                  {data.avgOrderValue.breakdown.map((item) => (
-                    <div
-                      key={item.period}
-                      className="flex justify-between items-center"
-                    >
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {item.period}
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatRupiah(item.value)}
-                      </span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>

@@ -163,42 +163,46 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         },
       });
 
-      // Calculate growth for this product (comparing to previous period)
+      // Calculate growth for this product by comparing across sequential periods
       let growth = 0;
-      const previousPeriodStart =
-        timeRange === "month"
-          ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
-          : timeRange === "quarter"
-          ? new Date(startDate.getFullYear() - 1, startDate.getMonth(), 1)
-          : new Date(startDate.getFullYear() - 6, 0, 1);
 
-      const prevPerformance = await db.orderItems.aggregate({
-        where: {
-          productId: item.productId,
-          orders: {
-            createdAt: {
-              gte: previousPeriodStart,
-              lt: startDate,
+      // Get revenue data for this product across all periods
+      const productPeriodData = await Promise.all(
+        periods.map(async (period) => {
+          const revenue = await db.orderItems.aggregate({
+            where: {
+              productId: item.productId,
+              orders: {
+                createdAt: {
+                  gte: period.start,
+                  lte: period.end,
+                },
+                status: "COMPLETED",
+              },
             },
-            status: "COMPLETED",
-          },
-        },
-        _sum: {
-          totalPrice: true,
-        },
-      });
+            _sum: {
+              totalPrice: true,
+            },
+          });
+          return revenue._sum.totalPrice || 0;
+        })
+      );
 
-      const currentRevenue = item._sum.totalPrice || 0;
-      const prevRevenue = prevPerformance._sum.totalPrice || 0;
+      // Calculate growth by comparing last two periods with revenue
+      const nonZeroPeriods = productPeriodData.filter((revenue) => revenue > 0);
+      if (nonZeroPeriods.length >= 2) {
+        const latestRevenue = nonZeroPeriods[nonZeroPeriods.length - 1];
+        const previousRevenue = nonZeroPeriods[nonZeroPeriods.length - 2];
 
-      if (prevRevenue > 0) {
-        growth = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+        if (previousRevenue > 0) {
+          growth = ((latestRevenue - previousRevenue) / previousRevenue) * 100;
+        }
       }
 
       return {
         id: item.productId,
         name: product?.name || "Unknown Product",
-        revenue: currentRevenue,
+        revenue: item._sum.totalPrice || 0,
         units: item._sum.quantity || 0,
         growth: growth,
         category: product?.category?.name || "Uncategorized",
@@ -279,7 +283,6 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         totalAmount: "desc",
       },
     },
-    take: 5,
   });
 
   const storePerformanceData = await Promise.all(
@@ -288,41 +291,47 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         where: { id: item.customerId },
       });
 
-      // Calculate growth for this location
+      // Calculate growth for this customer/store by comparing across sequential periods
       let growth = 0;
-      const previousPeriodStart =
-        timeRange === "month"
-          ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
-          : timeRange === "quarter"
-          ? new Date(startDate.getFullYear() - 1, startDate.getMonth(), 1)
-          : new Date(startDate.getFullYear() - 6, 0, 1);
 
-      const prevPerformance = await db.orders.aggregate({
-        where: {
-          customerId: item.customerId,
-          createdAt: {
-            gte: previousPeriodStart,
-            lt: startDate,
-          },
-          status: "COMPLETED",
-        },
-        _sum: {
-          totalAmount: true,
-        },
-      });
+      // Get revenue data for this customer across all periods
+      const customerPeriodData = await Promise.all(
+        periods.map(async (period) => {
+          const revenue = await db.orders.aggregate({
+            where: {
+              customerId: item.customerId,
+              createdAt: {
+                gte: period.start,
+                lte: period.end,
+              },
+              status: "COMPLETED",
+            },
+            _sum: {
+              totalAmount: true,
+            },
+          });
+          return revenue._sum.totalAmount || 0;
+        })
+      );
 
-      const currentRevenue = item._sum.totalAmount || 0;
-      const prevRevenue = prevPerformance._sum.totalAmount || 0;
+      // Calculate growth by comparing last two periods with revenue
+      const nonZeroPeriods = customerPeriodData.filter(
+        (revenue) => revenue > 0
+      );
+      if (nonZeroPeriods.length >= 2) {
+        const latestRevenue = nonZeroPeriods[nonZeroPeriods.length - 1];
+        const previousRevenue = nonZeroPeriods[nonZeroPeriods.length - 2];
 
-      if (prevRevenue > 0) {
-        growth = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+        if (previousRevenue > 0) {
+          growth = ((latestRevenue - previousRevenue) / previousRevenue) * 100;
+        }
       }
 
       return {
         id: item.customerId,
         name: customer?.name || "Unknown Customer",
         location: customer?.city || "Unknown Location",
-        revenue: currentRevenue,
+        revenue: item._sum.totalAmount || 0,
         growth: growth,
       };
     })
