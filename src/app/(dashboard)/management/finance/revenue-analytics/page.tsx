@@ -7,6 +7,7 @@ import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
 import { TargetForm } from "@/components/ui/TargetForm";
 import {
   getTargetsForChart,
+  updateSalesTarget,
   createSalesTarget,
 } from "@/lib/actions/sales-targets";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -21,6 +22,9 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  Edit2,
+  Save,
+  X,
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { toast } from "sonner";
@@ -70,6 +74,12 @@ export default function RevenueAnalytics() {
   const [targets, setTargets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingTargets, setLoadingTargets] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    targetAmount: string;
+  }>({
+    targetAmount: "",
+  });
   const [timeRange, setTimeRange] = useState<"month" | "quarter" | "year">(
     "month"
   );
@@ -77,20 +87,8 @@ export default function RevenueAnalytics() {
     "trends" | "products" | "sales" | "stores" | "aov"
   >("trends");
 
-  // Debug logging
-  useEffect(() => {
-    console.log("RevenueAnalytics: user state changed", {
-      user: user,
-      userLoading: userLoading,
-      userId: user?.id,
-    });
-  }, [user, userLoading]);
-
   const fetchTargets = async () => {
-    console.log("fetchTargets called with:", { userId: user?.id, timeRange });
-
     if (!user?.id) {
-      console.log("fetchTargets: No user ID, skipping");
       return;
     }
 
@@ -103,15 +101,7 @@ export default function RevenueAnalytics() {
           ? "QUARTERLY"
           : "YEARLY";
 
-      console.log("fetchTargets: Calling getTargetsForChart with:", {
-        userId: user.id,
-        targetType,
-      });
-
       const targetData = await getTargetsForChart(user.id, targetType);
-
-      console.log("fetchTargets: Received target data:", targetData);
-
       setTargets(targetData);
     } catch (error) {
       console.error("Error fetching targets:", error);
@@ -122,36 +112,54 @@ export default function RevenueAnalytics() {
   };
 
   const handleTargetSuccess = () => {
-    console.log("handleTargetSuccess called - refreshing targets");
-    toast.success("Target added successfully! Refreshing data...");
-    fetchTargets(); // Refresh targets after adding new one
+    toast.success("Target saved successfully! Refreshing data...");
+    fetchTargets(); // Refresh targets after adding/updating
+    setEditingTarget(null); // Close edit mode
   };
 
-  // Debug function to test target creation
-  const debugCreateTarget = async () => {
-    if (!user?.id) return;
+  const handleEditTarget = (target: any) => {
+    setEditingTarget(target.id);
+    setEditForm({
+      targetAmount: target.target.toString(),
+    });
+  };
 
-    console.log("🧪 Debug: Testing target creation...");
+  const handleCancelEdit = () => {
+    setEditingTarget(null);
+    setEditForm({ targetAmount: "" });
+  };
+
+  const handleSaveEdit = async (targetId: string, period: string) => {
+    if (!user?.id || !editForm.targetAmount) {
+      toast.error("Please enter a valid target amount");
+      return;
+    }
+
     try {
-      const result = await createSalesTarget({
+      const result = await updateSalesTarget(targetId, {
         userId: user.id,
-        targetType: "MONTHLY",
-        targetPeriod: "2025-07",
-        targetAmount: 5000000,
+        targetType:
+          timeRange === "month"
+            ? "MONTHLY"
+            : timeRange === "quarter"
+            ? "QUARTERLY"
+            : "YEARLY",
+        targetPeriod: period,
+        targetAmount: parseFloat(editForm.targetAmount),
         isActive: true,
       });
 
-      console.log("🧪 Debug: Create result:", result);
-
       if (result.success) {
-        toast.success("Debug target created!");
+        toast.success("Target updated successfully!");
         fetchTargets();
+        setEditingTarget(null);
+        setEditForm({ targetAmount: "" });
       } else {
-        toast.error("Debug failed: " + result.error);
+        toast.error(result.error || "Failed to update target");
       }
     } catch (error) {
-      console.error("🧪 Debug error:", error);
-      toast.error("Debug error occurred");
+      console.error("Error updating target:", error);
+      toast.error("An error occurred while updating the target");
     }
   };
 
@@ -313,16 +321,6 @@ export default function RevenueAnalytics() {
 
               {/* Right side - Controls */}
               <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 lg:gap-4 lg:flex-shrink-0">
-                {/* Debug Button - Remove after testing */}
-                {user?.id && (
-                  <button
-                    onClick={debugCreateTarget}
-                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm font-medium"
-                  >
-                    🧪 Debug Test
-                  </button>
-                )}
-
                 {/* Target Form */}
                 {user?.id && (
                   <div className="flex-shrink-0">
@@ -564,40 +562,89 @@ export default function RevenueAnalytics() {
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                           {target.period}
                         </span>
-                        <span
-                          className={`text-sm font-bold px-2 py-1 rounded-full ${
-                            target.percentage >= 100
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : target.percentage >= 80
-                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          }`}
-                        >
-                          {target.percentage.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Target: {formatRupiah(target.target)}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Achieved: {formatRupiah(target.achieved)}
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-300 ${
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className={`text-sm font-bold px-2 py-1 rounded-full ${
                               target.percentage >= 100
-                                ? "bg-green-500"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                 : target.percentage >= 80
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
+                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                             }`}
-                            style={{
-                              width: `${Math.min(target.percentage, 100)}%`,
-                            }}
-                          ></div>
+                          >
+                            {target.percentage.toFixed(1)}%
+                          </span>
+                          {editingTarget !== target.id && (
+                            <button
+                              onClick={() => handleEditTarget(target)}
+                              className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                              title="Edit target"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
+
+                      {editingTarget === target.id ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
+                              Target Amount
+                            </label>
+                            <input
+                              type="number"
+                              value={editForm.targetAmount}
+                              onChange={(e) =>
+                                setEditForm({ targetAmount: e.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                              placeholder="Enter target amount"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() =>
+                                handleSaveEdit(target.id, target.period)
+                              }
+                              className="flex items-center px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                            >
+                              <Save className="h-3 w-3 mr-1" />
+                              Save
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="flex items-center px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Target: {formatRupiah(target.target)}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Achieved: {formatRupiah(target.achieved)}
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                target.percentage >= 100
+                                  ? "bg-green-500"
+                                  : target.percentage >= 80
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                              style={{
+                                width: `${Math.min(target.percentage, 100)}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -20,11 +20,6 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
     targetAmount: "",
   });
 
-  // Debug: Log when component receives userId
-  useEffect(() => {
-    console.log("TargetForm rendered with userId:", userId);
-  }, [userId]);
-
   const generatePeriodPlaceholder = () => {
     const currentDate = new Date();
     const year = currentDate.getFullYear();
@@ -97,10 +92,8 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
         setIsOpen(false);
 
         // Call onSuccess callback to refresh parent component
-        console.log("🔄 Calling onSuccess callback to refresh targets...");
         onSuccess?.();
       } else {
-        console.error("❌ Target creation failed:", result);
         toast.error(result.error || "Failed to create target");
       }
     } catch (error) {

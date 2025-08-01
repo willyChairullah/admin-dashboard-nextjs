@@ -84,10 +84,6 @@ export function RevenueTrendChart({
 
       const matchingTarget = targets.find((t) => t.period === periodFormat);
       if (matchingTarget) {
-        console.log(
-          `Found target for ${item.month} (${periodFormat}):`,
-          matchingTarget
-        );
         return matchingTarget.target;
       }
     }

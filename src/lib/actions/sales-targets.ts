@@ -106,20 +106,14 @@ export async function getCurrentMonthTarget(
 
 // Create new sales target
 export async function createSalesTarget(data: SalesTargetFormData) {
-  console.log("🎯 createSalesTarget called with data:", data);
-
   try {
     // First, check if the user exists
-    console.log("🔍 Checking if user exists:", data.userId);
     const userExists = await db.users.findUnique({
       where: { id: data.userId },
       select: { id: true, name: true, email: true },
     });
 
-    console.log("👤 User exists check result:", userExists);
-
     if (!userExists) {
-      console.log("❌ User not found");
       return {
         success: false,
         error:
@@ -128,10 +122,6 @@ export async function createSalesTarget(data: SalesTargetFormData) {
     }
 
     // Check if target already exists for this user and period
-    console.log("🔍 Checking for existing target:", {
-      userId: data.userId,
-      targetPeriod: data.targetPeriod,
-    });
     const existingTarget = await db.salesTargets.findFirst({
       where: {
         userId: data.userId,
@@ -139,10 +129,7 @@ export async function createSalesTarget(data: SalesTargetFormData) {
       },
     });
 
-    console.log("📊 Existing target check result:", existingTarget);
-
     if (existingTarget) {
-      console.log("❌ Target already exists for this period");
       return {
         success: false,
         error:
@@ -150,7 +137,6 @@ export async function createSalesTarget(data: SalesTargetFormData) {
       };
     }
 
-    console.log("💾 Creating target in database...");
     const target = await db.salesTargets.create({
       data: {
         userId: data.userId,
@@ -161,21 +147,14 @@ export async function createSalesTarget(data: SalesTargetFormData) {
       },
     });
 
-    console.log("✅ Target created successfully:", target);
-
     revalidatePath("/management/sales-target");
     revalidatePath("/management/finance/revenue-analytics");
     return { success: true, data: target };
   } catch (error) {
-    console.error("💥 Error creating sales target:", error);
-    console.error("💥 Error type:", typeof error);
-    console.error("💥 Error constructor:", error?.constructor?.name);
+    console.error("Error creating sales target:", error);
 
     // Handle specific Prisma errors
     if (error instanceof Error) {
-      console.error("💥 Error message:", error.message);
-      console.error("💥 Error stack:", error.stack);
-
       if (error.message.includes("Foreign key constraint")) {
         return {
           success: false,
@@ -375,18 +354,87 @@ export async function getTargetsForChart(
       },
     });
 
-    // Transform to chart format
-    return targets.map((target) => ({
-      period: target.targetPeriod,
-      target: target.targetAmount,
-      achieved: target.achievedAmount,
-      percentage:
-        target.targetAmount > 0
-          ? (target.achievedAmount / target.targetAmount) * 100
-          : 0,
-    }));
+    // Calculate achieved amounts from actual invoice data
+    const targetsWithAchieved = await Promise.all(
+      targets.map(async (target) => {
+        const achievedAmount = await calculateAchievedAmount(
+          target.userId,
+          target.targetPeriod,
+          target.targetType
+        );
+
+        return {
+          id: target.id,
+          period: target.targetPeriod,
+          target: target.targetAmount,
+          achieved: achievedAmount,
+          percentage:
+            target.targetAmount > 0
+              ? (achievedAmount / target.targetAmount) * 100
+              : 0,
+        };
+      })
+    );
+
+    return targetsWithAchieved;
   } catch (error) {
     console.error("Error fetching targets for chart:", error);
     throw new Error("Failed to fetch chart data");
+  }
+}
+
+// Calculate achieved amount from actual invoice data
+async function calculateAchievedAmount(
+  userId: string,
+  targetPeriod: string,
+  targetType: TargetType
+): Promise<number> {
+  try {
+    let startDate: Date;
+    let endDate: Date;
+
+    // Parse the target period and create date range
+    if (targetType === "MONTHLY") {
+      // targetPeriod format: "2025-01"
+      const [year, month] = targetPeriod.split("-").map(Number);
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0); // Last day of the month
+    } else if (targetType === "QUARTERLY") {
+      // targetPeriod format: "2025-Q1"
+      const [year, quarterStr] = targetPeriod.split("-");
+      const quarter = parseInt(quarterStr.replace("Q", ""));
+      const startMonth = (quarter - 1) * 3;
+      startDate = new Date(parseInt(year), startMonth, 1);
+      endDate = new Date(parseInt(year), startMonth + 3, 0); // Last day of the quarter
+    } else if (targetType === "YEARLY") {
+      // targetPeriod format: "2025"
+      const year = parseInt(targetPeriod);
+      startDate = new Date(year, 0, 1); // Jan 1
+      endDate = new Date(year, 11, 31); // Dec 31
+    } else {
+      return 0;
+    }
+
+    // Calculate achieved revenue from invoices through orders
+    const result = await db.invoices.aggregate({
+      where: {
+        invoiceDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "PAID",
+        order: {
+          salesId: userId,
+        },
+      },
+      _sum: {
+        totalAmount: true,
+      },
+    });
+
+    return result._sum?.totalAmount || 0;
+  } catch (error) {
+    console.error("Error calculating achieved amount:", error);
+    return 0;
   }
 }
