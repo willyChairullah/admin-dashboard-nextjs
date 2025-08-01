@@ -80,7 +80,7 @@ model Products {
   stockMovements         StockMovements[]
   salesReturnItems       SalesReturnItems[]
   stockOpnameItems       StockOpnameItems[]
-  ProductionLogItems     ProductionLogItems[]
+  ProductionItems     ProductionItems[]
   ManagementStockItems   ManagementStockItems[]
   PurchaseOrderItems     PurchaseOrderItems[]
 
@@ -109,7 +109,7 @@ model Users {
   processedSalesReturns SalesReturns[]        @relation("AdminProcessor")
   requestedSalesReturns SalesReturns[]        @relation("SalesRequester")
   salesTargets          SalesTargets[]
-  ProductionLogs        ProductionLogs[]
+  Productions        Productions[]
   ManagementStocks      ManagementStocks[]
   PurchaseOrders        PurchaseOrders[]      @relation("CreatedPurchaseOrders")
   ConfirmedStocks       PurchaseOrders[]      @relation("StockConfirmationUser")
@@ -378,7 +378,7 @@ model StockMovements {
   previousStock          Int
   newStock               Int
   reference              String?
-  productionLogsItemsId  String?
+  productionItemsId  String?
   ManagementStockItemsId String?
   stockOpnameItemId      String?
   ordersId               String?
@@ -392,7 +392,7 @@ model StockMovements {
   orderId                Orders?                @relation(fields: [ordersId], references: [id])
   stockOpnameItem        StockOpnameItems?      @relation(fields: [stockOpnameItemId], references: [id], onDelete: Cascade)
   managementStockItemId  ManagementStockItems?  @relation(fields: [ManagementStockItemsId], references: [id])
-  productionLogItemId    ProductionLogItems?    @relation(fields: [productionLogsItemsId], references: [id])
+  productionLogItemId    ProductionItems?    @relation(fields: [productionItemsId], references: [id])
 
   @@map("stock_movements")
 }
@@ -456,7 +456,7 @@ model SalesReturnItems {
   @@map("sales_return_items")
 }
 
-model ProductionLogs {
+model Productions {
   id             String             @id @default(cuid())
   code           String             @unique
   productionDate DateTime           @default(now())
@@ -464,18 +464,18 @@ model ProductionLogs {
   notes          String?
   producedById   String
   producedBy     Users              @relation(fields: [producedById], references: [id])
-  items          ProductionLogItems[]
+  items          ProductionItems[]
 
   @@map("production_logs")
 }
 
-model ProductionLogItems {
+model ProductionItems {
   id              String           @id @default(cuid())
   quantity        Float
   productionLogId String
   productId       String
   notes           String?
-  productionLog   ProductionLogs   @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
+  productionLog   Productions   @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
   product         Products         @relation(fields: [productId], references: [id])
   StockMovements  StockMovements[]
 

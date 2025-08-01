@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getProductionLogs } from "@/lib/actions/productionLogs";
+import { getProductions } from "@/lib/actions/productions";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
@@ -16,7 +16,7 @@ export default async function ManajemenStokLayout({
     module: "inventory",
     subModule: "Produksi",
     allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
-    data: await getProductionLogs(), // Await the async function
+    data: await getProductions(), // Await the async function
   };
 
   return (

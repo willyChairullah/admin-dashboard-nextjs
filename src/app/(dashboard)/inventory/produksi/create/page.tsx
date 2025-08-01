@@ -13,7 +13,7 @@ import {
   createProductionLog,
   getAvailableProducts,
   getAvailableUsers,
-} from "@/lib/actions/productionLogs";
+} from "@/lib/actions/productions";
 // [PERBAIKAN IMPORT] Perbaiki import getActiveCategories
 import { getActiveCategories } from "@/lib/actions/categories"; // Pastikan path ini benar jika getActiveCategories ada di file ini
 import { useRouter } from "next/navigation";
@@ -264,7 +264,7 @@ export default function CreateProductionLogPage() {
       });
 
       if (result.success) {
-        toast.success("Production log berhasil dibuat.");
+        toast.success("Productions log berhasil dibuat.");
         router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
         const errorMessage = result.error || "Gagal membuat production log";

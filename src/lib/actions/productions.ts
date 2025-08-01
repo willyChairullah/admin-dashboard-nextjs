@@ -3,8 +3,8 @@
 
 import db from "@/lib/db";
 import {
-  ProductionLogs,
-  ProductionLogItems,
+  Productions,
+  ProductionItems,
   StockMovementType,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -23,12 +23,12 @@ export type ProductionLogFormData = {
   items: ProductionLogItemFormData[];
 };
 
-export type ProductionLogWithDetails = ProductionLogs & {
+export type ProductionLogWithDetails = Productions & {
   producedBy: {
     id: string;
     name: string;
   };
-  items: (ProductionLogItems & {
+  items: (ProductionItems & {
     product: {
       id: string;
       name: string;
@@ -38,9 +38,9 @@ export type ProductionLogWithDetails = ProductionLogs & {
 };
 
 // Get all production logs
-export async function getProductionLogs(): Promise<ProductionLogWithDetails[]> {
+export async function getProductions(): Promise<ProductionLogWithDetails[]> {
   try {
-    const productionLogs = await db.productionLogs.findMany({
+    const productions = await db.productions.findMany({
       include: {
         producedBy: {
           select: {
@@ -65,7 +65,7 @@ export async function getProductionLogs(): Promise<ProductionLogWithDetails[]> {
       },
     });
 
-    return productionLogs;
+    return productions;
   } catch (error) {
     console.error("Error fetching production logs:", error);
     throw new Error("Failed to fetch production logs");
@@ -77,7 +77,7 @@ export async function getProductionLogById(
   id: string
 ): Promise<ProductionLogWithDetails | null> {
   try {
-    const productionLog = await db.productionLogs.findUnique({
+    const productionLog = await db.productions.findUnique({
       where: { id },
       include: {
         producedBy: {
@@ -112,7 +112,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
   try {
     const result = await db.$transaction(async tx => {
       // Create production log
-      const productionLog = await tx.productionLogs.create({
+      const productionLog = await tx.productions.create({
         data: {
           code: data.code,
           productionDate: data.productionDate,
@@ -138,7 +138,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
         const newStock = previousStock + item.quantity;
 
         // Create production log item
-        const productionLogItem = await tx.productionLogItems.create({
+        const productionLogItem = await tx.productionItems.create({
           data: {
             quantity: item.quantity,
             productionLogId: productionLog.id,
@@ -160,10 +160,10 @@ export async function createProductionLog(data: ProductionLogFormData) {
             quantity: item.quantity,
             previousStock: previousStock,
             newStock: newStock,
-            reference: `Production Log #${productionLog.id}`,
+            reference: `Productions Log #${productionLog.id}`,
             productId: item.productId,
             userId: data.producedById,
-            productionLogsItemsId: productionLogItem.id,
+            productionItemsId: productionLogItem.id,
             notes: item.notes || null,
           },
         });
@@ -194,7 +194,7 @@ export async function updateProductionLog(
   try {
     const result = await db.$transaction(async tx => {
       // Get existing production log with items
-      const existingLog = await tx.productionLogs.findUnique({
+      const existingLog = await tx.productions.findUnique({
         where: { id },
         include: {
           items: true,
@@ -202,7 +202,7 @@ export async function updateProductionLog(
       });
 
       if (!existingLog) {
-        throw new Error("Production log not found");
+        throw new Error("Productions log not found");
       }
 
       // Reverse previous stock movements
@@ -223,17 +223,17 @@ export async function updateProductionLog(
 
         // Delete old stock movements
         await tx.stockMovements.deleteMany({
-          where: { productionLogsItemsId: existingItem.id },
+          where: { productionItemsId: existingItem.id },
         });
       }
 
       // Delete existing items
-      await tx.productionLogItems.deleteMany({
+      await tx.productionItems.deleteMany({
         where: { productionLogId: id },
       });
 
       // Update production log
-      const updatedLog = await tx.productionLogs.update({
+      const updatedLog = await tx.productions.update({
         where: { id },
         data: {
           productionDate: data.productionDate,
@@ -256,7 +256,7 @@ export async function updateProductionLog(
         const previousStock = product.currentStock;
         const newStock = previousStock + item.quantity;
 
-        const productionLogItem = await tx.productionLogItems.create({
+        const productionLogItem = await tx.productionItems.create({
           data: {
             quantity: item.quantity,
             productionLogId: updatedLog.id,
@@ -276,10 +276,10 @@ export async function updateProductionLog(
             quantity: item.quantity,
             previousStock: previousStock,
             newStock: newStock,
-            reference: `Production Log #${updatedLog.id}`,
+            reference: `Productions Log #${updatedLog.id}`,
             productId: item.productId,
             userId: data.producedById,
-            productionLogsItemsId: productionLogItem.id,
+            productionItemsId: productionLogItem.id,
             notes: item.notes || null,
           },
         });
@@ -308,7 +308,7 @@ export async function deleteProductionLog(id: string) {
   try {
     const result = await db.$transaction(async tx => {
       // Get production log with items
-      const productionLog = await tx.productionLogs.findUnique({
+      const productionLog = await tx.productions.findUnique({
         where: { id },
         include: {
           items: true,
@@ -316,7 +316,7 @@ export async function deleteProductionLog(id: string) {
       });
 
       if (!productionLog) {
-        throw new Error("Production log not found");
+        throw new Error("Productions log not found");
       }
 
       // Reverse stock changes
@@ -335,12 +335,12 @@ export async function deleteProductionLog(id: string) {
 
         // Delete related stock movements
         await tx.stockMovements.deleteMany({
-          where: { productionLogsItemsId: item.id },
+          where: { productionItemsId: item.id },
         });
       }
 
       // Delete production log (items will be cascade deleted)
-      await tx.productionLogs.delete({
+      await tx.productions.delete({
         where: { id },
       });
     });

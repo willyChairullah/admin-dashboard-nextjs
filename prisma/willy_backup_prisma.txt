@@ -80,7 +80,7 @@ model Products {
   stockMovements       StockMovements[]
   salesReturnItems     SalesReturnItems[] // Tambahan untuk Retur
   stockOpnameItems     StockOpnameItems[] // Tambahan untuk Stok Opname
-  ProductionLogItems   ProductionLogItems[]
+  ProductionItems   ProductionItems[]
   ManagementStockItems ManagementStockItems[]
   PurchaseOrderItems   PurchaseOrderItems[]
 
@@ -367,7 +367,7 @@ model StockMovements {
   orderId                Orders?               @relation(fields: [ordersId], references: [id])
   stockOpnameItem        StockOpnameItems?     @relation(fields: [stockOpnameItemId], references: [id], onDelete: Cascade)
   managementStockItemId  ManagementStockItems? @relation(fields: [ManagementStockItemsId], references: [id])
-  productionLogItemId    ProductionLogItems?   @relation(fields: [productionLogsItemsId], references: [id])
+  productionLogItemId    ProductionItems?   @relation(fields: [productionLogsItemsId], references: [id])
 
   @@map("stock_movements")
 }
@@ -439,12 +439,12 @@ model ProductionLogs {
   notes          String?
   producedById   String
   producedBy     Users                @relation(fields: [producedById], references: [id])
-  items          ProductionLogItems[]
+  items          ProductionItems[]
 
   @@map("production_logs")
 }
 
-model ProductionLogItems {
+model ProductionItems {
   id              String           @id @default(cuid())
   quantity        Float
   productionLogId String

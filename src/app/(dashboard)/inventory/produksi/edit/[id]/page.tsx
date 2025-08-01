@@ -15,7 +15,7 @@ import {
   getAvailableProducts,
   getAvailableUsers,
   deleteProductionLog,
-} from "@/lib/actions/productionLogs";
+} from "@/lib/actions/productions";
 import { useRouter, useParams } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
@@ -96,7 +96,7 @@ export default function EditProductionLogPage() {
         ]);
 
         if (!productionLog) {
-          toast.error("Production log tidak ditemukan");
+          toast.error("Productions log tidak ditemukan");
           router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
           return;
         }
@@ -290,7 +290,7 @@ export default function EditProductionLogPage() {
       });
 
       if (result.success) {
-        toast.success("Production log berhasil diperbarui.");
+        toast.success("Productions log berhasil diperbarui.");
         router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
         const errorMessage = result.error || "Gagal memperbarui production log";
