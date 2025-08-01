@@ -23,9 +23,9 @@ async function main() {
     await prisma.stockMovements.deleteMany({});
     await prisma.transactions.deleteMany({});
     await prisma.store.deleteMany({});
-    await prisma.products.deleteMany({}); // Tambahkan ini untuk membersihkan produk
-    await prisma.categories.deleteMany({}); // Tambahkan ini untuk membersihkan kategori
-    await prisma.customers.deleteMany({}); // Tambahkan ini untuk membersihkan pelanggan
+    await prisma.products.deleteMany({});
+    await prisma.categories.deleteMany({});
+    await prisma.customers.deleteMany({});
     const deletedUsers = await prisma.users.deleteMany({});
     console.log(`✅ Cleared ${deletedUsers.count} users and related data`);
 
@@ -131,7 +131,6 @@ async function main() {
       console.log(`✅ Created store: ${store.name}`);
     }
 
-    // --- Penambahan Kategori dan Produk Minyak ---
     console.log("📦 Creating categories and products...");
 
     const oilCategory = await prisma.categories.create({
@@ -241,9 +240,7 @@ async function main() {
       createdProducts.push(product);
       console.log(`✅ Created product: ${product.name}`);
     }
-    // --- Akhir Penambahan Kategori dan Produk Minyak ---
 
-    // --- Penambahan Pelanggan ---
     console.log("👥 Creating sample customers...");
     const customersToCreate = [
       {
@@ -298,18 +295,18 @@ async function main() {
       createdCustomers.push(customer);
       console.log(`✅ Created customer: ${customer.name}`);
     }
-    // --- Akhir Penambahan Pelanggan ---
 
-    // --- Penambahan Orders dan OrderItems ---
     console.log("📝 Creating sample orders and order items...");
 
+    // --- Order 1 ---
     const order1 = await prisma.orders.create({
       data: {
         id: uuid(),
         orderNumber: "ORD-202507-001",
         orderDate: new Date("2025-07-20T10:00:00Z"),
+        dueDate: new Date("2025-08-03T10:00:00Z"), // Jatuh tempo 14 hari
         status: "NEW",
-        totalAmount: 0, // Akan dihitung setelah item ditambahkan
+        totalAmount: 0,
         notes: "Pesanan pertama pelanggan Jaya Abadi",
         customerId: createdCustomers[0].id,
         salesId: salesUser.id,
@@ -350,7 +347,7 @@ async function main() {
         });
         totalAmountOrder1 += totalPrice;
         console.log(
-          `  ✅ Added item: ${product.name} to ${order1.orderNumber}`
+          `   ✅ Added item: ${product.name} to ${order1.orderNumber}`
         );
       }
     }
@@ -362,13 +359,15 @@ async function main() {
       `✅ Updated total amount for ${order1.orderNumber}: ${totalAmountOrder1}`
     );
 
+    // --- Order 2 ---
     const order2 = await prisma.orders.create({
       data: {
         id: uuid(),
         orderNumber: "ORD-202507-002",
         orderDate: new Date("2025-07-22T14:30:00Z"),
+        dueDate: new Date("2025-08-05T14:30:00Z"), // Jatuh tempo 14 hari
         status: "COMPLETED",
-        totalAmount: 0, // Akan dihitung setelah item ditambahkan
+        totalAmount: 0,
         notes: "Pesanan Toko Maju Mundur, sudah lunas",
         customerId: createdCustomers[1].id,
         salesId: salesUser.id,
@@ -411,7 +410,7 @@ async function main() {
         });
         totalAmountOrder2 += totalPrice;
         console.log(
-          `  ✅ Added item: ${product.name} to ${order2.orderNumber}`
+          `   ✅ Added item: ${product.name} to ${order2.orderNumber}`
         );
       }
     }
@@ -423,13 +422,15 @@ async function main() {
       `✅ Updated total amount for ${order2.orderNumber}: ${totalAmountOrder2}`
     );
 
+    // --- Order 3 ---
     const order3 = await prisma.orders.create({
       data: {
         id: uuid(),
         orderNumber: "ORD-202507-003",
         orderDate: new Date("2025-07-25T08:00:00Z"),
+        dueDate: new Date("2025-08-08T08:00:00Z"), // Jatuh tempo 14 hari
         status: "PENDING_CONFIRMATION",
-        totalAmount: 0, // Akan dihitung setelah item ditambahkan
+        totalAmount: 0,
         notes: "Menunggu konfirmasi dari admin",
         customerId: createdCustomers[2].id,
         salesId: salesUser.id,
@@ -467,7 +468,7 @@ async function main() {
         });
         totalAmountOrder3 += totalPrice;
         console.log(
-          `  ✅ Added item: ${product.name} to ${order3.orderNumber}`
+          `   ✅ Added item: ${product.name} to ${order3.orderNumber}`
         );
       }
     }
@@ -479,7 +480,181 @@ async function main() {
       `✅ Updated total amount for ${order3.orderNumber}: ${totalAmountOrder3}`
     );
 
-    // --- Akhir Penambahan Orders dan OrderItems ---
+    // --- Order 4 (Cancelled) ---
+    const order4 = await prisma.orders.create({
+      data: {
+        id: uuid(),
+        orderNumber: "ORD-202507-004",
+        orderDate: new Date("2025-07-26T11:00:00Z"),
+        dueDate: new Date("2025-08-09T11:00:00Z"), // Jatuh tempo 14 hari
+        status: "CANCELLED",
+        totalAmount: 0,
+        notes: "Dibatalkan oleh pelanggan",
+        customerId: createdCustomers[0].id,
+        salesId: salesUser.id,
+        deliveryAddress: "Jl. Merdeka No. 10, Bandung",
+        deliveryCity: "Bandung",
+        deliveryPostalCode: "40115",
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`✅ Created order: ${order4.orderNumber}`);
+    const orderItems4 = [
+      {
+        productId: createdProducts[2].id, // Minyak Indana 800 ml
+        quantity: 10,
+      },
+    ];
+    let totalAmountOrder4 = 0;
+    for (const item of orderItems4) {
+      const product = createdProducts.find(p => p.id === item.productId);
+      if (product) {
+        const totalPrice = item.quantity * product.price;
+        await prisma.orderItems.create({
+          data: {
+            id: uuid(),
+            orderId: order4.id,
+            productId: product.id,
+            quantity: item.quantity,
+            price: product.price,
+            totalPrice: totalPrice,
+            updatedAt: new Date(),
+          },
+        });
+        totalAmountOrder4 += totalPrice;
+        console.log(
+          `   ✅ Added item: ${product.name} to ${order4.orderNumber}`
+        );
+      }
+    }
+    await prisma.orders.update({
+      where: { id: order4.id },
+      data: { totalAmount: totalAmountOrder4 },
+    });
+    console.log(
+      `✅ Updated total amount for ${order4.orderNumber}: ${totalAmountOrder4}`
+    );
+
+    // --- Order 5 (Shipped) ---
+    const order5 = await prisma.orders.create({
+      data: {
+        id: uuid(),
+        orderNumber: "ORD-202507-005",
+        orderDate: new Date("2025-07-28T15:00:00Z"),
+        dueDate: new Date("2025-08-11T15:00:00Z"), // Jatuh tempo 14 hari
+        status: "NEW",
+        totalAmount: 0,
+        notes: "Pesanan besar, pengiriman prioritas",
+        customerId: createdCustomers[1].id,
+        salesId: salesUser.id,
+        deliveryAddress: "Jl. Pahlawan No. 25, Surabaya",
+        deliveryCity: "Surabaya",
+        deliveryPostalCode: "60174",
+        deliveryDate: new Date("2025-07-29T10:00:00Z"),
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`✅ Created order: ${order5.orderNumber}`);
+    const orderItems5 = [
+      {
+        productId: createdProducts[4].id, // Minyak Indana 1 Liter
+        quantity: 20,
+      },
+      {
+        productId: createdProducts[5].id, // Minyak Kita 1 Liter
+        quantity: 15,
+      },
+    ];
+    let totalAmountOrder5 = 0;
+    for (const item of orderItems5) {
+      const product = createdProducts.find(p => p.id === item.productId);
+      if (product) {
+        const totalPrice = item.quantity * product.price;
+        await prisma.orderItems.create({
+          data: {
+            id: uuid(),
+            orderId: order5.id,
+            productId: product.id,
+            quantity: item.quantity,
+            price: product.price,
+            totalPrice: totalPrice,
+            updatedAt: new Date(),
+          },
+        });
+        totalAmountOrder5 += totalPrice;
+        console.log(
+          `   ✅ Added item: ${product.name} to ${order5.orderNumber}`
+        );
+      }
+    }
+    await prisma.orders.update({
+      where: { id: order5.id },
+      data: { totalAmount: totalAmountOrder5 },
+    });
+    console.log(
+      `✅ Updated total amount for ${order5.orderNumber}: ${totalAmountOrder5}`
+    );
+
+    // --- Order 6 (New) ---
+    const order6 = await prisma.orders.create({
+      data: {
+        id: uuid(),
+        orderNumber: "ORD-202507-006",
+        orderDate: new Date("2025-07-30T09:30:00Z"),
+        dueDate: new Date("2025-08-13T09:30:00Z"), // Jatuh tempo 14 hari
+        status: "NEW",
+        totalAmount: 0,
+        notes: "Pesanan rutin Warung Sejahtera",
+        customerId: createdCustomers[2].id,
+        salesId: salesUser.id,
+        deliveryAddress: "Jl. Sudirman No. 50, Yogyakarta",
+        deliveryCity: "Yogyakarta",
+        deliveryPostalCode: "55223",
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`✅ Created order: ${order6.orderNumber}`);
+
+    const orderItems6 = [
+      {
+        productId: createdProducts[0].id, // Minyak Indana 250 ml
+        quantity: 12,
+      },
+      {
+        productId: createdProducts[1].id, // Minyak Indana 500 ml
+        quantity: 12,
+      },
+    ];
+
+    let totalAmountOrder6 = 0;
+    for (const item of orderItems6) {
+      const product = createdProducts.find(p => p.id === item.productId);
+      if (product) {
+        const totalPrice = item.quantity * product.price;
+        await prisma.orderItems.create({
+          data: {
+            id: uuid(),
+            orderId: order6.id,
+            productId: product.id,
+            quantity: item.quantity,
+            price: product.price,
+            totalPrice: totalPrice,
+            updatedAt: new Date(),
+          },
+        });
+        totalAmountOrder6 += totalPrice;
+        console.log(
+          `   ✅ Added item: ${product.name} to ${order6.orderNumber}`
+        );
+      }
+    }
+    await prisma.orders.update({
+      where: { id: order6.id },
+      data: { totalAmount: totalAmountOrder6 },
+    });
+    console.log(
+      `✅ Updated total amount for ${order6.orderNumber}: ${totalAmountOrder6}`
+    );
 
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
