@@ -40,26 +40,40 @@ const ManagementContent = <T extends Record<string, any>>({
     };
   }, []);
 
+  // const enhancedColumns = useMemo(() => {
+  //   return columns.map(column => {
+  //     // 1. Jika kolom punya properti 'cell' (seperti kolom harga)
+  //     // Ganti blok if yang lama dengan ini
+  //     if (column.cell && typeof column.cell === "function") {
+  //       // 1. Simpan fungsi 'cell' yang sudah divalidasi ke dalam konstanta baru
+  //       const cellFn = column.cell;
+
+  //       return {
+  //         ...column,
+  //         render: (value: any) => {
+  //           // 2. Panggil konstanta tersebut. Sekarang TypeScript yakin ini adalah fungsi.
+  //           return cellFn({ getValue: () => value });
+  //         },
+  //       };
+  //     }
+  //     return column;
+  //   });
+  // }, [columns, dateAccessor]);
+
   const enhancedColumns = useMemo(() => {
     return columns.map(column => {
-      // 1. Jika kolom punya properti 'cell' (seperti kolom harga)
-      // Ganti blok if yang lama dengan ini
+      // Jika Anda tetap ingin mengkonversi 'cell' ke 'render' secara universal
       if (column.cell && typeof column.cell === "function") {
-        // 1. Simpan fungsi 'cell' yang sudah divalidasi ke dalam konstanta baru
         const cellFn = column.cell;
-
         return {
           ...column,
-          render: (value: any) => {
-            // 2. Panggil konstanta tersebut. Sekarang TypeScript yakin ini adalah fungsi.
-            return cellFn({ getValue: () => value });
-          },
+          render: (value: any, row: any) => cellFn({ getValue: () => value }), // Pastikan 'row' juga diteruskan jika cellFn memerlukan
         };
       }
-      return column;
+      return column; // Kembalikan kolom apa adanya, karena 'render' sudah ada di definisi kolom
     });
-  }, [columns, dateAccessor]);
-
+  }, [columns]);
+  
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [searchQuery, setSearchQuery] = useState("");

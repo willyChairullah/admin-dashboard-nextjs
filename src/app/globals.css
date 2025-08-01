@@ -81,6 +81,64 @@ select {
     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* globals.css */
+
+/* Variabel CSS untuk konsistensi */
+:root {
+  /* Warna default untuk light mode */
+  --color-input-bg: #ffffff; /* bg-white */
+  --color-input-text: #1f2937; /* text-gray-900 */
+}
+
+.dark {
+  /* Warna untuk dark mode */
+  --color-input-bg: #1f2937; /* bg-gray-900 (atau yang Anda inginkan) */
+  --color-input-text: #e5e7eb; /* text-gray-100 (atau yang Anda inginkan) */
+}
+
+/* Ini yang paling penting untuk mengatasi autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px var(--color-input-bg) inset !important; /* Gunakan variabel */
+  -webkit-text-fill-color: var(
+    --color-input-text
+  ) !important; /* Gunakan variabel */
+  caret-color: var(--color-input-text) !important;
+  transition: background-color 5000s ease-in-out 0s; /* Trik transisi */
+}
+
+/* globals.css */
+
+/* Variabel CSS untuk konsistensi */
+:root {
+  /* Warna default untuk light mode */
+  --color-input-bg: #ffffff; /* bg-white */
+  --color-input-text: #101828; /* text-gray-900 */
+}
+
+.dark {
+  /* Warna untuk dark mode */
+  --color-input-bg: #101828; /* [PERUBAHAN]: Ganti dengan warna hitam pekat (black) */
+  /* Atau jika ingin warna yang lebih mendekati gray-950 Tailwind: #030712 */
+
+  --color-input-text: #e5e7eb; /* text-gray-100 (sesuaikan jika ingin warna teks lebih terang/gelap) */
+}
+
+/* Ini yang paling penting untuk mengatasi autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0px 1000px var(--color-input-bg) inset !important; /* Gunakan variabel */
+  -webkit-text-fill-color: var(
+    --color-input-text
+  ) !important; /* Gunakan variabel */
+  caret-color: var(--color-input-text) !important;
+  transition: background-color 5000s ease-in-out 0s; /* Trik transisi */
+}
+
 /* Mobile-specific styles for sidebar */
 @media (max-width: 768px) {
   .mobile-sidebar {

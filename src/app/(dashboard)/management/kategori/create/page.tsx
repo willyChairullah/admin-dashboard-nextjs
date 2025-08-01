@@ -1,6 +1,9 @@
 "use client";
+
 import { ManagementHeader } from "@/components/ui";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react"; // [PERUBAHAN] Tambahkan useEffect
+
 import {
   Input,
   FormField,
@@ -8,19 +11,28 @@ import {
   InputTextArea,
   ManagementForm,
 } from "@/components/ui";
+
 import { createCategory } from "@/lib/actions/categories";
+
 import { useRouter } from "next/navigation";
+
 import { useSharedData } from "@/contexts/StaticData";
-// --- [PERUBAHAN 1] Impor toast ---
+
 import { toast } from "sonner";
 
+import { generateCodeByTable } from "@/utils/getCode"; // [PERBAIKAN] Pastikan path import benar ke lokasi file db-helpers.ts Anda
+// Contoh: '@/lib/db-helpers' jika ada di lib
+// Contoh: '@/utils/getCode' jika ada di utils/getCode.ts
+
 interface CategoryFormData {
+  code: string;
   name: string;
   description: string;
   isActive: boolean;
 }
 
 interface CategoryFormErrors {
+  code?: string; // [PERUBAHAN] Tambahkan error untuk code jika perlu
   name?: string;
   description?: string;
   isActive?: string;
@@ -31,15 +43,57 @@ export default function CreateCategoryPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<CategoryFormData>({
+    code: "", // Akan diisi otomatis oleh useEffect
     name: "",
     description: "",
     isActive: true,
   });
 
   const [formErrors, setFormErrors] = useState<CategoryFormErrors>({});
+  const [isLoadingCode, setIsLoadingCode] = useState(true);
+  const [errorGeneratingCode, setErrorGeneratingCode] = useState<string | null>(
+    null
+  ); // [BARU] State untuk error generasi code
+
+  // --- [BARU] useEffect untuk menghasilkan dan mengisi kode saat komponen dimuat ---
+  useEffect(() => {
+    const fetchAndSetCode = async () => {
+      try {
+        setIsLoadingCode(true); // Mulai loading
+        setErrorGeneratingCode(null); // Reset error
+        // Panggil fungsi untuk mendapatkan kode otomatis untuk tabel 'Categories'
+        const newCode = await generateCodeByTable("Categories");
+
+        // Update state formData dengan kode yang baru
+        setFormData(prevData => ({
+          ...prevData, // Pertahankan nilai-nilai lain
+          code: newCode,
+        }));
+      } catch (error: any) {
+        console.error("Error generating initial category code:", error);
+        setErrorGeneratingCode(
+          error.message || "Gagal menghasilkan kode kategori awal."
+        );
+        // Anda bisa memilih untuk mengosongkan kode atau menampilkan pesan error
+        setFormData(prevData => ({
+          ...prevData,
+          code: "ERROR_CODE", // Contoh: bisa diisi dengan string error atau kosong
+        }));
+      } finally {
+        setIsLoadingCode(false); // Selesai loading
+      }
+    };
+
+    fetchAndSetCode();
+  }, []); // Array dependensi kosong agar hanya berjalan sekali saat komponen mount
 
   const validateForm = (): boolean => {
     const errors: CategoryFormErrors = {};
+
+    if (!formData.code.trim()) {
+      // [PERUBAHAN] Tambahkan validasi untuk code
+      errors.code = "Kode kategori tidak boleh kosong.";
+    }
 
     if (!formData.name.trim()) {
       errors.name = "Nama kategori wajib diisi";
@@ -61,8 +115,9 @@ export default function CreateCategoryPage() {
   ) => {
     setFormData({ ...formData, [field]: value });
 
+    // Hapus error terkait field yang diubah
     if (formErrors[field as keyof CategoryFormErrors]) {
-      setFormErrors({ ...formErrors, [field]: undefined });
+      setFormErrors(prevErrors => ({ ...prevErrors, [field]: undefined }));
     }
   };
 
@@ -70,7 +125,6 @@ export default function CreateCategoryPage() {
     e.preventDefault();
 
     if (!validateForm()) {
-      // Menampilkan toast jika validasi gagal
       toast.warning("Harap periksa kembali data yang Anda masukkan.");
       return;
     }
@@ -78,27 +132,26 @@ export default function CreateCategoryPage() {
     setIsSubmitting(true);
 
     try {
+      // Pastikan objek yang dikirim ke createCategory memiliki 'code'
       const result = await createCategory({
+        code: formData.code, // [PERUBAHAN] Kirimkan kode yang sudah digenerate
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         isActive: formData.isActive,
       });
 
       if (result.success) {
-        // --- [PERUBAHAN 2] Tambahkan toast sukses ---
         toast.success(`Kategori "${formData.name.trim()}" berhasil dibuat.`);
         router.push(`/${data.module}/${data.subModule.toLowerCase()}`);
       } else {
-        // --- [PERUBAHAN 3] Tambahkan toast error ---
         const errorMessage = result.error || `Gagal membuat ${data.subModule}`;
         toast.error(errorMessage);
         setFormErrors({
-          name: errorMessage,
+          name: errorMessage, // [PERUBAHAN] Arahkan error ke field 'name' atau 'code' yang sesuai
         });
       }
     } catch (error) {
       console.error(`Terjadi kesalahan saat membuat ${data.subModule}:`, error);
-      // --- [PERUBAHAN 4] Tambahkan toast untuk error tak terduga ---
       const errorMessage = "Terjadi kesalahan yang tidak terduga";
       toast.error(errorMessage);
       setFormErrors({ name: errorMessage });
@@ -107,11 +160,32 @@ export default function CreateCategoryPage() {
     }
   };
 
+  // --- [BARU] Tampilkan loading atau error saat mengambil kode awal ---
+  if (isLoadingCode) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+        <p className="text-gray-600 dark:text-gray-400">
+          Memuat formulir... Sedang menghasilkan kode kategori...
+        </p>
+      </div>
+    );
+  }
+
+  if (errorGeneratingCode) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+        <p className="text-red-500">
+          Error: {errorGeneratingCode}. Harap muat ulang halaman.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         headerTittle={`Buat ${data.subModule}`}
-        mainPageName={`/${data.module}/${data.subModule}`}
+        mainPageName={`/${data.module}/${data.subModule.toLowerCase()}`}
         allowedRoles={data.allowedRole}
       />
 
@@ -121,6 +195,21 @@ export default function CreateCategoryPage() {
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
       >
+        <FormField
+          label="Kode Kategori"
+          htmlFor="code"
+          required
+          errorMessage={formErrors.code}
+        >
+          <Input
+            type="text"
+            name="code"
+            value={formData.code}
+            readOnly // Kode digenerate otomatis, tidak bisa diubah manual
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+          />
+        </FormField>
+
         <FormField
           label="Nama Kategori"
           htmlFor="name"

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "purchase_orders" ADD COLUMN     "dateline" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

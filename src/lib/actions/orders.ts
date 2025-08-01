@@ -139,6 +139,7 @@ export async function createOrder({
         requiresConfirmation,
         notes: notes || null,
         orderDate: new Date(),
+        deliveryAddress: storeAddress || "Alamat belum ditentukan",
         updatedAt: new Date(),
       },
     });
