@@ -56,7 +56,10 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
     }
 
     // Validate period format
-    const isValidPeriod = validatePeriodFormat(formData.targetPeriod, formData.targetType);
+    const isValidPeriod = validatePeriodFormat(
+      formData.targetPeriod,
+      formData.targetType
+    );
     if (!isValidPeriod) {
       toast.error("Invalid period format. Please check the example format.");
       return;
@@ -92,7 +95,7 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
           targetAmount: "",
         });
         setIsOpen(false);
-        
+
         // Call onSuccess callback to refresh parent component
         console.log("🔄 Calling onSuccess callback to refresh targets...");
         onSuccess?.();
@@ -180,16 +183,24 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
                 setFormData({ ...formData, targetPeriod: e.target.value })
               }
               className={`${
-                formData.targetPeriod && !validatePeriodFormat(formData.targetPeriod, formData.targetType)
+                formData.targetPeriod &&
+                !validatePeriodFormat(
+                  formData.targetPeriod,
+                  formData.targetType
+                )
                   ? "border-red-500 focus:ring-red-500"
                   : ""
               }`}
             />
-            {formData.targetPeriod && !validatePeriodFormat(formData.targetPeriod, formData.targetType) && (
-              <p className="text-red-500 text-xs mt-1">
-                Invalid format. Use: {generatePeriodPlaceholder()}
-              </p>
-            )}
+            {formData.targetPeriod &&
+              !validatePeriodFormat(
+                formData.targetPeriod,
+                formData.targetType
+              ) && (
+                <p className="text-red-500 text-xs mt-1">
+                  Invalid format. Use: {generatePeriodPlaceholder()}
+                </p>
+              )}
           </FormField>
 
           <FormField label="Target Amount" htmlFor="targetAmount" required>

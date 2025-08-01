@@ -5,7 +5,10 @@ import Link from "next/link";
 import Card from "@/components/ui/common/Card";
 import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
 import { TargetForm } from "@/components/ui/TargetForm";
-import { getTargetsForChart, createSalesTarget } from "@/lib/actions/sales-targets";
+import {
+  getTargetsForChart,
+  createSalesTarget,
+} from "@/lib/actions/sales-targets";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   TrendingUp,
@@ -79,13 +82,13 @@ export default function RevenueAnalytics() {
     console.log("RevenueAnalytics: user state changed", {
       user: user,
       userLoading: userLoading,
-      userId: user?.id
+      userId: user?.id,
     });
   }, [user, userLoading]);
 
   const fetchTargets = async () => {
     console.log("fetchTargets called with:", { userId: user?.id, timeRange });
-    
+
     if (!user?.id) {
       console.log("fetchTargets: No user ID, skipping");
       return;
@@ -99,16 +102,16 @@ export default function RevenueAnalytics() {
           : timeRange === "quarter"
           ? "QUARTERLY"
           : "YEARLY";
-      
+
       console.log("fetchTargets: Calling getTargetsForChart with:", {
         userId: user.id,
-        targetType
+        targetType,
       });
-      
+
       const targetData = await getTargetsForChart(user.id, targetType);
-      
+
       console.log("fetchTargets: Received target data:", targetData);
-      
+
       setTargets(targetData);
     } catch (error) {
       console.error("Error fetching targets:", error);
@@ -127,7 +130,7 @@ export default function RevenueAnalytics() {
   // Debug function to test target creation
   const debugCreateTarget = async () => {
     if (!user?.id) return;
-    
+
     console.log("🧪 Debug: Testing target creation...");
     try {
       const result = await createSalesTarget({
@@ -135,11 +138,11 @@ export default function RevenueAnalytics() {
         targetType: "MONTHLY",
         targetPeriod: "2025-07",
         targetAmount: 5000000,
-        isActive: true
+        isActive: true,
       });
-      
+
       console.log("🧪 Debug: Create result:", result);
-      
+
       if (result.success) {
         toast.success("Debug target created!");
         fetchTargets();

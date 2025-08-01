@@ -12,7 +12,9 @@ export default function DebugTargetsPage() {
 
   const fetchDebugData = async () => {
     try {
-      const response = await fetch(`/api/debug/targets?userId=${user?.id}&targetType=MONTHLY`);
+      const response = await fetch(
+        `/api/debug/targets?userId=${user?.id}&targetType=MONTHLY`
+      );
       const result = await response.json();
       setDebugData(result);
     } catch (error) {
@@ -53,13 +55,15 @@ export default function DebugTargetsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Debug Targets Page</h1>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form Section */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Target Form Test</h2>
           <div className="border rounded-lg p-4">
-            <p className="mb-4">Current User: {user.name} ({user.id})</p>
+            <p className="mb-4">
+              Current User: {user.name} ({user.id})
+            </p>
             <TargetForm userId={user.id} onSuccess={handleTargetSuccess} />
           </div>
         </div>

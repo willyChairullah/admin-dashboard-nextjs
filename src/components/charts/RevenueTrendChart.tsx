@@ -59,18 +59,35 @@ export function RevenueTrendChart({
   const targetData = data.map((item, index) => {
     // Convert month name to YYYY-MM format for matching
     const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
-    
-    const monthIndex = monthNames.findIndex(name => name.toLowerCase() === item.month.toLowerCase());
+
+    const monthIndex = monthNames.findIndex(
+      (name) => name.toLowerCase() === item.month.toLowerCase()
+    );
     if (monthIndex !== -1) {
       const currentYear = new Date().getFullYear();
-      const periodFormat = `${currentYear}-${(monthIndex + 1).toString().padStart(2, "0")}`;
-      
+      const periodFormat = `${currentYear}-${(monthIndex + 1)
+        .toString()
+        .padStart(2, "0")}`;
+
       const matchingTarget = targets.find((t) => t.period === periodFormat);
       if (matchingTarget) {
-        console.log(`Found target for ${item.month} (${periodFormat}):`, matchingTarget);
+        console.log(
+          `Found target for ${item.month} (${periodFormat}):`,
+          matchingTarget
+        );
         return matchingTarget.target;
       }
     }

@@ -48,7 +48,9 @@ export async function getSalesTargets(): Promise<SalesTargetWithUser[]> {
 }
 
 // Get sales target by ID
-export async function getSalesTargetById(id: string): Promise<SalesTargets | null> {
+export async function getSalesTargetById(
+  id: string
+): Promise<SalesTargets | null> {
   try {
     const target = await db.salesTargets.findUnique({
       where: { id },
@@ -66,7 +68,7 @@ export async function getSalesTargetById(id: string): Promise<SalesTargets | nul
 
 // Get sales target for specific user and period
 export async function getUserSalesTarget(
-  userId: string, 
+  userId: string,
   targetPeriod: string
 ): Promise<SalesTargets | null> {
   try {
@@ -86,11 +88,15 @@ export async function getUserSalesTarget(
 }
 
 // Get current month target for user
-export async function getCurrentMonthTarget(userId: string): Promise<SalesTargets | null> {
+export async function getCurrentMonthTarget(
+  userId: string
+): Promise<SalesTargets | null> {
   try {
     const currentDate = new Date();
-    const targetPeriod = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    
+    const targetPeriod = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1
+    ).padStart(2, "0")}`;
+
     return await getUserSalesTarget(userId, targetPeriod);
   } catch (error) {
     console.error("Error fetching current month target:", error);
@@ -101,27 +107,31 @@ export async function getCurrentMonthTarget(userId: string): Promise<SalesTarget
 // Create new sales target
 export async function createSalesTarget(data: SalesTargetFormData) {
   console.log("🎯 createSalesTarget called with data:", data);
-  
+
   try {
     // First, check if the user exists
     console.log("🔍 Checking if user exists:", data.userId);
     const userExists = await db.users.findUnique({
       where: { id: data.userId },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true },
     });
 
     console.log("👤 User exists check result:", userExists);
 
     if (!userExists) {
       console.log("❌ User not found");
-      return { 
-        success: false, 
-        error: "User tidak ditemukan. Silakan login ulang atau hubungi administrator." 
+      return {
+        success: false,
+        error:
+          "User tidak ditemukan. Silakan login ulang atau hubungi administrator.",
       };
     }
 
     // Check if target already exists for this user and period
-    console.log("🔍 Checking for existing target:", { userId: data.userId, targetPeriod: data.targetPeriod });
+    console.log("🔍 Checking for existing target:", {
+      userId: data.userId,
+      targetPeriod: data.targetPeriod,
+    });
     const existingTarget = await db.salesTargets.findFirst({
       where: {
         userId: data.userId,
@@ -133,9 +143,10 @@ export async function createSalesTarget(data: SalesTargetFormData) {
 
     if (existingTarget) {
       console.log("❌ Target already exists for this period");
-      return { 
-        success: false, 
-        error: "Target untuk periode ini sudah ada. Silakan edit target yang sudah ada." 
+      return {
+        success: false,
+        error:
+          "Target untuk periode ini sudah ada. Silakan edit target yang sudah ada.",
       };
     }
 
@@ -159,23 +170,26 @@ export async function createSalesTarget(data: SalesTargetFormData) {
     console.error("💥 Error creating sales target:", error);
     console.error("💥 Error type:", typeof error);
     console.error("💥 Error constructor:", error?.constructor?.name);
-    
+
     // Handle specific Prisma errors
     if (error instanceof Error) {
       console.error("💥 Error message:", error.message);
       console.error("💥 Error stack:", error.stack);
-      
-      if (error.message.includes('Foreign key constraint')) {
-        return { 
-          success: false, 
-          error: "User tidak valid. Silakan login ulang atau hubungi administrator." 
+
+      if (error.message.includes("Foreign key constraint")) {
+        return {
+          success: false,
+          error:
+            "User tidak valid. Silakan login ulang atau hubungi administrator.",
         };
       }
     }
-    
-    return { 
-      success: false, 
-      error: `Failed to create sales target: ${error instanceof Error ? error.message : String(error)}` 
+
+    return {
+      success: false,
+      error: `Failed to create sales target: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     };
   }
 }
@@ -193,9 +207,9 @@ export async function updateSalesTarget(id: string, data: SalesTargetFormData) {
     });
 
     if (existingTarget) {
-      return { 
-        success: false, 
-        error: "Target untuk periode ini sudah ada untuk user tersebut." 
+      return {
+        success: false,
+        error: "Target untuk periode ini sudah ada untuk user tersebut.",
       };
     }
 
@@ -261,7 +275,11 @@ export async function toggleSalesTargetStatus(id: string) {
 }
 
 // Update achieved amount (called when orders are created/updated)
-export async function updateAchievedAmount(userId: string, targetPeriod: string, newAmount: number) {
+export async function updateAchievedAmount(
+  userId: string,
+  targetPeriod: string,
+  newAmount: number
+) {
   try {
     const target = await db.salesTargets.findFirst({
       where: {
@@ -272,7 +290,10 @@ export async function updateAchievedAmount(userId: string, targetPeriod: string,
     });
 
     if (!target) {
-      return { success: false, error: "No active target found for this period" };
+      return {
+        success: false,
+        error: "No active target found for this period",
+      };
     }
 
     const updatedTarget = await db.salesTargets.update({
@@ -290,20 +311,23 @@ export async function updateAchievedAmount(userId: string, targetPeriod: string,
 }
 
 // Generate target period string
-export async function generateTargetPeriod(targetType: TargetType, date: Date = new Date()): Promise<string> {
+export async function generateTargetPeriod(
+  targetType: TargetType,
+  date: Date = new Date()
+): Promise<string> {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
-  
+
   switch (targetType) {
     case "MONTHLY":
-      return `${year}-${String(month).padStart(2, '0')}`;
+      return `${year}-${String(month).padStart(2, "0")}`;
     case "QUARTERLY":
       const quarter = Math.ceil(month / 3);
       return `${year}-Q${quarter}`;
     case "YEARLY":
       return `${year}`;
     default:
-      return `${year}-${String(month).padStart(2, '0')}`;
+      return `${year}-${String(month).padStart(2, "0")}`;
   }
 }
 
@@ -333,10 +357,13 @@ export async function getSalesUsers() {
 }
 
 // Get targets for chart display
-export async function getTargetsForChart(userId?: string, targetType: TargetType = "MONTHLY") {
+export async function getTargetsForChart(
+  userId?: string,
+  targetType: TargetType = "MONTHLY"
+) {
   try {
     const where = userId ? { userId } : {};
-    
+
     const targets = await db.salesTargets.findMany({
       where: {
         ...where,
@@ -344,16 +371,19 @@ export async function getTargetsForChart(userId?: string, targetType: TargetType
         isActive: true,
       },
       orderBy: {
-        targetPeriod: 'asc',
+        targetPeriod: "asc",
       },
     });
 
     // Transform to chart format
-    return targets.map(target => ({
+    return targets.map((target) => ({
       period: target.targetPeriod,
       target: target.targetAmount,
       achieved: target.achievedAmount,
-      percentage: target.targetAmount > 0 ? (target.achievedAmount / target.targetAmount) * 100 : 0,
+      percentage:
+        target.targetAmount > 0
+          ? (target.achievedAmount / target.targetAmount) * 100
+          : 0,
     }));
   } catch (error) {
     console.error("Error fetching targets for chart:", error);

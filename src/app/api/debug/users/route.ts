@@ -9,22 +9,25 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
-        isActive: true
+        isActive: true,
       },
       where: {
-        isActive: true
-      }
+        isActive: true,
+      },
     });
 
     return NextResponse.json({
       success: true,
-      users
+      users,
     });
   } catch (error) {
     console.error("Get users error:", error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
