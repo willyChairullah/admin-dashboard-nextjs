@@ -70,6 +70,26 @@ export default function OrdersPage() {
     loadProducts();
   }, []);
 
+  // Auto-populate customer info when store is selected
+  useEffect(() => {
+    if (useExistingStore && selectedStore) {
+      const selectedStoreData = stores.find(store => store.id === selectedStore);
+      if (selectedStoreData) {
+        // Auto-populate customer information based on store
+        setCustomerName(selectedStoreData.name);
+        setCustomerPhone(selectedStoreData.phone || "");
+        setCustomerEmail(""); // Reset email as stores might not have email
+        setDeliveryAddress(selectedStoreData.address);
+      }
+    } else if (!useExistingStore) {
+      // Reset when switching to new store
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerEmail("");
+      setDeliveryAddress("");
+    }
+  }, [selectedStore, useExistingStore, stores]);
+
   const loadStores = async () => {
     try {
       const result = await getStores();
@@ -419,10 +439,17 @@ export default function OrdersPage() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/10 dark:to-blue-900/10 rounded-xl -z-10"></div>
                 <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
-                  <h4 className="flex items-center text-lg font-bold text-gray-900 dark:text-white mb-6">
-                    <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mr-3"></div>
-                    Informasi Customer
-                  </h4>
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="flex items-center text-lg font-bold text-gray-900 dark:text-white">
+                      <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mr-3"></div>
+                      Informasi Customer
+                    </h4>
+                    {useExistingStore && selectedStore && (
+                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                        Auto dari toko terpilih
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 gap-4 sm:gap-6">
                     <div className="min-w-0">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -433,7 +460,12 @@ export default function OrdersPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Masukkan nama customer"
-                        className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                        disabled={useExistingStore && selectedStore}
+                        className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
+                          useExistingStore && selectedStore
+                            ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
+                            : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
+                        }`}
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -446,7 +478,12 @@ export default function OrdersPage() {
                           value={customerEmail}
                           onChange={(e) => setCustomerEmail(e.target.value)}
                           placeholder="email@customer.com"
-                          className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                          disabled={useExistingStore && selectedStore}
+                          className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
+                            useExistingStore && selectedStore
+                              ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
+                              : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
+                          }`}
                         />
                       </div>
                       <div className="min-w-0">
@@ -458,7 +495,12 @@ export default function OrdersPage() {
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
                           placeholder="08xxxxxxxxxx"
-                          className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                          disabled={useExistingStore && selectedStore}
+                          className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
+                            useExistingStore && selectedStore
+                              ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
+                              : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
+                          }`}
                         />
                       </div>
                     </div>
@@ -470,10 +512,17 @@ export default function OrdersPage() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 rounded-xl -z-10"></div>
                 <div className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
-                  <h4 className="flex items-center text-lg font-bold text-gray-900 dark:text-white mb-6">
-                    <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mr-3"></div>
-                    Informasi Pengiriman & Pembayaran
-                  </h4>
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="flex items-center text-lg font-bold text-gray-900 dark:text-white">
+                      <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mr-3"></div>
+                      Informasi Pengiriman & Pembayaran
+                    </h4>
+                    {useExistingStore && selectedStore && (
+                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">
+                        Alamat auto dari toko
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 gap-6">
                     <div className="min-w-0">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -484,7 +533,12 @@ export default function OrdersPage() {
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Masukkan alamat lengkap pengiriman"
                         rows={3}
-                        className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl resize-none"
+                        disabled={useExistingStore && selectedStore}
+                        className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 resize-none ${
+                          useExistingStore && selectedStore
+                            ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
+                            : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:shadow-xl"
+                        }`}
                       />
                     </div>
 
