@@ -276,10 +276,30 @@ export default function OrderHistoryPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <OrderStatsCard
-            stats={stats}
-            period="berdasarkan filter yang dipilih"
+            title="Total Orders"
+            value={stats.total}
+            color="blue"
+            icon={<Package className="h-6 w-6" />}
+          />
+          <OrderStatsCard
+            title="Menunggu Konfirmasi"
+            value={stats.pending}
+            color="yellow"
+            icon={<Clock className="h-6 w-6" />}
+          />
+          <OrderStatsCard
+            title="Dalam Proses"
+            value={stats.inProcess}
+            color="orange"
+            icon={<ShoppingCart className="h-6 w-6" />}
+          />
+          <OrderStatsCard
+            title="Selesai"
+            value={stats.completed}
+            color="green"
+            icon={<CheckCircle className="h-6 w-6" />}
           />
         </div>
 

@@ -70,7 +70,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
     if (
       hasChildren &&
       item.children.some(
-        child =>
+        (child) =>
           pathname === child.href || pathname.startsWith(child.href + "/")
       )
     ) {
@@ -202,7 +202,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
           }}
         >
           <div ref={submenuRef} className="space-y-1 pt-1">
-            {item.children?.map(child => {
+            {item.children?.map((child) => {
               const isChildActive =
                 pathname === child.href ||
                 pathname.startsWith(child.href + "/");
@@ -658,9 +658,9 @@ export default function SideBar({
         )}
 
         {/* Menu Items */}
-        <nav className="flex-1 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto pb-20">
           {menuItems.length > 0 ? (
-            <ul className="space-y-2 px-3 mt-4 pb-24">
+            <ul className="space-y-2 px-3 mt-4">
               {menuItems.map((item: MenuItem) => {
                 // --- PERUBAHAN DIMULAI DI SINI ---
                 // Logika baru untuk isActive:
@@ -693,7 +693,7 @@ export default function SideBar({
               })}
             </ul>
           ) : (
-            <div className="flex justify-center items-center h-screen pb-44">
+            <div className="flex justify-center items-center h-full">
               <div className="px-3 py-6 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {shouldShowExpanded ? "No accessible modules" : "N/A"}
@@ -703,13 +703,23 @@ export default function SideBar({
           )}
         </nav>
 
-        {/* Sticky Footer */}
-      </div>
-      <div className="sticky bottom-0 left-0 right-0 px-3 pb-3 pt-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-            © 2025 Indana ERP
-          </p>
+        {/* Footer */}
+        <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+          {shouldShowExpanded ? (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-lg p-2.5">
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center font-medium">
+                © 2025 Indana ERP
+              </p>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-lg flex items-center justify-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400 font-bold">
+                  ©
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
