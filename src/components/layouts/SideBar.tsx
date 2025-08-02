@@ -321,22 +321,22 @@ export default function SideBar({
         href: "#",
         roles: ["WAREHOUSE", "ADMIN", "OWNER"], // Added roles
         children: [
-          {
-            id: "stock-dashboard",
-            label: "Stock Dashboard",
-            icon: "",
-            href: "/inventory/dashboard",
-            children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
-          },
-          {
-            id: "item-list",
-            label: "Item List",
-            icon: "",
-            href: "/inventory/items",
-            children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
-          },
+          // {
+          //   id: "stock-dashboard",
+          //   label: "Stock Dashboard",
+          //   icon: "",
+          //   href: "/inventory/dashboard",
+          //   children: [],
+          //   roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+          // },
+          // {
+          //   id: "item-list",
+          //   label: "Item List",
+          //   icon: "",
+          //   href: "/inventory/items",
+          //   children: [],
+          //   roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+          // },
           {
             id: "Produksi",
             label: "Produksi",

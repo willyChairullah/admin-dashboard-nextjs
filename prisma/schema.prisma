@@ -617,6 +617,13 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERPAID
+}
+
 enum OrderStatus {
   NEW
   PROCESSING
@@ -691,13 +698,6 @@ enum StockConfirmationStatus {
   WAITING_CONFIRMATION
   STOCK_AVAILABLE
   INSUFFICIENT_STOCK
-}
-
-enum PaymentStatus {
-  UNPAID
-  PARTIALLY_PAID
-  PAID
-  OVERPAID
 }
 
 enum PreparationStatus {
