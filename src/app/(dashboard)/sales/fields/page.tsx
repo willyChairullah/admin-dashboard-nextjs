@@ -46,7 +46,11 @@ export default function SalesFieldPage() {
   const [filteredStores, setFilteredStores] = useState<Store[]>([]);
   const [storeSearchQuery, setStoreSearchQuery] = useState("");
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -451,7 +455,8 @@ export default function SalesFieldPage() {
                           if (storeSearchQuery.trim() !== "") {
                             setShowStoreDropdown(true);
                             if (inputRef.current) {
-                              const rect = inputRef.current.getBoundingClientRect();
+                              const rect =
+                                inputRef.current.getBoundingClientRect();
                               setDropdownPosition({
                                 top: rect.bottom + window.scrollY + 8,
                                 left: rect.left + window.scrollX,
@@ -463,52 +468,57 @@ export default function SalesFieldPage() {
                         placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
                         className="block w-full px-4 py-4 text-base border-2 border-blue-200/50 dark:border-blue-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
                       />
-                      <ChevronDown 
+                      <ChevronDown
                         className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform ${
-                          showStoreDropdown ? 'rotate-180' : ''
-                        }`} 
+                          showStoreDropdown ? "rotate-180" : ""
+                        }`}
                       />
                     </div>
 
                     {/* Portal Dropdown */}
-                    {showStoreDropdown && typeof window !== 'undefined' && createPortal(
-                      <div
-                        ref={dropdownRef}
-                        style={{
-                          position: 'absolute',
-                          top: dropdownPosition.top,
-                          left: dropdownPosition.left,
-                          width: dropdownPosition.width,
-                          zIndex: 9999,
-                        }}
-                        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
-                      >
-                        {filteredStores.length > 0 ? (
-                          filteredStores.map((store) => (
-                            <button
-                              key={store.id}
-                              type="button"
-                              onClick={() => handleStoreSelect(store.id, store.name)}
-                              className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
-                            >
-                              <div className="font-semibold text-gray-900 dark:text-white">
-                                {store.name}
+                    {showStoreDropdown &&
+                      typeof window !== "undefined" &&
+                      createPortal(
+                        <div
+                          ref={dropdownRef}
+                          style={{
+                            position: "absolute",
+                            top: dropdownPosition.top,
+                            left: dropdownPosition.left,
+                            width: dropdownPosition.width,
+                            zIndex: 9999,
+                          }}
+                          className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
+                        >
+                          {filteredStores.length > 0 ? (
+                            filteredStores.map((store) => (
+                              <button
+                                key={store.id}
+                                type="button"
+                                onClick={() =>
+                                  handleStoreSelect(store.id, store.name)
+                                }
+                                className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
+                              >
+                                <div className="font-semibold text-gray-900 dark:text-white">
+                                  {store.name}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                                  {store.address}
+                                </div>
+                              </button>
+                            ))
+                          ) : storeSearchQuery ? (
+                            <div className="px-4 py-3">
+                              <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
+                                Tidak ditemukan toko dengan kata kunci "
+                                {storeSearchQuery}"
                               </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                                {store.address}
-                              </div>
-                            </button>
-                          ))
-                        ) : storeSearchQuery ? (
-                          <div className="px-4 py-3">
-                            <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
-                              Tidak ditemukan toko dengan kata kunci "{storeSearchQuery}"
                             </div>
-                          </div>
-                        ) : null}
-                      </div>,
-                      document.body
-                    )}
+                          ) : null}
+                        </div>,
+                        document.body
+                      )}
 
                     {/* Search results info */}
                     {storeSearchQuery && !showStoreDropdown && (

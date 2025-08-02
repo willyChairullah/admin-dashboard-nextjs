@@ -112,8 +112,9 @@ export async function createOrder({
           data: {
             name: storeName,
             address:
-              storeAddress ||
-              `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
+              storeAddress && storeAddress.trim()
+                ? storeAddress.trim()
+                : `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
           },
         });
         finalStoreId = newStore.id;
@@ -139,7 +140,8 @@ export async function createOrder({
           name: customerName,
           email: customerEmail || null,
           phone: customerPhone || null,
-          address: deliveryAddress || storeAddress || "Alamat belum diverifikasi",
+          address:
+            deliveryAddress || storeAddress || "Alamat belum diverifikasi",
           city: "Unknown", // Default city since it's required
           updatedAt: new Date(),
         },

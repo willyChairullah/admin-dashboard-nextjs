@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import { ShoppingCart, Plus, Trash2, Users } from "lucide-react";
+import { useState, useRef, useEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { ShoppingCart, Plus, Trash2, Users, ChevronDown } from "lucide-react";
 import { createOrder } from "@/lib/actions/orders";
 import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -45,11 +46,26 @@ export default function OrdersPage() {
   const [selectedStore, setSelectedStore] = useState("");
   const [storeName, setStoreName] = useState("");
   const [storeAddress, setStoreAddress] = useState("");
+  const [storeCity, setStoreCity] = useState("");
   const [useExistingStore, setUseExistingStore] = useState(true);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Store search states
+  const [storeSearchQuery, setStoreSearchQuery] = useState("");
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+  const [filteredStores, setFilteredStores] = useState<Store[]>([]);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
+
+  // Refs for dropdown functionality
+  const storeInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // New form states for shipping, discount, and payment
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -73,6 +89,25 @@ export default function OrdersPage() {
     loadProducts();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        storeInputRef.current &&
+        !storeInputRef.current.contains(event.target as Node)
+      ) {
+        setShowStoreDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Auto-populate customer info when store is selected
   useEffect(() => {
     if (useExistingStore && selectedStore) {
@@ -92,6 +127,10 @@ export default function OrdersPage() {
       setCustomerPhone("");
       setCustomerEmail("");
       setDeliveryAddress("");
+      setStoreSearchQuery("");
+      setSelectedStore("");
+      setShowStoreDropdown(false);
+      setStoreCity("");
     }
   }, [selectedStore, useExistingStore, stores]);
 
@@ -100,6 +139,7 @@ export default function OrdersPage() {
       const result = await getStores();
       if (result.success) {
         setStores(result.data);
+        setFilteredStores(result.data);
       }
     } catch (error) {
       console.error("Error loading stores:", error);
@@ -116,6 +156,46 @@ export default function OrdersPage() {
     } finally {
       setLoadingProducts(false);
     }
+  };
+
+  const handleStoreSearch = (query: string) => {
+    setStoreSearchQuery(query);
+    if (query.trim() === "") {
+      setFilteredStores(stores);
+      setShowStoreDropdown(false);
+    } else {
+      const filtered = stores.filter(
+        (store) =>
+          store.name.toLowerCase().includes(query.toLowerCase()) ||
+          store.address.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredStores(filtered);
+      setShowStoreDropdown(true);
+
+      // Calculate dropdown position
+      if (storeInputRef.current) {
+        const rect = storeInputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+
+      // Clear selected store if it's not in the filtered results
+      if (
+        selectedStore &&
+        !filtered.find((store) => store.id === selectedStore)
+      ) {
+        setSelectedStore("");
+      }
+    }
+  };
+
+  const handleStoreSelect = (storeId: string, storeName: string) => {
+    setSelectedStore(storeId);
+    setStoreSearchQuery(storeName);
+    setShowStoreDropdown(false);
   };
 
   const addItem = () => {
@@ -177,8 +257,23 @@ export default function OrdersPage() {
       return;
     }
 
+    if (!useExistingStore && !storeAddress) {
+      alert("Masukkan alamat toko.");
+      return;
+    }
+
+    if (!useExistingStore && !storeCity) {
+      alert("Masukkan nama kota toko.");
+      return;
+    }
+
     if (!customerName) {
       alert("Masukkan nama customer.");
+      return;
+    }
+
+    if (!deliveryAddress) {
+      alert("Masukkan alamat pengiriman.");
       return;
     }
 
@@ -230,6 +325,10 @@ export default function OrdersPage() {
             setSelectedStore("");
             setStoreName("");
             setStoreAddress("");
+            setStoreCity("");
+            setStoreSearchQuery("");
+            setShowStoreDropdown(false);
+            setFilteredStores(stores);
             setCustomerName("");
             setCustomerEmail("");
             setCustomerPhone("");
@@ -386,36 +485,92 @@ export default function OrdersPage() {
                   </div>
 
                   {useExistingStore ? (
-                    <div className="relative">
-                      <select
-                        value={selectedStore}
-                        onChange={(e) => setSelectedStore(e.target.value)}
-                        className="block w-full pl-4 pr-10 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
-                      >
-                        <option value="">Pilih toko</option>
-                        {stores.map((store) => (
-                          <option key={store.id} value={store.id}>
-                            {store.name} - {store.address}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                        <div className="w-5 h-5 text-gray-400">
-                          <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </div>
+                    <>
+                      {/* Modern Searchable Input with Portal Dropdown */}
+                      <div className="relative">
+                        <input
+                          ref={storeInputRef}
+                          type="text"
+                          value={storeSearchQuery}
+                          onChange={(e) => handleStoreSearch(e.target.value)}
+                          onFocus={() => {
+                            if (storeSearchQuery.trim() !== "") {
+                              setShowStoreDropdown(true);
+                              if (storeInputRef.current) {
+                                const rect =
+                                  storeInputRef.current.getBoundingClientRect();
+                                setDropdownPosition({
+                                  top: rect.bottom + window.scrollY + 8,
+                                  left: rect.left + window.scrollX,
+                                  width: rect.width,
+                                });
+                              }
+                            }
+                          }}
+                          placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
+                          className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                        />
+                        <ChevronDown
+                          className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform ${
+                            showStoreDropdown ? "rotate-180" : ""
+                          }`}
+                        />
                       </div>
-                    </div>
+
+                      {/* Portal Dropdown */}
+                      {showStoreDropdown &&
+                        typeof window !== "undefined" &&
+                        createPortal(
+                          <div
+                            ref={dropdownRef}
+                            style={{
+                              position: "absolute",
+                              top: dropdownPosition.top,
+                              left: dropdownPosition.left,
+                              width: dropdownPosition.width,
+                              zIndex: 9999,
+                            }}
+                            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
+                          >
+                            {filteredStores.length > 0 ? (
+                              filteredStores.map((store) => (
+                                <button
+                                  key={store.id}
+                                  type="button"
+                                  onClick={() =>
+                                    handleStoreSelect(store.id, store.name)
+                                  }
+                                  className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
+                                >
+                                  <div className="font-semibold text-gray-900 dark:text-white">
+                                    {store.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                                    {store.address}
+                                  </div>
+                                </button>
+                              ))
+                            ) : storeSearchQuery ? (
+                              <div className="px-4 py-3">
+                                <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
+                                  Tidak ditemukan toko dengan kata kunci "
+                                  {storeSearchQuery}"
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>,
+                          document.body
+                        )}
+
+                      {/* Search results info */}
+                      {storeSearchQuery && !showStoreDropdown && (
+                        <div className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                          {filteredStores.length > 0
+                            ? `Ditemukan ${filteredStores.length} dari ${stores.length} toko`
+                            : `Tidak ditemukan toko dengan kata kunci "${storeSearchQuery}"`}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="space-y-4">
                       <div>
@@ -432,13 +587,25 @@ export default function OrdersPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Alamat Toko
+                          Alamat Toko *
                         </label>
                         <input
                           type="text"
                           value={storeAddress}
                           onChange={(e) => setStoreAddress(e.target.value)}
-                          placeholder="Masukkan alamat toko (opsional)"
+                          placeholder="Masukkan alamat toko lengkap"
+                          className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Nama Kota *
+                        </label>
+                        <input
+                          type="text"
+                          value={storeCity}
+                          onChange={(e) => setStoreCity(e.target.value)}
+                          placeholder="Masukkan nama kota"
                           className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                         />
                       </div>

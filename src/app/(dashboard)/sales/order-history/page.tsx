@@ -22,9 +22,9 @@ import {
 } from "lucide-react";
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { OrderTracking, OrderStatsCard } from "@/components/sales";
 import Loading from "@/components/ui/common/Loading";
 import { Button } from "@/components/ui/common";
+import { OrderTracking } from "@/components/sales";
 
 interface OrderItem {
   id: string;
