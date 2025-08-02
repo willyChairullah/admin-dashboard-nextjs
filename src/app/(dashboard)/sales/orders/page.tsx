@@ -73,7 +73,9 @@ export default function OrdersPage() {
   // Auto-populate customer info when store is selected
   useEffect(() => {
     if (useExistingStore && selectedStore) {
-      const selectedStoreData = stores.find(store => store.id === selectedStore);
+      const selectedStoreData = stores.find(
+        (store) => store.id === selectedStore
+      );
       if (selectedStoreData) {
         // Auto-populate customer information based on store
         setCustomerName(selectedStoreData.name);
@@ -460,7 +462,7 @@ export default function OrdersPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Masukkan nama customer"
-                        disabled={useExistingStore && selectedStore}
+                        disabled={useExistingStore && !!selectedStore}
                         className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
                           useExistingStore && selectedStore
                             ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
@@ -478,7 +480,7 @@ export default function OrdersPage() {
                           value={customerEmail}
                           onChange={(e) => setCustomerEmail(e.target.value)}
                           placeholder="email@customer.com"
-                          disabled={useExistingStore && selectedStore}
+                          disabled={useExistingStore && !!selectedStore}
                           className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
                             useExistingStore && selectedStore
                               ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
@@ -495,7 +497,7 @@ export default function OrdersPage() {
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
                           placeholder="08xxxxxxxxxx"
-                          disabled={useExistingStore && selectedStore}
+                          disabled={useExistingStore && !!selectedStore}
                           className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
                             useExistingStore && selectedStore
                               ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
@@ -533,7 +535,7 @@ export default function OrdersPage() {
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Masukkan alamat lengkap pengiriman"
                         rows={3}
-                        disabled={useExistingStore && selectedStore}
+                        disabled={useExistingStore && !!selectedStore}
                         className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 resize-none ${
                           useExistingStore && selectedStore
                             ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
