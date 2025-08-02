@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Package,
   Clock,
@@ -16,6 +17,8 @@ import {
   Mail,
   Phone,
   FileText,
+  Edit,
+  ExternalLink,
 } from "lucide-react";
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -53,7 +56,8 @@ interface Order {
   status: string;
   notes?: string;
   customer: Customer;
-  order_items?: OrderItem[];
+  orderItems?: OrderItem[];
+  order_items?: OrderItem[]; // Support both formats
 }
 
 export default function OrderHistoryPage() {
@@ -274,15 +278,6 @@ export default function OrderHistoryPage() {
             </div>
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="mb-6 sm:mb-8">
-          <OrderStatsCard
-            stats={stats}
-            period="berdasarkan filter yang dipilih"
-          />
-        </div>
-
         {/* Filters */}
         <div className="mb-6 sm:mb-8">
           <div className="bg-gradient-to-br from-white/80 via-purple-50/60 to-blue-50/40 dark:from-gray-800/80 dark:via-purple-900/60 dark:to-blue-900/40 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 p-6 sm:p-8">
@@ -380,15 +375,24 @@ export default function OrderHistoryPage() {
                             {formatDate(order.orderDate)}
                           </div>
                         </div>
-                        <button
-                          onClick={() => toggleOrderExpansion(order.id)}
-                          className="p-3 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
-                          aria-label={
-                            isExpanded ? "Tutup detail" : "Lihat detail"
-                          }
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleOrderExpansion(order.id)}
+                            className="p-3 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
+                            aria-label={
+                              isExpanded ? "Tutup detail" : "Lihat detail"
+                            }
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          <Link
+                            href={`/sales/orders/${order.id}`}
+                            className="p-3 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
+                            aria-label="Edit order"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
 
@@ -448,38 +452,43 @@ export default function OrderHistoryPage() {
                         <div className="mb-6">
                           <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                             <Package className="w-5 h-5 mr-2 text-purple-500" />
-                            Items Order ({order.order_items?.length || 0} items)
+                            Items Order (
+                            {(order.orderItems || order.order_items)?.length ||
+                              0}{" "}
+                            items)
                           </h4>
                           <div className="bg-gradient-to-br from-purple-50/50 to-pink-50/30 dark:from-purple-900/20 dark:to-pink-900/10 backdrop-blur-sm rounded-xl p-4 border border-purple-100/50 dark:border-purple-800/30">
                             <div className="space-y-3">
-                              {order.order_items?.map((item, index) => (
-                                <div
-                                  key={item.id}
-                                  className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-purple-100/50 dark:border-purple-800/30"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-sm font-semibold text-gray-900 dark:text-white block break-words">
-                                      {index + 1}.{" "}
-                                      {item.products?.name ||
-                                        `Product ${item.productId}`}
-                                    </span>
-                                    {item.products?.code && (
-                                      <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                                        ({item.products.code})
+                              {(order.orderItems || order.order_items)?.map(
+                                (item: OrderItem, index: number) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-purple-100/50 dark:border-purple-800/30"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-semibold text-gray-900 dark:text-white block break-words">
+                                        {index + 1}.{" "}
+                                        {item.products?.name ||
+                                          `Product ${item.productId}`}
                                       </span>
-                                    )}
-                                  </div>
-                                  <div className="text-left sm:text-right text-sm text-gray-700 dark:text-gray-300 flex-shrink-0 font-medium">
-                                    <span className="break-all">
-                                      {item.quantity} ×{" "}
-                                      {formatCurrency(item.price)} ={" "}
-                                      <span className="font-bold text-purple-600 dark:text-purple-400">
-                                        {formatCurrency(item.totalPrice)}
+                                      {item.products?.code && (
+                                        <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                                          ({item.products.code})
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-left sm:text-right text-sm text-gray-700 dark:text-gray-300 flex-shrink-0 font-medium">
+                                      <span className="break-all">
+                                        {item.quantity} ×{" "}
+                                        {formatCurrency(item.price)} ={" "}
+                                        <span className="font-bold text-purple-600 dark:text-purple-400">
+                                          {formatCurrency(item.totalPrice)}
+                                        </span>
                                       </span>
-                                    </span>
+                                    </div>
                                   </div>
-                                </div>
-                              )) || (
+                                )
+                              ) || (
                                 <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                                   <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                   Tidak ada item order

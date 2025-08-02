@@ -83,7 +83,8 @@ export async function createOrder({
     // Calculate total amount with discounts
     let subtotal = items.reduce((sum: number, item: OrderItem) => {
       const itemTotal = item.quantity * item.price;
-      const itemDiscount = discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0;
+      const itemDiscount =
+        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
       return sum + (itemTotal - itemDiscount);
     }, 0);
 
@@ -138,7 +139,7 @@ export async function createOrder({
           name: customerName,
           email: customerEmail || null,
           phone: customerPhone || null,
-          address: storeAddress || "Alamat belum diverifikasi",
+          address: deliveryAddress || storeAddress || "Alamat belum diverifikasi",
           city: "Unknown", // Default city since it's required
           updatedAt: new Date(),
         },
@@ -158,15 +159,17 @@ export async function createOrder({
         requiresConfirmation,
         notes: notes || null,
         orderDate: new Date(),
-        dueDate: paymentType === "IMMEDIATE" 
-          ? new Date() 
-          : paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Immediate or deadline/7 days default
+        dueDate:
+          paymentType === "IMMEDIATE"
+            ? new Date()
+            : paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Immediate or deadline/7 days default
         deliveryAddress:
           deliveryAddress || storeAddress || "Alamat belum ditentukan",
-        discount: discountType === "TOTAL" ? (discount || 0) : 0,
+        discount: discountType === "TOTAL" ? discount || 0 : 0,
         discountType: (discountType as any) || "TOTAL",
         shippingCost: shippingCost || 0,
-        paymentDeadline: paymentType === "IMMEDIATE" ? null : (paymentDeadline || null),
+        paymentDeadline:
+          paymentType === "IMMEDIATE" ? null : paymentDeadline || null,
         updatedAt: new Date(),
       },
     });
@@ -204,7 +207,8 @@ export async function createOrder({
       }
 
       // Create order item
-      const itemDiscount = discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0;
+      const itemDiscount =
+        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
       const orderItem = await db.orderItems.create({
         data: {
           orderId: order.id,
@@ -314,9 +318,15 @@ export async function getOrders({
       },
     });
 
+    // Transform the data to match the expected format
+    const transformedOrders = orders.map((order) => ({
+      ...order,
+      order_items: order.orderItems,
+    }));
+
     return {
       success: true,
-      data: orders,
+      data: transformedOrders,
     };
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -405,6 +415,156 @@ export async function confirmOrder({
     };
   } catch (error) {
     console.error("Error confirming order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function getOrderById(orderId: string) {
+  try {
+    const order = await db.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Transform the data to match the expected format
+    const transformedOrder = {
+      ...order,
+      order_items: order.orderItems,
+    };
+
+    return {
+      success: true,
+      data: transformedOrder,
+    };
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function updateOrder({
+  orderId,
+  notes,
+  deliveryAddress,
+  paymentDeadline,
+  items,
+}: {
+  orderId: string;
+  notes?: string;
+  deliveryAddress?: string;
+  paymentDeadline?: Date;
+  items: Array<{
+    id?: string;
+    productId: string;
+    quantity: number;
+    price: number;
+  }>;
+}) {
+  try {
+    // Check if order exists and can be edited
+    const existingOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    if (!existingOrder) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Only allow editing for NEW and PENDING_CONFIRMATION status
+    if (!["NEW", "PENDING_CONFIRMATION"].includes(existingOrder.status)) {
+      return {
+        success: false,
+        error: "Order cannot be edited in current status",
+      };
+    }
+
+    // Calculate new total amount
+    const totalAmount = items.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0
+    );
+
+    // Update order
+    const updatedOrder = await db.orders.update({
+      where: { id: orderId },
+      data: {
+        notes: notes || undefined,
+        deliveryAddress: deliveryAddress || undefined,
+        paymentDeadline: paymentDeadline || undefined,
+        totalAmount,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Handle order items - delete existing and create new ones
+    await db.orderItems.deleteMany({
+      where: { orderId },
+    });
+
+    // Create new order items
+    for (const item of items) {
+      await db.orderItems.create({
+        data: {
+          orderId,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          totalPrice: item.quantity * item.price,
+        },
+      });
+    }
+
+    // Fetch updated order with relations
+    const completeOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    revalidatePath("/sales/order-history");
+
+    return {
+      success: true,
+      data: completeOrder,
+      message: "Order berhasil diperbarui!",
+    };
+  } catch (error) {
+    console.error("Error updating order:", error);
     return {
       success: false,
       error: "Internal server error",

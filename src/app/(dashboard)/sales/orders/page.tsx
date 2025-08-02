@@ -58,7 +58,9 @@ export default function OrdersPage() {
   );
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
   const [shippingCost, setShippingCost] = useState<number>(0);
-  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEADLINE">("IMMEDIATE");
+  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEADLINE">(
+    "IMMEDIATE"
+  );
   const [paymentDeadline, setPaymentDeadline] = useState("");
 
   const [items, setItems] = useState<OrderItem[]>([
@@ -214,9 +216,10 @@ export default function OrdersPage() {
             discount: totalDiscount,
             shippingCost,
             paymentType,
-            paymentDeadline: paymentType === "DEADLINE" && paymentDeadline
-              ? new Date(paymentDeadline)
-              : undefined,
+            paymentDeadline:
+              paymentType === "DEADLINE" && paymentDeadline
+                ? new Date(paymentDeadline)
+                : undefined,
             requiresConfirmation: true, // Always require confirmation
           });
 
@@ -618,7 +621,7 @@ export default function OrdersPage() {
                             </span>
                           </label>
                         </div>
-                        
+
                         {paymentType === "DEADLINE" && (
                           <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -627,8 +630,10 @@ export default function OrdersPage() {
                             <input
                               type="date"
                               value={paymentDeadline}
-                              onChange={(e) => setPaymentDeadline(e.target.value)}
-                              min={new Date().toISOString().split('T')[0]}
+                              onChange={(e) =>
+                                setPaymentDeadline(e.target.value)
+                              }
+                              min={new Date().toISOString().split("T")[0]}
                               className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                             />
                           </div>
