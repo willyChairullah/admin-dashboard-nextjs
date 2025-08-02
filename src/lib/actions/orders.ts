@@ -24,6 +24,7 @@ export async function createOrder({
   discountType,
   discount,
   shippingCost,
+  paymentType,
   paymentDeadline,
   requiresConfirmation = false,
 }: {
@@ -40,6 +41,7 @@ export async function createOrder({
   discountType?: string;
   discount?: number;
   shippingCost?: number;
+  paymentType?: "IMMEDIATE" | "DEADLINE";
   paymentDeadline?: Date;
   requiresConfirmation?: boolean;
 }) {
@@ -156,13 +158,15 @@ export async function createOrder({
         requiresConfirmation,
         notes: notes || null,
         orderDate: new Date(),
-        dueDate: paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days from now
+        dueDate: paymentType === "IMMEDIATE" 
+          ? new Date() 
+          : paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Immediate or deadline/7 days default
         deliveryAddress:
           deliveryAddress || storeAddress || "Alamat belum ditentukan",
         discount: discountType === "TOTAL" ? (discount || 0) : 0,
         discountType: (discountType as any) || "TOTAL",
         shippingCost: shippingCost || 0,
-        paymentDeadline: paymentDeadline || null,
+        paymentDeadline: paymentType === "IMMEDIATE" ? null : (paymentDeadline || null),
         updatedAt: new Date(),
       },
     });

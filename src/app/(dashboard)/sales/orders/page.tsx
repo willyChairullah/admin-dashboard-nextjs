@@ -58,6 +58,7 @@ export default function OrdersPage() {
   );
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
   const [shippingCost, setShippingCost] = useState<number>(0);
+  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEADLINE">("IMMEDIATE");
   const [paymentDeadline, setPaymentDeadline] = useState("");
 
   const [items, setItems] = useState<OrderItem[]>([
@@ -179,6 +180,11 @@ export default function OrdersPage() {
       return;
     }
 
+    if (paymentType === "DEADLINE" && !paymentDeadline) {
+      alert("Masukkan tenggat pembayaran.");
+      return;
+    }
+
     if (
       items.some(
         (item) => !item.productName || item.quantity <= 0 || item.price <= 0
@@ -207,7 +213,8 @@ export default function OrdersPage() {
             discountType,
             discount: totalDiscount,
             shippingCost,
-            paymentDeadline: paymentDeadline
+            paymentType,
+            paymentDeadline: paymentType === "DEADLINE" && paymentDeadline
               ? new Date(paymentDeadline)
               : undefined,
             requiresConfirmation: true, // Always require confirmation
@@ -571,14 +578,61 @@ export default function OrdersPage() {
 
                       <div className="min-w-0">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                          Tenggat Pembayaran
+                          Jenis Pembayaran
                         </label>
-                        <input
-                          type="date"
-                          value={paymentDeadline}
-                          onChange={(e) => setPaymentDeadline(e.target.value)}
-                          className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
-                        />
+                        <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4">
+                          <label
+                            className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                              paymentType === "IMMEDIATE"
+                                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg transform scale-105"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="paymentType"
+                              checked={paymentType === "IMMEDIATE"}
+                              onChange={() => setPaymentType("IMMEDIATE")}
+                              className="sr-only"
+                            />
+                            <span className="text-sm font-medium">
+                              Langsung Bayar
+                            </span>
+                          </label>
+                          <label
+                            className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                              paymentType === "DEADLINE"
+                                ? "bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg transform scale-105"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="paymentType"
+                              checked={paymentType === "DEADLINE"}
+                              onChange={() => setPaymentType("DEADLINE")}
+                              className="sr-only"
+                            />
+                            <span className="text-sm font-medium">
+                              Dengan Tenggat
+                            </span>
+                          </label>
+                        </div>
+                        
+                        {paymentType === "DEADLINE" && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                              Tenggat Pembayaran *
+                            </label>
+                            <input
+                              type="date"
+                              value={paymentDeadline}
+                              onChange={(e) => setPaymentDeadline(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="block w-full px-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
 
