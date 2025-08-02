@@ -76,28 +76,6 @@ export default function SalesFieldPage() {
     };
   }, []);
 
-  // Update dropdown position when window resizes
-  useEffect(() => {
-    const updatePosition = () => {
-      if (inputRef.current && showStoreDropdown) {
-        const rect = inputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY + 8,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-        });
-      }
-    };
-
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition);
-    
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition);
-    };
-  }, [showStoreDropdown]);
-
   const loadStores = async () => {
     try {
       const result = await getStores();
@@ -213,8 +191,8 @@ export default function SalesFieldPage() {
       );
       setFilteredStores(filtered);
       setShowStoreDropdown(true);
-      
-      // Update dropdown position
+
+      // Calculate dropdown position
       if (inputRef.current) {
         const rect = inputRef.current.getBoundingClientRect();
         setDropdownPosition({
@@ -238,49 +216,6 @@ export default function SalesFieldPage() {
     setSelectedStore(storeId);
     setStoreSearchQuery(storeName);
     setShowStoreDropdown(false);
-  };
-
-  // Portal Dropdown Component
-  const PortalDropdown = () => {
-    if (!showStoreDropdown || typeof window === 'undefined') return null;
-
-    return createPortal(
-      <div
-        ref={dropdownRef}
-        className="fixed bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
-        style={{
-          top: dropdownPosition.top,
-          left: dropdownPosition.left,
-          width: dropdownPosition.width,
-          zIndex: 999999,
-        }}
-      >
-        {filteredStores.length > 0 ? (
-          filteredStores.map((store) => (
-            <button
-              key={store.id}
-              type="button"
-              onClick={() => handleStoreSelect(store.id, store.name)}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
-            >
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {store.name}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                {store.address}
-              </div>
-            </button>
-          ))
-        ) : storeSearchQuery ? (
-          <div className="px-4 py-3">
-            <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
-              Tidak ditemukan toko dengan kata kunci "{storeSearchQuery}"
-            </div>
-          </div>
-        ) : null}
-      </div>,
-      document.body
-    );
   };
 
   const deleteUploadedFile = async (filePath: string) => {
@@ -535,8 +470,45 @@ export default function SalesFieldPage() {
                       />
                     </div>
 
-                    {/* Portal-based Dropdown */}
-                    <PortalDropdown />
+                    {/* Portal Dropdown */}
+                    {showStoreDropdown && typeof window !== 'undefined' && createPortal(
+                      <div
+                        ref={dropdownRef}
+                        style={{
+                          position: 'absolute',
+                          top: dropdownPosition.top,
+                          left: dropdownPosition.left,
+                          width: dropdownPosition.width,
+                          zIndex: 9999,
+                        }}
+                        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
+                      >
+                        {filteredStores.length > 0 ? (
+                          filteredStores.map((store) => (
+                            <button
+                              key={store.id}
+                              type="button"
+                              onClick={() => handleStoreSelect(store.id, store.name)}
+                              className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
+                            >
+                              <div className="font-semibold text-gray-900 dark:text-white">
+                                {store.name}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                                {store.address}
+                              </div>
+                            </button>
+                          ))
+                        ) : storeSearchQuery ? (
+                          <div className="px-4 py-3">
+                            <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
+                              Tidak ditemukan toko dengan kata kunci "{storeSearchQuery}"
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>,
+                      document.body
+                    )}
 
                     {/* Search results info */}
                     {storeSearchQuery && !showStoreDropdown && (
