@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   Camera,
   CheckCircle,
@@ -8,6 +9,7 @@ import {
   Users,
   MapPin,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
@@ -44,9 +46,11 @@ export default function SalesFieldPage() {
   const [filteredStores, setFilteredStores] = useState<Store[]>([]);
   const [storeSearchQuery, setStoreSearchQuery] = useState("");
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -58,7 +62,9 @@ export default function SalesFieldPage() {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
       ) {
         setShowStoreDropdown(false);
       }
@@ -69,6 +75,28 @@ export default function SalesFieldPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Update dropdown position when window resizes
+  useEffect(() => {
+    const updatePosition = () => {
+      if (inputRef.current && showStoreDropdown) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    };
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition);
+    
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition);
+    };
+  }, [showStoreDropdown]);
 
   const loadStores = async () => {
     try {
@@ -185,6 +213,16 @@ export default function SalesFieldPage() {
       );
       setFilteredStores(filtered);
       setShowStoreDropdown(true);
+      
+      // Update dropdown position
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
 
       // Clear selected store if it's not in the filtered results
       if (
@@ -200,6 +238,49 @@ export default function SalesFieldPage() {
     setSelectedStore(storeId);
     setStoreSearchQuery(storeName);
     setShowStoreDropdown(false);
+  };
+
+  // Portal Dropdown Component
+  const PortalDropdown = () => {
+    if (!showStoreDropdown || typeof window === 'undefined') return null;
+
+    return createPortal(
+      <div
+        ref={dropdownRef}
+        className="fixed bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
+        style={{
+          top: dropdownPosition.top,
+          left: dropdownPosition.left,
+          width: dropdownPosition.width,
+          zIndex: 999999,
+        }}
+      >
+        {filteredStores.length > 0 ? (
+          filteredStores.map((store) => (
+            <button
+              key={store.id}
+              type="button"
+              onClick={() => handleStoreSelect(store.id, store.name)}
+              className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
+            >
+              <div className="font-semibold text-gray-900 dark:text-white">
+                {store.name}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                {store.address}
+              </div>
+            </button>
+          ))
+        ) : storeSearchQuery ? (
+          <div className="px-4 py-3">
+            <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
+              Tidak ditemukan toko dengan kata kunci "{storeSearchQuery}"
+            </div>
+          </div>
+        ) : null}
+      </div>,
+      document.body
+    );
   };
 
   const deleteUploadedFile = async (filePath: string) => {
@@ -329,7 +410,7 @@ export default function SalesFieldPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-indigo-900/20 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-indigo-900/20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Header */}
         <div className="mb-8">
@@ -366,7 +447,7 @@ export default function SalesFieldPage() {
 
         {/* Check-in Form */}
         <div className="max-w-3xl mx-auto">
-          <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
+          <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/20">
             {/* Form Header */}
             <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 sm:p-8">
               <div className="absolute inset-0 bg-black/10"></div>
@@ -424,65 +505,47 @@ export default function SalesFieldPage() {
 
                 {useExistingStore ? (
                   <>
-                    {/* Searchable dropdown for existing stores */}
-                    <div className="relative" ref={dropdownRef}>
+                    {/* Modern Searchable Input with Portal Dropdown */}
+                    <div className="relative">
                       <input
+                        ref={inputRef}
                         type="text"
                         value={storeSearchQuery}
                         onChange={(e) => handleStoreSearch(e.target.value)}
                         onFocus={() => {
                           if (storeSearchQuery.trim() !== "") {
                             setShowStoreDropdown(true);
+                            if (inputRef.current) {
+                              const rect = inputRef.current.getBoundingClientRect();
+                              setDropdownPosition({
+                                top: rect.bottom + window.scrollY + 8,
+                                left: rect.left + window.scrollX,
+                                width: rect.width,
+                              });
+                            }
                           }
                         }}
                         placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
                         className="block w-full px-4 py-4 text-base border-2 border-blue-200/50 dark:border-blue-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
                       />
-
-                      {/* Custom Dropdown */}
-                      {showStoreDropdown && filteredStores.length > 0 && (
-                        <div className="absolute z-20 w-full mt-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto">
-                          {filteredStores.map((store) => (
-                            <button
-                              key={store.id}
-                              type="button"
-                              onClick={() =>
-                                handleStoreSelect(store.id, store.name)
-                              }
-                              className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
-                            >
-                              <div className="font-semibold text-gray-900 dark:text-white">
-                                {store.name}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                                {store.address}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Show "no results" message */}
-                      {showStoreDropdown &&
-                        filteredStores.length === 0 &&
-                        storeSearchQuery && (
-                          <div className="absolute z-20 w-full mt-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-red-200/50 dark:border-red-700/50 rounded-xl shadow-2xl p-4">
-                            <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
-                              Tidak ditemukan toko dengan kata kunci "
-                              {storeSearchQuery}"
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Search results info */}
-                      {storeSearchQuery && !showStoreDropdown && (
-                        <div className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
-                          {filteredStores.length > 0
-                            ? `Ditemukan ${filteredStores.length} dari ${stores.length} toko`
-                            : `Tidak ditemukan toko dengan kata kunci "${storeSearchQuery}"`}
-                        </div>
-                      )}
+                      <ChevronDown 
+                        className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform ${
+                          showStoreDropdown ? 'rotate-180' : ''
+                        }`} 
+                      />
                     </div>
+
+                    {/* Portal-based Dropdown */}
+                    <PortalDropdown />
+
+                    {/* Search results info */}
+                    {storeSearchQuery && !showStoreDropdown && (
+                      <div className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                        {filteredStores.length > 0
+                          ? `Ditemukan ${filteredStores.length} dari ${stores.length} toko`
+                          : `Tidak ditemukan toko dengan kata kunci "${storeSearchQuery}"`}
+                      </div>
+                    )}
 
                     {/* Store location info */}
                     {selectedStore &&
