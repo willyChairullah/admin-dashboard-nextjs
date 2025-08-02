@@ -12,7 +12,7 @@ export type StockMovementFormData = {
   productId: string;
   userId: string;
   ordersId?: string;
-  productionLogsItemsId?: string;
+  productionItemsId?: string;
 };
 
 export type StockMovementWithRelations = StockMovements & {
@@ -278,7 +278,7 @@ export async function createStockMovement(data: StockMovementFormData) {
           productId: data.productId,
           userId: data.userId,
           ordersId: data.ordersId,
-          productionLogsItemsId: data.productionLogsItemsId,
+          productionItemsId: data.productionItemsId,
         },
       });
 

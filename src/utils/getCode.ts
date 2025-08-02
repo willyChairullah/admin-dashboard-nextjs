@@ -145,7 +145,7 @@ async function getLastCodeForCurrentMonth(
         break;
 
       case "ProductionLogs":
-        const lastProductionLog = await db.productionLogs.findFirst({
+        const lastProductionLog = await db.productions.findFirst({
           where: {
             code: {
               startsWith: codePrefix,
