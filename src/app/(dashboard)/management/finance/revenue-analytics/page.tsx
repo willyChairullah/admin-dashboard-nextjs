@@ -101,7 +101,11 @@ export default function RevenueAnalytics() {
           ? "QUARTERLY"
           : "YEARLY";
 
-      const targetData = await getTargetsForChart(user.id, targetType);
+      const targetData = await getTargetsForChart(
+        user.id,
+        targetType,
+        user.role
+      );
       setTargets(targetData);
     } catch (error) {
       console.error("Error fetching targets:", error);
@@ -321,15 +325,16 @@ export default function RevenueAnalytics() {
 
               {/* Right side - Controls */}
               <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 lg:gap-4 lg:flex-shrink-0">
-                {/* Target Form */}
-                {user?.id && (
-                  <div className="flex-shrink-0">
-                    <TargetForm
-                      userId={user.id}
-                      onSuccess={handleTargetSuccess}
-                    />
-                  </div>
-                )}
+                {/* Target Form - Show for SALES, OWNER, and ADMIN users */}
+                {user?.id &&
+                  (user?.role === "OWNER" || user?.role === "ADMIN") && (
+                    <div className="flex-shrink-0">
+                      <TargetForm
+                        userId={user.id}
+                        onSuccess={handleTargetSuccess}
+                      />
+                    </div>
+                  )}
 
                 {/* Time range buttons */}
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl lg:rounded-2xl p-1 sm:p-2">
@@ -550,8 +555,16 @@ export default function RevenueAnalytics() {
             {targets.length > 0 && (
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Revenue Targets Overview
+                  {user?.role === "OWNER" || user?.role === "ADMIN"
+                    ? "Company Revenue Targets Overview"
+                    : "Personal Revenue Targets Overview"}
                 </h4>
+                {user?.role === "OWNER" || user?.role === "ADMIN" ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    Aggregated targets and achievements from all sales
+                    representatives
+                  </p>
+                ) : null}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {targets.slice(0, 6).map((target) => (
                     <div

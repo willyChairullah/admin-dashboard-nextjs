@@ -2,23 +2,55 @@
 
 import React, { useState, useEffect } from "react";
 import { Input, FormField } from "@/components/ui";
-import { createSalesTarget } from "@/lib/actions/sales-targets";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getSalesUsers } from "@/lib/actions/user";
 
 interface TargetFormProps {
   userId?: string;
   onSuccess?: () => void;
 }
 
+interface SalesUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export function TargetForm({ userId, onSuccess }: TargetFormProps) {
+  const { user: currentUser } = useCurrentUser();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [salesUsers, setSalesUsers] = useState<SalesUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [formData, setFormData] = useState({
     targetType: "MONTHLY" as "MONTHLY" | "QUARTERLY" | "YEARLY",
     targetPeriod: "",
     targetAmount: "",
+    selectedUserId: userId || "", // Default to current user for SALES, empty for OWNER/ADMIN
   });
+
+  // Fetch sales users when form opens (for OWNER/ADMIN)
+  const fetchSalesUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const users = await getSalesUsers();
+      setSalesUsers(users);
+    } catch (error) {
+      console.error("Error fetching sales users:", error);
+      toast.error("Failed to load sales users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // When form opens, fetch sales users if user is OWNER/ADMIN
+  useEffect(() => {
+    if (isOpen && (currentUser?.role === "OWNER" || currentUser?.role === "ADMIN")) {
+      fetchSalesUsers();
+    }
+  }, [isOpen, currentUser?.role]);
 
   const generatePeriodPlaceholder = () => {
     const currentDate = new Date();
@@ -45,8 +77,13 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
       return;
     }
 
-    if (!userId) {
-      toast.error("User ID is required");
+    // For OWNER/ADMIN, use selectedUserId; for SALES, use their own userId
+    const targetUserId = (currentUser?.role === "OWNER" || currentUser?.role === "ADMIN") 
+      ? formData.selectedUserId 
+      : userId;
+
+    if (!targetUserId) {
+      toast.error("Please select a user to create targets for");
       return;
     }
 
@@ -67,18 +104,26 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
         targetType: formData.targetType,
         targetPeriod: formData.targetPeriod,
         targetAmount: parseFloat(formData.targetAmount),
-        userId,
+        userId: targetUserId,
         isActive: true,
       });
 
-      const result = await createSalesTarget({
-        targetType: formData.targetType,
-        targetPeriod: formData.targetPeriod,
-        targetAmount: parseFloat(formData.targetAmount),
-        userId,
-        isActive: true,
+      // Use API endpoint instead of server action
+      const response = await fetch("/api/targets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetType: formData.targetType,
+          targetPeriod: formData.targetPeriod,
+          targetAmount: parseFloat(formData.targetAmount),
+          userId: targetUserId,
+          isActive: true,
+        }),
       });
 
+      const result = await response.json();
       console.log("Create result:", result);
 
       if (result.success) {
@@ -88,6 +133,7 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
           targetType: "MONTHLY",
           targetPeriod: "",
           targetAmount: "",
+          selectedUserId: userId || "",
         });
         setIsOpen(false);
 
@@ -209,6 +255,30 @@ export function TargetForm({ userId, onSuccess }: TargetFormProps) {
               }
             />
           </FormField>
+
+          {/* User Selection for Owner/Admin */}
+          {(currentUser?.role === "OWNER" || currentUser?.role === "ADMIN") && (
+            <FormField label="Select Sales Person" htmlFor="selectedUserId" required>
+              <select
+                value={formData.selectedUserId}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    selectedUserId: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
+                required
+              >
+                <option value="">Choose a sales person...</option>
+                {salesUsers.map((user: any) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          )}
         </div>
 
         <div className="flex items-center gap-3 pt-4">

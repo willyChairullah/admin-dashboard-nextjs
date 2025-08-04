@@ -12,30 +12,98 @@ async function main() {
 
     // Clear in order due to foreign key constraints
     // Use try-catch to handle missing tables gracefully
-    try { await prisma.userNotifications.deleteMany({}); } catch (e) { console.log("⚠️ userNotifications table not found, skipping..."); }
-    try { await prisma.payments.deleteMany({}); } catch (e) { console.log("⚠️ payments table not found, skipping..."); }
-    try { await prisma.invoiceItems.deleteMany({}); } catch (e) { console.log("⚠️ invoiceItems table not found, skipping..."); }
-    try { await prisma.invoices.deleteMany({}); } catch (e) { console.log("⚠️ invoices table not found, skipping..."); }
-    try { await prisma.purchaseOrderItems.deleteMany({}); } catch (e) { console.log("⚠️ purchaseOrderItems table not found, skipping..."); }
-    try { await prisma.purchaseOrders.deleteMany({}); } catch (e) { console.log("⚠️ purchaseOrders table not found, skipping..."); }
-    try { await prisma.orderItems.deleteMany({}); } catch (e) { console.log("⚠️ orderItems table not found, skipping..."); }
-    try { await prisma.deliveryNotes.deleteMany({}); } catch (e) { console.log("⚠️ deliveryNotes table not found, skipping..."); }
-    try { await prisma.customerVisits.deleteMany({}); } catch (e) { console.log("⚠️ customerVisits table not found, skipping..."); }
-    try { await prisma.fieldVisit.deleteMany({}); } catch (e) { console.log("⚠️ fieldVisit table not found, skipping..."); }
-    try { await prisma.orders.deleteMany({}); } catch (e) { console.log("⚠️ orders table not found, skipping..."); }
-    try { await prisma.stockMovements.deleteMany({}); } catch (e) { console.log("⚠️ stockMovements table not found, skipping..."); }
-    try { await prisma.transactions.deleteMany({}); } catch (e) { console.log("⚠️ transactions table not found, skipping..."); }
-    try { await prisma.store.deleteMany({}); } catch (e) { console.log("⚠️ store table not found, skipping..."); }
-    try { await prisma.products.deleteMany({}); } catch (e) { console.log("⚠️ products table not found, skipping..."); }
-    try { await prisma.categories.deleteMany({}); } catch (e) { console.log("⚠️ categories table not found, skipping..."); }
-    try { await prisma.customers.deleteMany({}); } catch (e) { console.log("⚠️ customers table not found, skipping..."); }
-    
+    try {
+      await prisma.userNotifications.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ userNotifications table not found, skipping...");
+    }
+    try {
+      await prisma.payments.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ payments table not found, skipping...");
+    }
+    try {
+      await prisma.invoiceItems.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ invoiceItems table not found, skipping...");
+    }
+    try {
+      await prisma.invoices.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ invoices table not found, skipping...");
+    }
+    try {
+      await prisma.purchaseOrderItems.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ purchaseOrderItems table not found, skipping...");
+    }
+    try {
+      await prisma.purchaseOrders.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ purchaseOrders table not found, skipping...");
+    }
+    try {
+      await prisma.orderItems.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ orderItems table not found, skipping...");
+    }
+    try {
+      await prisma.deliveryNotes.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ deliveryNotes table not found, skipping...");
+    }
+    try {
+      await prisma.customerVisits.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ customerVisits table not found, skipping...");
+    }
+    try {
+      await prisma.fieldVisit.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ fieldVisit table not found, skipping...");
+    }
+    try {
+      await prisma.orders.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ orders table not found, skipping...");
+    }
+    try {
+      await prisma.stockMovements.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ stockMovements table not found, skipping...");
+    }
+    try {
+      await prisma.transactions.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ transactions table not found, skipping...");
+    }
+    try {
+      await prisma.store.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ store table not found, skipping...");
+    }
+    try {
+      await prisma.products.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ products table not found, skipping...");
+    }
+    try {
+      await prisma.categories.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ categories table not found, skipping...");
+    }
+    try {
+      await prisma.customers.deleteMany({});
+    } catch (e) {
+      console.log("⚠️ customers table not found, skipping...");
+    }
+
     let deletedUsersCount = 0;
-    try { 
+    try {
       const deletedUsers = await prisma.users.deleteMany({});
       deletedUsersCount = deletedUsers.count;
-    } catch (e) { 
-      console.log("⚠️ users table not found, skipping..."); 
+    } catch (e) {
+      console.log("⚠️ users table not found, skipping...");
     }
     console.log(`✅ Cleared ${deletedUsersCount} users and related data`);
 
@@ -418,9 +486,9 @@ async function main() {
 
     // Create invoices for completed orders
     console.log("🧾 Creating invoices for completed orders...");
-    const completedOrders = createdOrders.filter(
-      (order) => order.status === "COMPLETED"
-    );
+    const completedOrders = await prisma.orders.findMany({
+      where: { status: "COMPLETED" },
+    });
     let totalInvoices = 0;
 
     for (const order of completedOrders) {
@@ -439,6 +507,7 @@ async function main() {
             invoiceDate.getMonth() + 1
           ).padStart(2, "0")}-${String(totalInvoices + 1).padStart(3, "0")}`,
           customerId: order.customerId,
+          createdBy: order.salesId, // Add sales rep to track achievements
           invoiceDate: invoiceDate,
           dueDate: dueDate,
           status: (Math.random() > 0.1 ? "PAID" : "DRAFT") as
@@ -608,6 +677,450 @@ async function main() {
     }
     console.log(`✅ Created ${totalVisits} customer visits`);
 
+    // Create revenue transactions
+    console.log("💰 Creating revenue transactions...");
+    let totalRevenues = 0;
+
+    for (let monthOffset = 12; monthOffset >= 0; monthOffset--) {
+      const revenueDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthOffset,
+        1
+      );
+      const revenuesInMonth = Math.floor(Math.random() * 8) + 5; // 5-12 revenue transactions per month
+
+      for (let i = 0; i < revenuesInMonth; i++) {
+        const revenueDay = new Date(revenueDate);
+        revenueDay.setDate(Math.floor(Math.random() * 28) + 1);
+
+        // Generate different types of revenue
+        const revenueTypes = [
+          {
+            category: "Product Sales",
+            amount: Math.floor(Math.random() * 5000000) + 1000000,
+          }, // 1-6M
+          {
+            category: "Service Revenue",
+            amount: Math.floor(Math.random() * 2000000) + 500000,
+          }, // 0.5-2.5M
+          {
+            category: "Consultation",
+            amount: Math.floor(Math.random() * 1000000) + 200000,
+          }, // 0.2-1.2M
+          {
+            category: "Delivery Service",
+            amount: Math.floor(Math.random() * 500000) + 100000,
+          }, // 0.1-0.6M
+          {
+            category: "Installation",
+            amount: Math.floor(Math.random() * 800000) + 300000,
+          }, // 0.3-1.1M
+        ];
+
+        const randomRevenueType =
+          revenueTypes[Math.floor(Math.random() * revenueTypes.length)];
+        const randomUser =
+          createdUsers[Math.floor(Math.random() * createdUsers.length)];
+
+        const revenue = await prisma.transactions.create({
+          data: {
+            id: uuid(),
+            transactionDate: revenueDay,
+            type: "INCOME",
+            amount: randomRevenueType.amount,
+            description: `${
+              randomRevenueType.category
+            } - Revenue for ${revenueDay.toLocaleDateString("id-ID", {
+              month: "long",
+              year: "numeric",
+            })}`,
+            category: randomRevenueType.category,
+            reference: `REV-${revenueDay.getFullYear()}${String(
+              revenueDay.getMonth() + 1
+            ).padStart(2, "0")}-${String(i + 1).padStart(3, "0")}`,
+            userId: randomUser.id,
+            createdAt: revenueDay,
+            updatedAt: revenueDay,
+          },
+        });
+
+        // Create transaction items for product sales
+        if (randomRevenueType.category === "Product Sales") {
+          const itemsCount = Math.floor(Math.random() * 3) + 1; // 1-3 items
+          let itemTotal = 0;
+
+          for (let j = 0; j < itemsCount; j++) {
+            const randomProduct =
+              createdProducts[
+                Math.floor(Math.random() * createdProducts.length)
+              ];
+            const quantity = Math.floor(Math.random() * 20) + 1;
+            const price =
+              randomProduct.price + Math.floor(Math.random() * 2000); // Add some variation
+            const totalPrice = quantity * price;
+            itemTotal += totalPrice;
+
+            await prisma.transactionItems.create({
+              data: {
+                id: uuid(),
+                transactionId: revenue.id,
+                description: `${randomProduct.name} - ${quantity} ${randomProduct.unit}`,
+                quantity: quantity,
+                price: price,
+                totalPrice: totalPrice,
+              },
+            });
+          }
+
+          // Update transaction amount to match items
+          await prisma.transactions.update({
+            where: { id: revenue.id },
+            data: { amount: itemTotal },
+          });
+        }
+
+        totalRevenues++;
+      }
+    }
+    console.log(`✅ Created ${totalRevenues} revenue transactions`);
+
+    // Create expense transactions for better analytics
+    console.log("💸 Creating expense transactions...");
+    let totalExpenses = 0;
+
+    for (let monthOffset = 12; monthOffset >= 0; monthOffset--) {
+      const expenseDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthOffset,
+        1
+      );
+      const expensesInMonth = Math.floor(Math.random() * 6) + 3; // 3-8 expense transactions per month
+
+      for (let i = 0; i < expensesInMonth; i++) {
+        const expenseDay = new Date(expenseDate);
+        expenseDay.setDate(Math.floor(Math.random() * 28) + 1);
+
+        // Generate different types of expenses
+        const expenseTypes = [
+          {
+            category: "Raw Materials",
+            amount: Math.floor(Math.random() * 3000000) + 500000,
+          }, // 0.5-3.5M
+          {
+            category: "Operational Costs",
+            amount: Math.floor(Math.random() * 1500000) + 300000,
+          }, // 0.3-1.8M
+          {
+            category: "Transportation",
+            amount: Math.floor(Math.random() * 800000) + 200000,
+          }, // 0.2-1M
+          {
+            category: "Marketing",
+            amount: Math.floor(Math.random() * 1000000) + 250000,
+          }, // 0.25-1.25M
+          {
+            category: "Utilities",
+            amount: Math.floor(Math.random() * 500000) + 150000,
+          }, // 0.15-0.65M
+          {
+            category: "Equipment",
+            amount: Math.floor(Math.random() * 2000000) + 400000,
+          }, // 0.4-2.4M
+        ];
+
+        const randomExpenseType =
+          expenseTypes[Math.floor(Math.random() * expenseTypes.length)];
+        const randomUser =
+          createdUsers[Math.floor(Math.random() * createdUsers.length)];
+
+        await prisma.transactions.create({
+          data: {
+            id: uuid(),
+            transactionDate: expenseDay,
+            type: "EXPENSE",
+            amount: randomExpenseType.amount,
+            description: `${
+              randomExpenseType.category
+            } - Expense for ${expenseDay.toLocaleDateString("id-ID", {
+              month: "long",
+              year: "numeric",
+            })}`,
+            category: randomExpenseType.category,
+            reference: `EXP-${expenseDay.getFullYear()}${String(
+              expenseDay.getMonth() + 1
+            ).padStart(2, "0")}-${String(i + 1).padStart(3, "0")}`,
+            userId: randomUser.id,
+            createdAt: expenseDay,
+            updatedAt: expenseDay,
+          },
+        });
+
+        totalExpenses++;
+      }
+    }
+    console.log(`✅ Created ${totalExpenses} expense transactions`);
+
+    // Create sales targets for analytics
+    console.log("🎯 Creating sales targets...");
+    let totalTargets = 0;
+
+    for (const user of createdUsers) {
+      if (user.role === "SALES" || user.role === "ADMIN") {
+        // Create monthly targets for the past 12 months and next 6 months
+        for (let monthOffset = -12; monthOffset <= 6; monthOffset++) {
+          const targetDate = new Date(
+            now.getFullYear(),
+            now.getMonth() + monthOffset,
+            1
+          );
+          const targetPeriod = `${targetDate.getFullYear()}-${String(
+            targetDate.getMonth() + 1
+          ).padStart(2, "0")}`;
+
+          // Base target amount varies by user and increases over time
+          const baseTarget = user.role === "SALES" ? 50000000 : 100000000; // 50M for sales, 100M for admin
+          const growthFactor = 1 + monthOffset * 0.02; // 2% growth per month
+          const randomVariation = 0.8 + Math.random() * 0.4; // 80%-120% variation
+          const targetAmount = Math.floor(
+            baseTarget * growthFactor * randomVariation
+          );
+
+          // Calculate achieved amount (more realistic for past months)
+          let achievedAmount = 0;
+          if (monthOffset < 0) {
+            // Past months - random achievement between 70%-120%
+            const achievementRate = 0.7 + Math.random() * 0.5;
+            achievedAmount = Math.floor(targetAmount * achievementRate);
+          } else if (monthOffset === 0) {
+            // Current month - partial achievement
+            const dayOfMonth = now.getDate();
+            const daysInMonth = new Date(
+              targetDate.getFullYear(),
+              targetDate.getMonth() + 1,
+              0
+            ).getDate();
+            const progressRate = dayOfMonth / daysInMonth;
+            achievedAmount = Math.floor(
+              targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+            );
+          }
+          // Future months - no achievement yet
+
+          await prisma.salesTargets.create({
+            data: {
+              id: uuid(),
+              userId: user.id,
+              targetType: "MONTHLY",
+              targetPeriod: targetPeriod,
+              targetAmount: targetAmount,
+              achievedAmount: achievedAmount,
+              isActive: true,
+              createdAt: targetDate,
+              updatedAt: now,
+            },
+          });
+          totalTargets++;
+        }
+
+        // Create quarterly targets
+        for (let quarterOffset = -4; quarterOffset <= 2; quarterOffset++) {
+          const targetQuarter =
+            Math.floor((now.getMonth() + quarterOffset * 3) / 3) + 1;
+          const targetYear =
+            now.getFullYear() +
+            Math.floor((now.getMonth() + quarterOffset * 3) / 12);
+          const targetPeriod = `${targetYear}-Q${targetQuarter}`;
+
+          const baseTarget = user.role === "SALES" ? 150000000 : 300000000; // 150M for sales, 300M for admin
+          const growthFactor = 1 + quarterOffset * 0.05; // 5% growth per quarter
+          const randomVariation = 0.8 + Math.random() * 0.4;
+          const targetAmount = Math.floor(
+            baseTarget * growthFactor * randomVariation
+          );
+
+          let achievedAmount = 0;
+          if (quarterOffset < 0) {
+            const achievementRate = 0.7 + Math.random() * 0.5;
+            achievedAmount = Math.floor(targetAmount * achievementRate);
+          } else if (quarterOffset === 0) {
+            // Current quarter partial achievement
+            const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+            if (targetQuarter === currentQuarter) {
+              const monthsInQuarter = 3;
+              const currentMonthInQuarter = (now.getMonth() % 3) + 1;
+              const progressRate = currentMonthInQuarter / monthsInQuarter;
+              achievedAmount = Math.floor(
+                targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+              );
+            }
+          }
+
+          await prisma.salesTargets.create({
+            data: {
+              id: uuid(),
+              userId: user.id,
+              targetType: "QUARTERLY",
+              targetPeriod: targetPeriod,
+              targetAmount: targetAmount,
+              achievedAmount: achievedAmount,
+              isActive: true,
+              createdAt: new Date(targetYear, (targetQuarter - 1) * 3, 1),
+              updatedAt: now,
+            },
+          });
+          totalTargets++;
+        }
+
+        // Create yearly targets
+        for (let yearOffset = -2; yearOffset <= 1; yearOffset++) {
+          const targetYear = now.getFullYear() + yearOffset;
+          const targetPeriod = targetYear.toString();
+
+          const baseTarget = user.role === "SALES" ? 600000000 : 1200000000; // 600M for sales, 1.2B for admin
+          const growthFactor = 1 + yearOffset * 0.1; // 10% growth per year
+          const randomVariation = 0.8 + Math.random() * 0.4;
+          const targetAmount = Math.floor(
+            baseTarget * growthFactor * randomVariation
+          );
+
+          let achievedAmount = 0;
+          if (yearOffset < 0) {
+            const achievementRate = 0.7 + Math.random() * 0.5;
+            achievedAmount = Math.floor(targetAmount * achievementRate);
+          } else if (yearOffset === 0) {
+            // Current year partial achievement
+            const dayOfYear = Math.floor(
+              (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) /
+                (1000 * 60 * 60 * 24)
+            );
+            const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
+            const progressRate = dayOfYear / daysInYear;
+            achievedAmount = Math.floor(
+              targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+            );
+          }
+
+          await prisma.salesTargets.create({
+            data: {
+              id: uuid(),
+              userId: user.id,
+              targetType: "YEARLY",
+              targetPeriod: targetPeriod,
+              targetAmount: targetAmount,
+              achievedAmount: achievedAmount,
+              isActive: true,
+              createdAt: new Date(targetYear, 0, 1),
+              updatedAt: now,
+            },
+          });
+          totalTargets++;
+        }
+      }
+    }
+    console.log(`✅ Created ${totalTargets} sales targets`);
+
+    // Create additional orders to ensure rich analytics data
+    console.log("📈 Creating additional analytics-focused orders...");
+    let additionalOrders = 0;
+
+    // Create orders specifically distributed to show trends
+    for (let monthOffset = 12; monthOffset >= 0; monthOffset--) {
+      const orderDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthOffset,
+        1
+      );
+
+      // Create more orders for recent months to show growth trend
+      const baseOrdersPerMonth = 15;
+      const growthFactor = 1 + (12 - monthOffset) * 0.05; // 5% growth per month
+      const ordersInMonth =
+        Math.floor(baseOrdersPerMonth * growthFactor) +
+        Math.floor(Math.random() * 5);
+
+      for (let i = 0; i < ordersInMonth; i++) {
+        const orderDay = new Date(orderDate);
+        orderDay.setDate(Math.floor(Math.random() * 28) + 1);
+
+        const dueDate = new Date(orderDay);
+        dueDate.setDate(dueDate.getDate() + 30);
+
+        const randomCustomer =
+          createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
+
+        // Vary order values to create realistic AOV trends
+        const baseOrderValue = 500000; // 500K base
+        const seasonalFactor =
+          1 + Math.sin((orderDate.getMonth() / 12) * 2 * Math.PI) * 0.2; // Seasonal variation
+        const growthFactor2 = 1 + (12 - monthOffset) * 0.03; // 3% value growth per month
+        const randomFactor = 0.5 + Math.random() * 1.5; // Random variation 50%-200%
+
+        const itemsInOrder = Math.floor(Math.random() * 5) + 1; // 1-5 items
+        let orderTotal = 0;
+
+        const order = await prisma.orders.create({
+          data: {
+            id: uuid(),
+            orderNumber: `ANL-${orderDate.getFullYear()}${String(
+              orderDate.getMonth() + 1
+            ).padStart(2, "0")}-${String(additionalOrders + 1).padStart(
+              4,
+              "0"
+            )}`,
+            orderDate: orderDay,
+            dueDate: dueDate,
+            deliveryAddress: randomCustomer.address,
+            deliveryCity: randomCustomer.city,
+            customerId: randomCustomer.id,
+            salesId: salesUser.id,
+            status: monthOffset === 0 ? "PROCESSING" : "COMPLETED", // Current month processing, others completed
+            totalAmount: 0, // Will be calculated after items
+            notes: `Analytics order for ${orderDay.toLocaleDateString("id-ID", {
+              month: "long",
+              year: "numeric",
+            })}`,
+            createdAt: orderDay,
+            updatedAt: orderDay,
+          },
+        });
+
+        // Create order items with varied pricing
+        for (let j = 0; j < itemsInOrder; j++) {
+          const randomProduct =
+            createdProducts[Math.floor(Math.random() * createdProducts.length)];
+          const quantity = Math.floor(Math.random() * 10) + 1;
+          const basePrice = randomProduct.price;
+          const priceVariation =
+            basePrice * seasonalFactor * growthFactor2 * randomFactor;
+          const finalPrice = Math.floor(priceVariation);
+          const totalPrice = quantity * finalPrice;
+          orderTotal += totalPrice;
+
+          await prisma.orderItems.create({
+            data: {
+              id: uuid(),
+              orderId: order.id,
+              productId: randomProduct.id,
+              quantity: quantity,
+              price: finalPrice,
+              totalPrice: totalPrice,
+              createdAt: orderDay,
+              updatedAt: orderDay,
+            },
+          });
+        }
+
+        // Update order total
+        await prisma.orders.update({
+          where: { id: order.id },
+          data: { totalAmount: orderTotal },
+        });
+
+        additionalOrders++;
+      }
+    }
+    console.log(`✅ Created ${additionalOrders} additional analytics orders`);
+
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
     console.log("👑 OWNER: owner@indana.com / password123");
@@ -617,6 +1130,16 @@ async function main() {
     console.log("\n🏪 Sample stores created for testing field visits.");
     console.log("\n👥 Sample customers created.");
     console.log("\n📝 Sample orders and order items created.");
+    console.log("\n💰 Revenue and expense transactions created for analytics.");
+    console.log(
+      `\n📊 Generated ${totalRevenues} revenue transactions and ${totalExpenses} expense transactions over 12 months.`
+    );
+    console.log(
+      `\n🎯 Created ${totalTargets} sales targets (monthly, quarterly, yearly) for analytics.`
+    );
+    console.log(
+      `\n📈 Generated ${additionalOrders} additional orders with growth trends for comprehensive analytics.`
+    );
   } catch (error) {
     console.error("❌ Error seeding database:", error);
     throw error;

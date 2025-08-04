@@ -35,10 +35,10 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
 
   // Calculate date ranges and periods based on timeRange
   if (timeRange === "month") {
-    // This year: Jan to Dec
+    // Current year: January to December
     const currentYear = now.getFullYear();
-    startDate = new Date(currentYear, 0, 1); // Jan 1
-    endDate = new Date(currentYear, 11, 31); // Dec 31
+    startDate = new Date(currentYear, 0, 1); // January 1
+    endDate = new Date(currentYear, 11, 31); // December 31
 
     for (let i = 0; i < 12; i++) {
       const periodStart = new Date(currentYear, i, 1);
@@ -50,31 +50,35 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
       });
     }
   } else if (timeRange === "quarter") {
-    // Last 4 quarters
-
+    // Current year quarters: Q1, Q2, Q3, Q4
     const currentYear = now.getFullYear();
-    startDate = new Date(currentYear - 1, 0, 1);
+    startDate = new Date(currentYear, 0, 1); // January 1
+    endDate = new Date(currentYear, 11, 31); // December 31
+
     for (let i = 0; i < 4; i++) {
       const quarterStart = new Date(currentYear, i * 3, 1);
       const quarterEnd = new Date(currentYear, i * 3 + 3, 0);
-      const quarter = Math.floor(quarterStart.getMonth() / 3) + 1;
+      const quarter = i + 1;
       periods.push({
         start: quarterStart,
         end: quarterEnd,
-        label: `Q${quarter} ${quarterStart.getFullYear()}`,
+        label: `Q${quarter} ${currentYear}`,
       });
     }
   } else {
-    // Last 6 years
-    startDate = new Date(now.getFullYear() - 5, 0, 1);
+    // Last 5 years including current year
+    const currentYear = now.getFullYear();
+    startDate = new Date(currentYear - 4, 0, 1);
+    endDate = new Date(currentYear, 11, 31);
 
-    for (let i = 5; i >= 0; i--) {
-      const yearStart = new Date(now.getFullYear() - i, 0, 1);
-      const yearEnd = new Date(now.getFullYear() - i, 11, 31);
+    for (let i = 4; i >= 0; i--) {
+      const year = currentYear - i;
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year, 11, 31);
       periods.push({
         start: yearStart,
         end: yearEnd,
-        label: yearStart.getFullYear().toString(),
+        label: year.toString(),
       });
     }
   }

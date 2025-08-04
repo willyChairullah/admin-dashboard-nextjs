@@ -56,6 +56,30 @@ export async function getUsers() {
   }
 }
 
+export async function getSalesUsers() {
+  try {
+    const salesUsers = await db.users.findMany({
+      where: {
+        role: "SALES",
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return salesUsers;
+  } catch (error) {
+    console.error("Failed to fetch sales users:", error);
+    return [];
+  }
+}
+
 export async function getUserById(id: string) {
   try {
     const user = await db.users.findUnique({

@@ -338,9 +338,16 @@ export async function getSalesUsers() {
 // Get targets for chart display
 export async function getTargetsForChart(
   userId?: string,
-  targetType: TargetType = "MONTHLY"
+  targetType: TargetType = "MONTHLY",
+  userRole?: string
 ) {
   try {
+    // If user is OWNER or ADMIN, show company-wide aggregated targets
+    if (userRole === "OWNER" || userRole === "ADMIN") {
+      return await getCompanyTargetsForChart(targetType);
+    }
+
+    // For individual users (like SALES), show their personal targets
     const where = userId ? { userId } : {};
 
     const targets = await db.salesTargets.findMany({
@@ -383,6 +390,126 @@ export async function getTargetsForChart(
   }
 }
 
+// Get company-wide targets aggregated from all sales reps
+async function getCompanyTargetsForChart(targetType: TargetType = "MONTHLY") {
+  try {
+    // Get all targets from users with SALES role only
+    const allTargets = await db.salesTargets.findMany({
+      where: {
+        targetType,
+        isActive: true,
+        user: {
+          role: "SALES", // Only include sales reps in company calculations
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: {
+        targetPeriod: "asc",
+      },
+    });
+
+    // Group by period and sum up targets and achievements
+    const periodGroups = allTargets.reduce((acc, target) => {
+      if (!acc[target.targetPeriod]) {
+        acc[target.targetPeriod] = {
+          totalTarget: 0,
+          userIds: new Set(),
+        };
+      }
+      acc[target.targetPeriod].totalTarget += target.targetAmount;
+      acc[target.targetPeriod].userIds.add(target.userId);
+      return acc;
+    }, {} as Record<string, { totalTarget: number; userIds: Set<string> }>);
+
+    // Calculate achievements for each period
+    const companyTargets = await Promise.all(
+      Object.entries(periodGroups).map(async ([period, data]) => {
+        // Calculate total achieved amount from all sales reps for this period
+        const totalAchieved = await calculateCompanyAchievedAmount(
+          period,
+          targetType,
+          Array.from(data.userIds)
+        );
+
+        return {
+          id: `company-${period}`, // Unique ID for company targets
+          period: period,
+          target: data.totalTarget,
+          achieved: totalAchieved,
+          percentage:
+            data.totalTarget > 0 ? (totalAchieved / data.totalTarget) * 100 : 0,
+        };
+      })
+    );
+
+    // Sort by period
+    return companyTargets.sort((a, b) => a.period.localeCompare(b.period));
+  } catch (error) {
+    console.error("Error fetching company targets for chart:", error);
+    throw new Error("Failed to fetch company chart data");
+  }
+}
+
+// Calculate achieved amount from all sales reps for a specific period
+async function calculateCompanyAchievedAmount(
+  targetPeriod: string,
+  targetType: TargetType,
+  userIds: string[]
+): Promise<number> {
+  try {
+    let startDate: Date;
+    let endDate: Date;
+
+    // Parse the target period and create date range
+    if (targetType === "MONTHLY") {
+      const [year, month] = targetPeriod.split("-").map(Number);
+      startDate = new Date(year, month - 1, 1);
+      endDate = new Date(year, month, 0);
+    } else if (targetType === "QUARTERLY") {
+      const [year, quarterStr] = targetPeriod.split("-");
+      const quarter = parseInt(quarterStr.replace("Q", ""));
+      const startMonth = (quarter - 1) * 3;
+      startDate = new Date(parseInt(year), startMonth, 1);
+      endDate = new Date(parseInt(year), startMonth + 3, 0);
+    } else if (targetType === "YEARLY") {
+      const year = parseInt(targetPeriod);
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year, 11, 31);
+    } else {
+      return 0;
+    }
+
+    // Calculate total achieved revenue from all sales reps
+    const result = await db.invoices.aggregate({
+      where: {
+        invoiceDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "PAID",
+        createdBy: {
+          in: userIds, // Include all sales rep user IDs
+        },
+      },
+      _sum: {
+        totalAmount: true,
+      },
+    });
+
+    return result._sum?.totalAmount || 0;
+  } catch (error) {
+    console.error("Error calculating company achieved amount:", error);
+    return 0;
+  }
+}
+
 // Calculate achieved amount from actual invoice data
 async function calculateAchievedAmount(
   userId: string,
@@ -415,7 +542,7 @@ async function calculateAchievedAmount(
       return 0;
     }
 
-    // Calculate achieved revenue from invoices through orders
+    // Calculate achieved revenue from invoices created by this sales rep
     const result = await db.invoices.aggregate({
       where: {
         invoiceDate: {
@@ -423,9 +550,7 @@ async function calculateAchievedAmount(
           lte: endDate,
         },
         status: "PAID",
-        order: {
-          salesId: userId,
-        },
+        createdBy: userId, // Use createdBy field to track sales rep
       },
       _sum: {
         totalAmount: true,
