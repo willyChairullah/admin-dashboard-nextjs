@@ -5,11 +5,6 @@ import Link from "next/link";
 import Card from "@/components/ui/common/Card";
 import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
 import { TargetForm } from "@/components/ui/TargetForm";
-import {
-  getTargetsForChart,
-  updateSalesTarget,
-  createSalesTarget,
-} from "@/lib/actions/sales-targets";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   TrendingUp,
@@ -88,10 +83,6 @@ export default function RevenueAnalytics() {
   >("trends");
 
   const fetchTargets = async () => {
-    if (!user?.id) {
-      return;
-    }
-
     try {
       setLoadingTargets(true);
       const targetType =
@@ -101,15 +92,19 @@ export default function RevenueAnalytics() {
           ? "QUARTERLY"
           : "YEARLY";
 
-      const targetData = await getTargetsForChart(
-        user.id,
-        targetType,
-        user.role
-      );
-      setTargets(targetData);
+      const response = await fetch(`/api/company-targets?targetType=${targetType}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setTargets(result.data || []);
+      } else {
+        console.error("Failed to fetch company targets:", result.error);
+        setTargets([]);
+      }
     } catch (error) {
       console.error("Error fetching targets:", error);
       toast.error("Failed to load targets");
+      setTargets([]);
     } finally {
       setLoadingTargets(false);
     }
@@ -134,37 +129,9 @@ export default function RevenueAnalytics() {
   };
 
   const handleSaveEdit = async (targetId: string, period: string) => {
-    if (!user?.id || !editForm.targetAmount) {
-      toast.error("Please enter a valid target amount");
-      return;
-    }
-
-    try {
-      const result = await updateSalesTarget(targetId, {
-        userId: user.id,
-        targetType:
-          timeRange === "month"
-            ? "MONTHLY"
-            : timeRange === "quarter"
-            ? "QUARTERLY"
-            : "YEARLY",
-        targetPeriod: period,
-        targetAmount: parseFloat(editForm.targetAmount),
-        isActive: true,
-      });
-
-      if (result.success) {
-        toast.success("Target updated successfully!");
-        fetchTargets();
-        setEditingTarget(null);
-        setEditForm({ targetAmount: "" });
-      } else {
-        toast.error(result.error || "Failed to update target");
-      }
-    } catch (error) {
-      console.error("Error updating target:", error);
-      toast.error("An error occurred while updating the target");
-    }
+    // TODO: Implement company target update via API
+    toast.error("Edit functionality not yet implemented for company targets");
+    return;
   };
 
   useEffect(() => {
@@ -192,7 +159,7 @@ export default function RevenueAnalytics() {
 
     loadData();
     fetchTargets(); // Also load targets when timeRange changes
-  }, [timeRange, user?.id]);
+  }, [timeRange]);
 
   // Show loading if user is still loading
   if (userLoading) {
@@ -330,7 +297,6 @@ export default function RevenueAnalytics() {
                   (user?.role === "OWNER" || user?.role === "ADMIN") && (
                     <div className="flex-shrink-0">
                       <TargetForm
-                        userId={user.id}
                         onSuccess={handleTargetSuccess}
                       />
                     </div>
@@ -555,16 +521,11 @@ export default function RevenueAnalytics() {
             {targets.length > 0 && (
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  {user?.role === "OWNER" || user?.role === "ADMIN"
-                    ? "Company Revenue Targets Overview"
-                    : "Personal Revenue Targets Overview"}
+                  Company Revenue Targets Overview
                 </h4>
-                {user?.role === "OWNER" || user?.role === "ADMIN" ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                    Aggregated targets and achievements from all sales
-                    representatives
-                  </p>
-                ) : null}
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  Company-wide revenue targets and achievements across all revenue streams
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {targets.slice(0, 6).map((target) => (
                     <div
@@ -661,12 +622,12 @@ export default function RevenueAnalytics() {
                     </div>
                   ))}
                 </div>
-                {!loadingTargets && targets.length === 0 && user?.id && (
+                {!loadingTargets && targets.length === 0 && (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <p className="mb-2">No revenue targets set yet.</p>
+                    <p className="mb-2">No company revenue targets set yet.</p>
                     <p className="text-sm">
-                      Use the "Add Target" button above to create your first
-                      target.
+                      Use the "Add Company Target" button above to create your first
+                      company target.
                     </p>
                   </div>
                 )}

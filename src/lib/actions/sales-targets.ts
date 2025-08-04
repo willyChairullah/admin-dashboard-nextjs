@@ -12,6 +12,13 @@ export type SalesTargetFormData = {
   isActive: boolean;
 };
 
+export type CompanyTargetFormData = {
+  targetType: TargetType;
+  targetPeriod: string;
+  targetAmount: number;
+  isActive: boolean;
+};
+
 export type SalesTargetWithUser = SalesTargets & {
   user: {
     id: string;
@@ -167,6 +174,47 @@ export async function createSalesTarget(data: SalesTargetFormData) {
     return {
       success: false,
       error: `Failed to create sales target: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+}
+
+// Create new company target (uses CompanyTargets table)
+export async function createCompanyTarget(data: CompanyTargetFormData) {
+  try {
+    // Check if company target already exists for this period
+    const existingTarget = await db.companyTargets.findFirst({
+      where: {
+        targetPeriod: data.targetPeriod,
+        targetType: data.targetType,
+      },
+    });
+
+    if (existingTarget) {
+      return {
+        success: false,
+        error: "Company target for this period already exists. Please edit the existing target.",
+      };
+    }
+
+    const target = await db.companyTargets.create({
+      data: {
+        targetType: data.targetType,
+        targetPeriod: data.targetPeriod,
+        targetAmount: data.targetAmount,
+        isActive: data.isActive,
+      },
+    });
+
+    revalidatePath("/management/sales-target");
+    revalidatePath("/management/finance/revenue-analytics");
+    return { success: true, data: target };
+  } catch (error) {
+    console.error("Error creating company target:", error);
+    return {
+      success: false,
+      error: `Failed to create company target: ${
         error instanceof Error ? error.message : String(error)
       }`,
     };
@@ -388,6 +436,110 @@ export async function getTargetsForChart(
     console.error("Error fetching targets for chart:", error);
     throw new Error("Failed to fetch chart data");
   }
+}
+
+// Get company targets from the CompanyTargets table
+export async function getCompanyTargets(targetType: TargetType = "MONTHLY") {
+  try {
+    const targets = await db.companyTargets.findMany({
+      where: {
+        targetType,
+        isActive: true,
+      },
+      orderBy: {
+        targetPeriod: "asc",
+      },
+    });
+
+    // Calculate achieved amounts from actual invoice data (all company revenue)
+    const targetsWithAchieved = await Promise.all(
+      targets.map(async (target) => {
+        const achievedAmount = await calculateCompanyWideRevenue(
+          target.targetPeriod,
+          target.targetType
+        );
+
+        return {
+          id: target.id,
+          period: target.targetPeriod,
+          target: target.targetAmount,
+          achieved: achievedAmount,
+          percentage:
+            target.targetAmount > 0
+              ? (achievedAmount / target.targetAmount) * 100
+              : 0,
+        };
+      })
+    );
+
+    return targetsWithAchieved;
+  } catch (error) {
+    console.error("Error fetching company targets:", error);
+    throw new Error("Failed to fetch company targets");
+  }
+}
+
+// Calculate company-wide revenue for a specific period
+async function calculateCompanyWideRevenue(
+  targetPeriod: string,
+  targetType: TargetType
+): Promise<number> {
+  try {
+    // Get date range based on target type and period
+    const { startDate, endDate } = getDateRangeFromPeriod(targetPeriod, targetType);
+
+    const result = await db.invoices.aggregate({
+      _sum: {
+        totalAmount: true,
+      },
+      where: {
+        invoiceDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "PAID", // Only count paid invoices
+      },
+    });
+
+    return result._sum.totalAmount || 0;
+  } catch (error) {
+    console.error("Error calculating company-wide revenue:", error);
+    return 0;
+  }
+}
+
+// Helper function to get date range from period string
+function getDateRangeFromPeriod(
+  targetPeriod: string,
+  targetType: TargetType
+): { startDate: Date; endDate: Date } {
+  if (targetType === "MONTHLY") {
+    // Format: YYYY-MM
+    const [year, month] = targetPeriod.split("-").map(Number);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    return { startDate, endDate };
+  } else if (targetType === "QUARTERLY") {
+    // Format: YYYY-Q1
+    const [year, quarter] = targetPeriod.split("-");
+    const quarterNum = parseInt(quarter.replace("Q", ""));
+    const startMonth = (quarterNum - 1) * 3;
+    const startDate = new Date(parseInt(year), startMonth, 1);
+    const endDate = new Date(parseInt(year), startMonth + 3, 0, 23, 59, 59, 999);
+    return { startDate, endDate };
+  } else if (targetType === "YEARLY") {
+    // Format: YYYY
+    const year = parseInt(targetPeriod);
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+    return { startDate, endDate };
+  }
+
+  // Fallback to current month
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { startDate, endDate };
 }
 
 // Get company-wide targets aggregated from all sales reps
