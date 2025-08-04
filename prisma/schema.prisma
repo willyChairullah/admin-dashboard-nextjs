@@ -405,15 +405,7 @@ model StockOpnameItems {
   systemStock    Int
   physicalStock  Int
   difference     Int
-  opnameId       String
-  productId      String
-  stockOpname    StockOpnames     @relation(fields: [opnameId], references: [id], onDelete: Cascade)
-  product        Products         @relation(fields: [productId], references: [id])
-  id             String           @id @default(cuid())
-  systemStock    Int
-  physicalStock  Int
   notes          String?
-  difference     Int
   opnameId       String
   productId      String
   stockOpname    StockOpnames     @relation(fields: [opnameId], references: [id], onDelete: Cascade)
@@ -565,14 +557,9 @@ model Settings {
 
 model Notifications {
   id                String              @id @default(cuid())
-  id                String              @id @default(cuid())
   title             String
   message           String
   type              String
-  isGlobal          Boolean             @default(false)
-  isRead            Boolean             @default(false)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
   isGlobal          Boolean             @default(false)
   isRead            Boolean             @default(false)
   createdAt         DateTime            @default(now())

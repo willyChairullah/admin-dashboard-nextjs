@@ -11,23 +11,33 @@ async function main() {
     console.log("🗑️ Clearing existing data...");
 
     // Clear in order due to foreign key constraints
-    await prisma.userNotifications.deleteMany({});
-    await prisma.payments.deleteMany({});
-    await prisma.invoiceItems.deleteMany({});
-    await prisma.invoices.deleteMany({});
-    await prisma.orderItems.deleteMany({});
-    await prisma.deliveryNotes.deleteMany({});
-    await prisma.customerVisits.deleteMany({});
-    await prisma.fieldVisit.deleteMany({});
-    await prisma.orders.deleteMany({});
-    await prisma.stockMovements.deleteMany({});
-    await prisma.transactions.deleteMany({});
-    await prisma.store.deleteMany({});
-    await prisma.products.deleteMany({});
-    await prisma.categories.deleteMany({});
-    await prisma.customers.deleteMany({});
-    const deletedUsers = await prisma.users.deleteMany({});
-    console.log(`✅ Cleared ${deletedUsers.count} users and related data`);
+    // Use try-catch to handle missing tables gracefully
+    try { await prisma.userNotifications.deleteMany({}); } catch (e) { console.log("⚠️ userNotifications table not found, skipping..."); }
+    try { await prisma.payments.deleteMany({}); } catch (e) { console.log("⚠️ payments table not found, skipping..."); }
+    try { await prisma.invoiceItems.deleteMany({}); } catch (e) { console.log("⚠️ invoiceItems table not found, skipping..."); }
+    try { await prisma.invoices.deleteMany({}); } catch (e) { console.log("⚠️ invoices table not found, skipping..."); }
+    try { await prisma.purchaseOrderItems.deleteMany({}); } catch (e) { console.log("⚠️ purchaseOrderItems table not found, skipping..."); }
+    try { await prisma.purchaseOrders.deleteMany({}); } catch (e) { console.log("⚠️ purchaseOrders table not found, skipping..."); }
+    try { await prisma.orderItems.deleteMany({}); } catch (e) { console.log("⚠️ orderItems table not found, skipping..."); }
+    try { await prisma.deliveryNotes.deleteMany({}); } catch (e) { console.log("⚠️ deliveryNotes table not found, skipping..."); }
+    try { await prisma.customerVisits.deleteMany({}); } catch (e) { console.log("⚠️ customerVisits table not found, skipping..."); }
+    try { await prisma.fieldVisit.deleteMany({}); } catch (e) { console.log("⚠️ fieldVisit table not found, skipping..."); }
+    try { await prisma.orders.deleteMany({}); } catch (e) { console.log("⚠️ orders table not found, skipping..."); }
+    try { await prisma.stockMovements.deleteMany({}); } catch (e) { console.log("⚠️ stockMovements table not found, skipping..."); }
+    try { await prisma.transactions.deleteMany({}); } catch (e) { console.log("⚠️ transactions table not found, skipping..."); }
+    try { await prisma.store.deleteMany({}); } catch (e) { console.log("⚠️ store table not found, skipping..."); }
+    try { await prisma.products.deleteMany({}); } catch (e) { console.log("⚠️ products table not found, skipping..."); }
+    try { await prisma.categories.deleteMany({}); } catch (e) { console.log("⚠️ categories table not found, skipping..."); }
+    try { await prisma.customers.deleteMany({}); } catch (e) { console.log("⚠️ customers table not found, skipping..."); }
+    
+    let deletedUsersCount = 0;
+    try { 
+      const deletedUsers = await prisma.users.deleteMany({});
+      deletedUsersCount = deletedUsers.count;
+    } catch (e) { 
+      console.log("⚠️ users table not found, skipping..."); 
+    }
+    console.log(`✅ Cleared ${deletedUsersCount} users and related data`);
 
     console.log("👥 Creating 4 users with proper roles...");
 
@@ -88,9 +98,13 @@ async function main() {
       console.log(`✅ Created user: ${user.email} with role: ${user.role}`);
     }
 
-    const salesUser = createdUsers.find(user => user.role === "SALES");
-    if (!salesUser) {
-      throw new Error("Sales user not found after seeding.");
+    const salesUser = createdUsers.find((user) => user.role === "SALES");
+    const adminUser = createdUsers.find((user) => user.role === "ADMIN");
+    const warehouseUser = createdUsers.find(
+      (user) => user.role === "WAREHOUSE"
+    );
+    if (!salesUser || !adminUser || !warehouseUser) {
+      throw new Error("Required users not found after seeding.");
     }
 
     console.log("🏪 Creating sample stores...");
@@ -246,433 +260,6 @@ async function main() {
       {
         id: uuid(),
         code: "CUST001",
-        name: "Pelanggan Jaya Abadi",
-        email: "customer1@example.com",
-        phone: "+6281211112222",
-        address: "Jl. Merdeka No. 10, Bandung",
-        city: "Bandung",
-        latitude: -6.9175,
-        longitude: 107.6191,
-        creditLimit: 5000000,
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "CUST002",
-        name: "Toko Maju Mundur",
-        email: "customer2@example.com",
-        phone: "+6281233334444",
-        address: "Jl. Pahlawan No. 25, Surabaya",
-        city: "Surabaya",
-        latitude: -7.2575,
-        longitude: 112.7521,
-        creditLimit: 3000000,
-        isActive: true,
-        updatedAt: new Date(),
-      },
-      {
-        id: uuid(),
-        code: "CUST003",
-        name: "Warung Sejahtera",
-        email: "customer3@example.com",
-        phone: "+6281255556666",
-        address: "Jl. Sudirman No. 50, Yogyakarta",
-        city: "Yogyakarta",
-        latitude: -7.7956,
-        longitude: 110.3695,
-        creditLimit: 2000000,
-        isActive: true,
-        updatedAt: new Date(),
-      },
-    ];
-
-    const createdCustomers = [];
-    for (const customerData of customersToCreate) {
-      const customer = await prisma.customers.create({
-        data: customerData,
-      });
-      createdCustomers.push(customer);
-      console.log(`✅ Created customer: ${customer.name}`);
-    }
-
-    console.log("📝 Creating sample orders and order items...");
-
-    // --- Order 1 ---
-    const order1 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-001",
-        orderDate: new Date("2025-07-20T10:00:00Z"),
-        dueDate: new Date("2025-08-03T10:00:00Z"), // Jatuh tempo 14 hari
-        status: "NEW",
-        totalAmount: 0,
-        notes: "Pesanan pertama pelanggan Jaya Abadi",
-        customerId: createdCustomers[0].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Sumber Rejeki No. 123, Jakarta Timur",
-        deliveryCity: "Jakarta Timur",
-        deliveryPostalCode: "13620",
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order1.orderNumber}`);
-
-    const orderItems1 = [
-      {
-        productId: createdProducts[0].id, // Minyak Indana 250 ml
-        quantity: 5,
-      },
-      {
-        productId: createdProducts[4].id, // Minyak Indana 1 Liter
-        quantity: 2,
-      },
-    ];
-
-    let totalAmountOrder1 = 0;
-    for (const item of orderItems1) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order1.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder1 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order1.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order1.id },
-      data: { totalAmount: totalAmountOrder1, status: "PROCESSING" },
-    });
-    console.log(
-      `✅ Updated total amount for ${order1.orderNumber}: ${totalAmountOrder1}`
-    );
-
-    // --- Order 2 ---
-    const order2 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-002",
-        orderDate: new Date("2025-07-22T14:30:00Z"),
-        dueDate: new Date("2025-08-05T14:30:00Z"), // Jatuh tempo 14 hari
-        status: "COMPLETED",
-        totalAmount: 0,
-        notes: "Pesanan Toko Maju Mundur, sudah lunas",
-        customerId: createdCustomers[1].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Maju Mundur No. 456, Bekasi Utara",
-        deliveryCity: "Bekasi Utara",
-        deliveryPostalCode: "17142",
-        deliveryDate: new Date("2025-07-23T09:00:00Z"),
-        completedAt: new Date("2025-07-23T10:00:00Z"),
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order2.orderNumber}`);
-
-    const orderItems2 = [
-      {
-        productId: createdProducts[5].id, // Minyak Kita 1 Liter
-        quantity: 10,
-      },
-      {
-        productId: createdProducts[3].id, // Minyak Indana 900 ml
-        quantity: 3,
-      },
-    ];
-
-    let totalAmountOrder2 = 0;
-    for (const item of orderItems2) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order2.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder2 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order2.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order2.id },
-      data: { totalAmount: totalAmountOrder2 },
-    });
-    console.log(
-      `✅ Updated total amount for ${order2.orderNumber}: ${totalAmountOrder2}`
-    );
-
-    // --- Order 3 ---
-    const order3 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-003",
-        orderDate: new Date("2025-07-25T08:00:00Z"),
-        dueDate: new Date("2025-08-08T08:00:00Z"), // Jatuh tempo 14 hari
-        status: "PENDING_CONFIRMATION",
-        totalAmount: 0,
-        notes: "Menunggu konfirmasi dari admin",
-        customerId: createdCustomers[2].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Mandiri Sejahtera No. 789, Bandung Selatan",
-        deliveryCity: "Bandung Selatan",
-        deliveryPostalCode: "40291",
-        requiresConfirmation: true,
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order3.orderNumber}`);
-
-    const orderItems3 = [
-      {
-        productId: createdProducts[1].id, // Minyak Indana 500 ml
-        quantity: 7,
-      },
-    ];
-
-    let totalAmountOrder3 = 0;
-    for (const item of orderItems3) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order3.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder3 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order3.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order3.id },
-      data: { totalAmount: totalAmountOrder3 },
-    });
-    console.log(
-      `✅ Updated total amount for ${order3.orderNumber}: ${totalAmountOrder3}`
-    );
-
-    // --- Order 4 (Cancelled) ---
-    const order4 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-004",
-        orderDate: new Date("2025-07-26T11:00:00Z"),
-        dueDate: new Date("2025-08-09T11:00:00Z"), // Jatuh tempo 14 hari
-        status: "CANCELLED",
-        totalAmount: 0,
-        notes: "Dibatalkan oleh pelanggan",
-        customerId: createdCustomers[0].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Merdeka No. 10, Bandung",
-        deliveryCity: "Bandung",
-        deliveryPostalCode: "40115",
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order4.orderNumber}`);
-    const orderItems4 = [
-      {
-        productId: createdProducts[2].id, // Minyak Indana 800 ml
-        quantity: 10,
-      },
-    ];
-    let totalAmountOrder4 = 0;
-    for (const item of orderItems4) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order4.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder4 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order4.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order4.id },
-      data: { totalAmount: totalAmountOrder4 },
-    });
-    console.log(
-      `✅ Updated total amount for ${order4.orderNumber}: ${totalAmountOrder4}`
-    );
-
-    // --- Order 5 (Shipped) ---
-    const order5 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-005",
-        orderDate: new Date("2025-07-28T15:00:00Z"),
-        dueDate: new Date("2025-08-11T15:00:00Z"), // Jatuh tempo 14 hari
-        status: "NEW",
-        totalAmount: 0,
-        notes: "Pesanan besar, pengiriman prioritas",
-        customerId: createdCustomers[1].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Pahlawan No. 25, Surabaya",
-        deliveryCity: "Surabaya",
-        deliveryPostalCode: "60174",
-        deliveryDate: new Date("2025-07-29T10:00:00Z"),
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order5.orderNumber}`);
-    const orderItems5 = [
-      {
-        productId: createdProducts[4].id, // Minyak Indana 1 Liter
-        quantity: 20,
-      },
-      {
-        productId: createdProducts[5].id, // Minyak Kita 1 Liter
-        quantity: 15,
-      },
-    ];
-    let totalAmountOrder5 = 0;
-    for (const item of orderItems5) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order5.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder5 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order5.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order5.id },
-      data: { totalAmount: totalAmountOrder5 },
-    });
-    console.log(
-      `✅ Updated total amount for ${order5.orderNumber}: ${totalAmountOrder5}`
-    );
-
-    // --- Order 6 (New) ---
-    const order6 = await prisma.orders.create({
-      data: {
-        id: uuid(),
-        orderNumber: "ORD-202507-006",
-        orderDate: new Date("2025-07-30T09:30:00Z"),
-        dueDate: new Date("2025-08-13T09:30:00Z"), // Jatuh tempo 14 hari
-        status: "NEW",
-        totalAmount: 0,
-        notes: "Pesanan rutin Warung Sejahtera",
-        customerId: createdCustomers[2].id,
-        salesId: salesUser.id,
-        deliveryAddress: "Jl. Sudirman No. 50, Yogyakarta",
-        deliveryCity: "Yogyakarta",
-        deliveryPostalCode: "55223",
-        updatedAt: new Date(),
-      },
-    });
-    console.log(`✅ Created order: ${order6.orderNumber}`);
-
-    const orderItems6 = [
-      {
-        productId: createdProducts[0].id, // Minyak Indana 250 ml
-        quantity: 12,
-      },
-      {
-        productId: createdProducts[1].id, // Minyak Indana 500 ml
-        quantity: 12,
-      },
-    ];
-
-    let totalAmountOrder6 = 0;
-    for (const item of orderItems6) {
-      const product = createdProducts.find(p => p.id === item.productId);
-      if (product) {
-        const totalPrice = item.quantity * product.price;
-        await prisma.orderItems.create({
-          data: {
-            id: uuid(),
-            orderId: order6.id,
-            productId: product.id,
-            quantity: item.quantity,
-            price: product.price,
-            totalPrice: totalPrice,
-            updatedAt: new Date(),
-          },
-        });
-        totalAmountOrder6 += totalPrice;
-        console.log(
-          `   ✅ Added item: ${product.name} to ${order6.orderNumber}`
-        );
-      }
-    }
-    await prisma.orders.update({
-      where: { id: order6.id },
-      data: { totalAmount: totalAmountOrder6 },
-    });
-    console.log(
-      `✅ Updated total amount for ${order6.orderNumber}: ${totalAmountOrder6}`
-    );
-
-    // --- Seeding Chart Data ---
-    console.log("📊 Creating sample customers and orders for charts...");
-
-    // Get all created users and stores for reference
-    const allUsers = await prisma.users.findMany();
-    const allStores = await prisma.store.findMany();
-    const allProducts = await prisma.products.findMany();
-    const salesUsers = allUsers.filter(
-      (user) => user.role === "SALES" || user.role === "ADMIN"
-    );
-
-    // First, create some customers
-    console.log("👥 Creating sample customers...");
-    const customersToCreate = [
-      {
-        id: uuid(),
-        code: "CUST001",
         name: "PT Sinar Jaya Abadi",
         email: "purchasing@sinarjaya.com",
         phone: "+62211234567",
@@ -740,23 +327,25 @@ async function main() {
         const orderDay = new Date(orderDate);
         orderDay.setDate(Math.floor(Math.random() * 28) + 1); // Random day in month
 
+        const dueDate = new Date(orderDay);
+        dueDate.setDate(dueDate.getDate() + 30); // 30 days later
+
         const randomCustomer =
           createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
-        const randomSales =
-          salesUsers[Math.floor(Math.random() * salesUsers.length)];
-        const orderStatus =
+        const randomSales = salesUser;
+        const orderStatus:
+          | "NEW"
+          | "PROCESSING"
+          | "COMPLETED"
+          | "CANCELLED"
+          | "PENDING_CONFIRMATION"
+          | "IN_PROCESS"
+          | "CANCELED" =
           Math.random() > 0.2
             ? "COMPLETED"
             : Math.random() > 0.5
             ? "PROCESSING"
-            : ("NEW" as
-                | "NEW"
-                | "PROCESSING"
-                | "COMPLETED"
-                | "CANCELLED"
-                | "PENDING_CONFIRMATION"
-                | "IN_PROCESS"
-                | "CANCELED");
+            : "NEW";
 
         ordersToCreate.push({
           id: uuid(),
@@ -764,6 +353,9 @@ async function main() {
             orderDate.getMonth() + 1
           ).padStart(2, "0")}-${String(i + 1).padStart(3, "0")}`,
           orderDate: orderDay,
+          dueDate: dueDate,
+          deliveryAddress: randomCustomer.address,
+          deliveryCity: randomCustomer.city,
           customerId: randomCustomer.id,
           salesId: randomSales.id,
           status: orderStatus,
@@ -795,7 +387,7 @@ async function main() {
 
       for (let i = 0; i < itemsInOrder; i++) {
         const randomProduct =
-          allProducts[Math.floor(Math.random() * allProducts.length)];
+          createdProducts[Math.floor(Math.random() * createdProducts.length)];
         const quantity = Math.floor(Math.random() * 10) + 1; // 1-10 quantity
         const unitPrice = randomProduct.price;
         const totalPrice = quantity * unitPrice;
@@ -843,22 +435,18 @@ async function main() {
       const invoice = await prisma.invoices.create({
         data: {
           id: uuid(),
-          invoiceNumber: `INV-${invoiceDate.getFullYear()}${String(
+          code: `INV-${invoiceDate.getFullYear()}${String(
             invoiceDate.getMonth() + 1
           ).padStart(2, "0")}-${String(totalInvoices + 1).padStart(3, "0")}`,
-          orderId: order.id,
           customerId: order.customerId,
           invoiceDate: invoiceDate,
           dueDate: dueDate,
-          status:
-            Math.random() > 0.1
-              ? "PAID"
-              : ("DRAFT" as
-                  | "DRAFT"
-                  | "SENT"
-                  | "PAID"
-                  | "OVERDUE"
-                  | "CANCELLED"), // 90% paid
+          status: (Math.random() > 0.1 ? "PAID" : "DRAFT") as
+            | "DRAFT"
+            | "SENT"
+            | "PAID"
+            | "OVERDUE"
+            | "CANCELLED",
           totalAmount: order.totalAmount,
           notes: `Invoice for order ${order.orderNumber}`,
           createdAt: invoiceDate,
@@ -915,7 +503,7 @@ async function main() {
           ).padStart(2, "0")}-${Math.floor(Math.random() * 1000)
             .toString()
             .padStart(3, "0")}`,
-          notes: `Payment for invoice ${invoice.invoiceNumber}`,
+          notes: `Payment for invoice ${invoice.code}`,
           createdAt: paymentDate,
           updatedAt: paymentDate,
         },
@@ -926,11 +514,9 @@ async function main() {
     // Create stock movements
     console.log("📈 Creating stock movements...");
     let totalStockMovements = 0;
-    const warehouseUsers = allUsers.filter(
-      (user) => user.role === "WAREHOUSE" || user.role === "ADMIN"
-    );
+    const warehouseUsers = [warehouseUser, adminUser];
 
-    for (const product of allProducts) {
+    for (const product of createdProducts) {
       // Create some random stock movements over the last 6 months
       for (let monthOffset = 6; monthOffset >= 0; monthOffset--) {
         const movementDate = new Date(
@@ -945,7 +531,7 @@ async function main() {
           moveDay.setDate(Math.floor(Math.random() * 28) + 1);
 
           const movementType =
-            Math.random() > 0.3 ? "OUT" : ("IN" as "IN" | "OUT" | "ADJUSTMENT"); // 70% out, 30% in
+            Math.random() > 0.3 ? "SALES_OUT" : "PRODUCTION_IN";
           const quantity = Math.floor(Math.random() * 20) + 1;
           const randomUser =
             warehouseUsers[Math.floor(Math.random() * warehouseUsers.length)];
@@ -953,7 +539,7 @@ async function main() {
           // Calculate stock levels
           const previousStock = product.currentStock;
           const newStock =
-            movementType === "OUT"
+            movementType === "SALES_OUT"
               ? previousStock - quantity
               : previousStock + quantity;
 
@@ -970,7 +556,7 @@ async function main() {
                 moveDay.getMonth() + 1
               ).padStart(2, "0")}-${i + 1}`,
               notes: `${
-                movementType === "OUT" ? "Sale" : "Restock"
+                movementType === "SALES_OUT" ? "Sale" : "Restock"
               } movement for ${product.name}`,
               movementDate: moveDay,
               createdAt: moveDay,
@@ -999,15 +585,13 @@ async function main() {
         const visitDay = new Date(visitDate);
         visitDay.setDate(Math.floor(Math.random() * 28) + 1);
 
-        const randomSales =
-          salesUsers[Math.floor(Math.random() * salesUsers.length)];
         const randomCustomer =
           createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
 
         await prisma.customerVisits.create({
           data: {
             id: uuid(),
-            salesId: randomSales.id,
+            salesId: salesUser.id,
             customerId: randomCustomer.id,
             visitDate: visitDay,
             latitude:
@@ -1023,8 +607,6 @@ async function main() {
       }
     }
     console.log(`✅ Created ${totalVisits} customer visits`);
-
-    // --- End Chart Data Seeding ---
 
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
