@@ -22,12 +22,14 @@ import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 
 interface CategoryFormData {
+  code: string;
   name: string;
   description: string;
   isActive: boolean;
 }
 
 interface CategoryFormErrors {
+  code?: string;
   name?: string;
   description?: string;
   isActive?: string;
@@ -43,6 +45,7 @@ export default function EditCategoryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [category, setCategory] = useState<Categories | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({
+    code: "",
     name: "",
     description: "",
     isActive: true,
@@ -64,6 +67,7 @@ export default function EditCategoryPage() {
         if (categoryData) {
           setCategory(categoryData);
           setFormData({
+            code: categoryData.code,
             name: categoryData.name,
             description: categoryData.description || "",
             isActive: categoryData.isActive,
@@ -122,6 +126,7 @@ export default function EditCategoryPage() {
     setIsSubmitting(true);
     try {
       const result = await updateCategory(categoryId, {
+        code: formData.code,
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         isActive: formData.isActive,
@@ -215,6 +220,20 @@ export default function EditCategoryPage() {
           hideDeleteButton={false}
         >
           {/* ... Field-field form tidak berubah ... */}
+          <FormField
+            label="Kode Kategori"
+            htmlFor="code"
+            required
+            errorMessage={formErrors.code}
+          >
+            <Input
+              type="text"
+              name="code"
+              value={formData.code}
+              readOnly // Kode digenerate otomatis, tidak bisa diubah manual
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+            />
+          </FormField>
           <FormField
             label="Nama Kategori"
             htmlFor="name"

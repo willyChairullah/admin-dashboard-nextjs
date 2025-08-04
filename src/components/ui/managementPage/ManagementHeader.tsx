@@ -10,12 +10,14 @@ interface ManagementHeaderProps {
   allowedRoles: string[]; // List of roles allowed to see the "Add New" button
   mainPageName: string; // The base path for the main page
   headerTittle: string; // The base path for the main page
+  isAddHidden?: boolean; // Optional prop to manually hide the "Add New" button
 }
 
 const ManagementHeader: React.FC<ManagementHeaderProps> = ({
   allowedRoles,
   mainPageName,
   headerTittle,
+  isAddHidden = false, // Default value is false (show button)
 }) => {
   const { user, loading } = useCurrentUser(); // Get user details
   const isMobile = useIsMobile();
@@ -37,13 +39,16 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
 
   const handleAddNewClick = () => {
     if (isOnMainPage || isOnEditPage) {
-      console.log("Navigating to:", `${pathname}/create`);
+      // console.log("Navigating to:", `${pathname}/create`);
       router.push(`${mainPage}/create`); // Navigasi ke '/me/create'
     }
   };
 
   // Check if the user's role is allowed to see the "Add New" button
   const canAddNewUser = user && allowedRoles.includes(user.role || "");
+
+  // Show add button only if user has permission AND isAddHidden is false
+  const showAddButton = canAddNewUser && !isAddHidden;
 
   return (
     <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-3 border-b border-gray-200 dark:border-gray-700">
@@ -61,7 +66,7 @@ const ManagementHeader: React.FC<ManagementHeaderProps> = ({
         >
           Daftar
         </Button>
-        {canAddNewUser && (
+        {showAddButton && (
           <Button
             size={isMobile ? "small" : "medium"}
             variant={isOnCreatePage ? "secondary" : "primary"}

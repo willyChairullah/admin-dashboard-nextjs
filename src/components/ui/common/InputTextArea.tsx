@@ -1,4 +1,5 @@
 "use client";
+
 import React from "react";
 
 interface InputTextAreaProps
@@ -8,6 +9,7 @@ interface InputTextAreaProps
   errorMessage?: string;
   className?: string;
   name: string;
+  height?: string;
 }
 
 const InputTextArea: React.FC<InputTextAreaProps> = ({
@@ -16,6 +18,7 @@ const InputTextArea: React.FC<InputTextAreaProps> = ({
   errorMessage,
   className = "",
   name,
+  height,
   ...props
 }) => {
   const hasError = errorMessage && errorMessage.length > 0;
@@ -27,6 +30,7 @@ const InputTextArea: React.FC<InputTextAreaProps> = ({
         value={value}
         onChange={onChange}
         name={name}
+        style={height ? { height } : undefined}
         className={`
           dark:text-gray-300
           dark:bg-gray-900

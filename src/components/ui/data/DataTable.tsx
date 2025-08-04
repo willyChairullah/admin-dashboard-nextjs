@@ -391,6 +391,16 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => {
   );
 };
 
+// Fungsi helper untuk mendapatkan nilai dari properti bersarang
+const getNestedValue = (obj: any, accessor: string): any => {
+  return accessor.split(".").reduce((acc, part) => {
+    if (acc && typeof acc === "object" && part in acc) {
+      return acc[part];
+    }
+    return undefined;
+  }, obj);
+};
+
 const DataTable: React.FC<TableProps> = ({
   columns,
   data,
@@ -562,42 +572,44 @@ const DataTable: React.FC<TableProps> = ({
                       key={rowIndex}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150"
                     >
-                      {/* Add sequence number cell */}
                       <td className="w-[50px] px-3 py-3 text-sm text-gray-900 dark:text-gray-100 text-center">
                         {(currentPage - 1) * pageSize + rowIndex + 1}
                       </td>
+                      
+                      {columns.map((column, colIndex) => {
+                        const value = getNestedValue(row, column.accessor);
+                        const cellContent = column.render
+                          ? column.render(value, row)
+                          : value;
 
-                      {/* Link in first column */}
-                      {linkPath ? (
-                        <td className="px-3 py-3">
-                          <a
-                            href={linkPath(row)} // Menjaga aksesibilitas
-                            onClick={e => {
-                              e.preventDefault(); // Mencegah refresh halaman
-                              router.push(linkPath(row)); // Navigasi menggunakan router
-                            }}
-                            className="text-blue-600 hover:underline"
+                        // Jika ini kolom pertama dan ada linkPath, buat menjadi link
+                        if (linkPath && colIndex === 0) {
+                          return (
+                            <td key={colIndex} className="px-3 py-3">
+                              <a
+                                href={linkPath(row)}
+                                onClick={e => {
+                                  e.preventDefault();
+                                  router.push(linkPath(row));
+                                }}
+                                className="text-blue-600 hover:underline"
+                              >
+                                {cellContent}
+                              </a>
+                            </td>
+                          );
+                        }
+
+                        // Render sel biasa untuk kolom lainnya
+                        return (
+                          <td
+                            key={colIndex}
+                            className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words"
                           >
-                            {row[columns[0].accessor]}
-                          </a>
-                        </td>
-                      ) : (
-                        <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words">
-                          {row[columns[0].accessor]}{" "}
-                          {/* Other columns will render normally */}
-                        </td>
-                      )}
-
-                      {columns.slice(1).map((column, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className="px-3 py-3 text-sm text-gray-900 dark:text-gray-100 break-words"
-                        >
-                          {column.render
-                            ? column.render(row[column.accessor], row)
-                            : row[column.accessor]}
-                        </td>
-                      ))}
+                            {cellContent}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
