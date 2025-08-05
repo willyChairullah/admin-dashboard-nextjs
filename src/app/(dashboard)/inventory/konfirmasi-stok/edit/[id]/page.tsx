@@ -11,7 +11,6 @@ import {
 import {
   confirmPurchaseOrderStock,
   getPurchaseOrderForConfirmationById,
-  getAvailableWarehouseUsers,
   type StockConfirmationFormData,
   type PurchaseOrderForConfirmation,
 } from "@/lib/actions/stockConfirmation";
@@ -21,11 +20,11 @@ import { toast } from "sonner";
 import { StockConfirmationStatus } from "@prisma/client";
 import { formatDate } from "@/utils/formatDate";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface StockConfirmationFormErrors {
   statusStockConfirmation?: string;
   notesStockConfirmation?: string;
-  userStockConfirmation?: string;
   items?: {
     [key: number]: {
       notesStockConfirmation?: string;
@@ -33,23 +32,17 @@ interface StockConfirmationFormErrors {
   };
 }
 
-interface User {
-  id: string;
-  name: string;
-  role: string;
-}
-
 export default function ConfirmStockPage() {
   const params = useParams();
   const router = useRouter();
   const data = useSharedData();
   const id = params.id as string;
+  const { user } = useCurrentUser();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [purchaseOrder, setPurchaseOrder] =
     useState<PurchaseOrderForConfirmation | null>(null);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
 
   const [formData, setFormData] = useState<StockConfirmationFormData>({
     statusStockConfirmation: "WAITING_CONFIRMATION",
@@ -60,13 +53,20 @@ export default function ConfirmStockPage() {
 
   const [formErrors, setFormErrors] = useState<StockConfirmationFormErrors>({});
 
+  // Update userStockConfirmation when user data is available
+  useEffect(() => {
+    if (user?.id) {
+      setFormData(prev => ({
+        ...prev,
+        userStockConfirmation: user.id,
+      }));
+    }
+  }, [user]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [poData, users] = await Promise.all([
-          getPurchaseOrderForConfirmationById(id),
-          getAvailableWarehouseUsers(),
-        ]);
+        const poData = await getPurchaseOrderForConfirmationById(id);
 
         if (!poData) {
           toast.error("Purchase Order tidak ditemukan");
@@ -75,13 +75,12 @@ export default function ConfirmStockPage() {
         }
 
         setPurchaseOrder(poData);
-        setAvailableUsers(users);
 
-        // Set form data from existing PO
+        // Set form data from existing PO dengan user dari session
         setFormData({
           statusStockConfirmation: poData.statusStockConfirmation,
           notesStockConfirmation: poData.notesStockConfirmation || "",
-          userStockConfirmation: poData.userStockConfirmationId || "",
+          userStockConfirmation: user?.id || "",
           items: poData.items.map(item => ({
             id: item.id,
             notesStockConfirmation: item.notesStockConfirmation || "",
@@ -97,17 +96,13 @@ export default function ConfirmStockPage() {
     };
 
     fetchData();
-  }, [id, router]);
+  }, [id, router, user]);
 
   const validateForm = (): boolean => {
     const errors: StockConfirmationFormErrors = {};
 
     if (!formData.statusStockConfirmation) {
       errors.statusStockConfirmation = "Status konfirmasi wajib dipilih";
-    }
-
-    if (!formData.userStockConfirmation) {
-      errors.userStockConfirmation = "User konfirmasi wajib dipilih";
     }
 
     setFormErrors(errors);
@@ -120,8 +115,17 @@ export default function ConfirmStockPage() {
   ) => {
     setFormData({ ...formData, [field]: value });
 
-    if (formErrors[field]) {
-      setFormErrors({ ...formErrors, [field]: undefined });
+    // Only clear errors for fields that exist in StockConfirmationFormErrors
+    if (
+      field === "statusStockConfirmation" &&
+      formErrors.statusStockConfirmation
+    ) {
+      setFormErrors({ ...formErrors, statusStockConfirmation: undefined });
+    } else if (
+      field === "notesStockConfirmation" &&
+      formErrors.notesStockConfirmation
+    ) {
+      setFormErrors({ ...formErrors, notesStockConfirmation: undefined });
     }
   };
 
@@ -219,30 +223,6 @@ export default function ConfirmStockPage() {
             </div>
             <div>
               <span className="font-medium text-gray-500 dark:text-gray-400">
-                Tanggal PO:
-              </span>
-              <p className="text-gray-900 dark:text-gray-100">
-                {formatDate(purchaseOrder.poDate)}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-500 dark:text-gray-400">
-                Deadline:
-              </span>
-              <p className="text-gray-900 dark:text-gray-100">
-                {formatDate(purchaseOrder.dateline)}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-500 dark:text-gray-400">
-                Pembuat:
-              </span>
-              <p className="text-gray-900 dark:text-gray-100">
-                {purchaseOrder.creator.name}
-              </p>
-            </div>
-            <div>
-              <span className="font-medium text-gray-500 dark:text-gray-400">
                 Customer:
               </span>
               <p className="text-gray-900 dark:text-gray-100">
@@ -251,17 +231,35 @@ export default function ConfirmStockPage() {
             </div>
             <div>
               <span className="font-medium text-gray-500 dark:text-gray-400">
-                Total Amount:
+                Total Bayar:
               </span>
               <p className="text-gray-900 dark:text-gray-100">
-                {formatRupiah(purchaseOrder.totalAmount)}
+                {formatRupiah(purchaseOrder.totalPayment)}
+              </p>
+            </div>
+            <div>
+              <span className="font-medium text-gray-500 dark:text-gray-400">
+                Tanggal PO:
+              </span>
+              <p className="text-gray-900 dark:text-gray-100">
+                {formatDate(purchaseOrder.poDate)}
+              </p>
+            </div>
+            <div>
+              <span className="font-medium text-gray-500 dark:text-gray-400">
+                Tanggal pembayaran:
+              </span>
+              <p className="text-gray-900 dark:text-gray-100">
+                {purchaseOrder.paymentDeadline
+                  ? formatDate(purchaseOrder.paymentDeadline)
+                  : "Bayar Langsung"}
               </p>
             </div>
           </div>
         </div>
 
         {/* Stock Confirmation Form */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <FormField
             label="Status Konfirmasi Stok"
             required
@@ -287,47 +285,27 @@ export default function ConfirmStockPage() {
             </select>
           </FormField>
 
-          <FormField
-            label="User Konfirmasi"
-            required
-            errorMessage={formErrors.userStockConfirmation}
-          >
-            <select
-              value={formData.userStockConfirmation}
-              onChange={e =>
-                handleInputChange("userStockConfirmation", e.target.value)
-              }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                formErrors.userStockConfirmation
-                  ? "border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
-          </FormField>
+          {/* Hidden field untuk User Konfirmasi - diambil langsung dari session */}
+          <input
+            type="hidden"
+            name="userStockConfirmation"
+            value={formData.userStockConfirmation}
+          />
 
-          <div className="md:col-span-2">
-            <FormField
-              label="Catatan Konfirmasi"
-              errorMessage={formErrors.notesStockConfirmation}
-            >
-              <InputTextArea
-                name="notesStockConfirmation"
-                value={formData.notesStockConfirmation}
-                onChange={e =>
-                  handleInputChange("notesStockConfirmation", e.target.value)
-                }
-                placeholder="Catatan tambahan untuk konfirmasi stok (opsional)"
-                rows={3}
-              />
-            </FormField>
-          </div>
+          <FormField
+            label="Catatan Konfirmasi"
+            errorMessage={formErrors.notesStockConfirmation}
+          >
+            <InputTextArea
+              name="notesStockConfirmation"
+              value={formData.notesStockConfirmation}
+              onChange={e =>
+                handleInputChange("notesStockConfirmation", e.target.value)
+              }
+              placeholder="Catatan tambahan untuk konfirmasi stok (opsional)"
+              rows={3}
+            />
+          </FormField>
         </div>
 
         {/* Items Section */}
@@ -350,17 +328,9 @@ export default function ConfirmStockPage() {
                     <p className="text-gray-900 dark:text-gray-100">
                       {item.product.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    {/* <p className="text-xs text-gray-500">
                       Unit: {item.product.unit}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Qty Diminta:
-                    </span>
-                    <p className="text-gray-900 dark:text-gray-100">
-                      {item.quantity}
-                    </p>
+                    </p> */}
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -374,6 +344,14 @@ export default function ConfirmStockPage() {
                       }`}
                     >
                       {item.product.currentStock}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Qty Diminta:
+                    </span>
+                    <p className="text-gray-900 dark:text-gray-100">
+                      {item.quantity}
                     </p>
                   </div>
                   <div>

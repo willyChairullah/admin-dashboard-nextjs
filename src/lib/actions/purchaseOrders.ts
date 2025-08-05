@@ -13,6 +13,7 @@ export type PurchaseOrderItemFormData = {
   productId: string;
   quantity: number;
   price: number; // Harga per unit saat PO dibuat
+  discount: number; // Potongan per item
   totalPrice: number; // Total harga untuk item ini
 };
 
@@ -24,6 +25,13 @@ export type PurchaseOrderFormData = {
   creatorId: string;
   orderId: string; // Optional untuk PO yang tidak berasal dari Order
   totalAmount: number; // Total nilai PO
+  orderLevelDiscount: number; // Potongan keseluruhan
+  totalDiscount: number; // Total semua potongan
+  totalTax: number; // Total pajak
+  taxPercentage: number | null; // Persentase pajak
+  shippingCost: number; // Biaya pengiriman
+  totalPayment: number; // Total pembayaran akhir
+  paymentDeadline?: Date | null; // Tenggat pembayaran
   items: PurchaseOrderItemFormData[];
 };
 
@@ -270,6 +278,14 @@ export async function createPurchaseOrder(
       };
     }
 
+    // Validasi taxPercentage
+    if (data.taxPercentage === null || data.taxPercentage === undefined) {
+      return {
+        success: false,
+        error: "Pajak wajib dipilih",
+      };
+    }
+
     // Create purchase order with items
     const result = await db.$transaction(async tx => {
       // Create the main purchase order
@@ -282,6 +298,13 @@ export async function createPurchaseOrder(
           creatorId: data.creatorId,
           orderId: data.orderId,
           totalAmount: data.totalAmount,
+          orderLevelDiscount: data.orderLevelDiscount,
+          totalDiscount: data.totalDiscount,
+          totalTax: data.totalTax,
+          taxPercentage: data.taxPercentage || 0, // Convert null to 0
+          shippingCost: data.shippingCost,
+          totalPayment: data.totalPayment,
+          paymentDeadline: data.paymentDeadline,
           status: "PENDING",
         },
       });
@@ -293,6 +316,7 @@ export async function createPurchaseOrder(
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
+          discount: item.discount,
           totalPrice: item.totalPrice,
         })),
       });
@@ -325,6 +349,14 @@ export async function updatePurchaseOrder(
       };
     }
 
+    // Validasi taxPercentage
+    if (data.taxPercentage === null || data.taxPercentage === undefined) {
+      return {
+        success: false,
+        error: "Pajak wajib dipilih",
+      };
+    }
+
     const result = await db.$transaction(async tx => {
       // Update the main purchase order
       const purchaseOrder = await tx.purchaseOrders.update({
@@ -337,6 +369,13 @@ export async function updatePurchaseOrder(
           creatorId: data.creatorId,
           orderId: data.orderId,
           totalAmount: data.totalAmount,
+          orderLevelDiscount: data.orderLevelDiscount,
+          totalDiscount: data.totalDiscount,
+          totalTax: data.totalTax,
+          taxPercentage: data.taxPercentage || 0,
+          shippingCost: data.shippingCost,
+          totalPayment: data.totalPayment,
+          paymentDeadline: data.paymentDeadline,
         },
       });
 
@@ -352,6 +391,7 @@ export async function updatePurchaseOrder(
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
+          discount: item.discount,
           totalPrice: item.totalPrice,
         })),
       });

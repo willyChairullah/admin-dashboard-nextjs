@@ -148,6 +148,13 @@ model PurchaseOrders {
   status                  PurchaseOrderStatus     @default(PENDING)
   notes                   String?
   totalAmount             Float                   @default(0)
+  orderLevelDiscount      Float                   @default(0) // Potongan keseluruhan
+  totalDiscount           Float                   @default(0) // Total semua potongan
+  totalTax                Float                   @default(0) // Total pajak
+  taxPercentage           Float                   @default(0) // Persentase pajak
+  shippingCost            Float                   @default(0) // Biaya pengiriman
+  totalPayment            Float                   @default(0) // Total pembayaran akhir
+  paymentDeadline         DateTime?                          // Tenggat pembayaran
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
@@ -175,7 +182,8 @@ model PurchaseOrderItems {
   id                     String  @id @default(cuid())
   quantity               Float
   price                  Float   @default(0) // Harga per unit saat PO dibuat (price snapshot)
-  totalPrice             Float   @default(0) // Total harga untuk item ini (quantity * price)
+  discount               Float   @default(0) // Potongan per item
+  totalPrice             Float   @default(0) // Total harga untuk item ini (quantity * (price - discount))
   notesStockConfirmation String? // Notes from warehouse regarding stock confirmation
 
   // Relasi penting
