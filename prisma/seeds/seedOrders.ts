@@ -109,30 +109,6 @@ export async function seedOrders(
     },
     [{ productId: products[4].id, quantity: 10 }]
   );
-  const invoiceForPaidOrder = await prisma.invoices.create({
-    data: {
-      id: uuid(),
-      code: `INV-${paidOrder.orderNumber}`,
-      invoiceDate: paidOrder.orderDate,
-      dueDate: paidOrder.dueDate,
-      status: "PAID",
-      paymentStatus: "PAID",
-      totalAmount: paidOrder.totalAmount,
-      paidAmount: paidOrder.totalAmount,
-      remainingAmount: 0,
-      customerId: paidOrder.customerId,
-    },
-  });
-  await prisma.payments.create({
-    data: {
-      id: uuid(),
-      paymentDate: new Date("2025-07-23T10:00:00Z"),
-      amount: paidOrder.totalAmount,
-      method: "TRANSFER",
-      invoiceId: invoiceForPaidOrder.id,
-    },
-  });
-  console.log(`✅ Created Invoice and Payment for ${paidOrder.orderNumber}`);
 
   // --- Variasi 4: Order BELUM DIBAYAR (paymentDate kosong) ---
   const unpaidOrder = await createOrderWithItems(
@@ -150,21 +126,6 @@ export async function seedOrders(
     },
     [{ productId: products[5].id, quantity: 20 }]
   );
-  await prisma.invoices.create({
-    data: {
-      id: uuid(),
-      code: `INV-${unpaidOrder.orderNumber}`,
-      invoiceDate: unpaidOrder.orderDate,
-      dueDate: unpaidOrder.dueDate,
-      status: "SENT",
-      paymentStatus: "UNPAID",
-      totalAmount: unpaidOrder.totalAmount,
-      paidAmount: 0,
-      remainingAmount: unpaidOrder.totalAmount,
-      customerId: unpaidOrder.customerId,
-    },
-  });
-  console.log(`✅ Created Unpaid Invoice for ${unpaidOrder.orderNumber}`);
 
   // --- Variasi 5: Order dengan BEBERAPA DISKON PER ITEM ---
   await createOrderWithItems(

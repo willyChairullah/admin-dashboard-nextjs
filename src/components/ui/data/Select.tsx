@@ -103,7 +103,7 @@ const Select: React.FC<SelectProps> = ({
           onClick={toggleDropdown}
           placeholder={selectedOption?.label || placeholder}
           // 👇 PERUBAHAN 1: Kursor kondisional (hand vs text)
-          className={`w-full p-2 pr-10 text-left rounded-lg focus:outline-none dark:text-gray-300 ${
+          className={`w-full p-1.5 pr-10 text-left rounded-lg focus:outline-none dark:text-gray-300 ${
             isOpen && searchable ? "cursor-text" : "cursor-pointer"
           } ${
             hasError ? "bg-red-50 dark:bg-red-900" : "bg-white dark:bg-gray-900"

@@ -172,6 +172,8 @@ export default function EditPurchaseOrderPage() {
         setAvailableOrders(orders);
         setAvailableProducts(products);
 
+        console.log(purchaseOrder);
+
         // Set form data from existing PO
         setFormData({
           code: purchaseOrder.code,

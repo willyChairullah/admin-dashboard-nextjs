@@ -12,7 +12,8 @@ import {
 import { revalidatePath } from "next/cache";
 
 export type InvoiceItemFormData = {
-  productId: string;
+  productId?: string; // Made optional to support non-product items
+  description?: string; // Added for non-product items
   quantity: number;
   price: number;
   discount: number;
@@ -27,7 +28,9 @@ export type InvoiceFormData = {
   isProforma: boolean;
   subtotal: number;
   tax: number;
+  taxPercentage: number;
   discount: number;
+  shippingCost: number;
   totalAmount: number;
   notes?: string;
   customerId: string;
@@ -63,7 +66,7 @@ export type InvoiceWithDetails = Invoices & {
       name: string;
       unit: string;
       price: number;
-    };
+    } | null; // Made nullable to match the database schema
   })[];
 };
 
@@ -315,7 +318,7 @@ export async function createInvoice(data: InvoiceFormData) {
   try {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount;
+    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
     const remainingAmount = totalAmount - 0; // paidAmount starts at 0
 
     const result = await db.$transaction(async tx => {
@@ -329,7 +332,9 @@ export async function createInvoice(data: InvoiceFormData) {
           isProforma: data.isProforma,
           subtotal: subtotal,
           tax: data.tax,
+          taxPercentage: data.taxPercentage,
           discount: data.discount,
+          shippingCost: data.shippingCost,
           totalAmount: totalAmount,
           paidAmount: 0,
           remainingAmount: remainingAmount,
@@ -345,12 +350,13 @@ export async function createInvoice(data: InvoiceFormData) {
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
+              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId,
+              productId: item.productId || null,
             },
           })
         )
@@ -359,7 +365,9 @@ export async function createInvoice(data: InvoiceFormData) {
       return { invoice, invoiceItems };
     });
 
-    revalidatePath("/sales/invoice");
+    // revalidatePath("/sales/invoice");
+    console.log("backend");
+    
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating invoice:", error);
@@ -376,7 +384,7 @@ export async function updateInvoice(
   try {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount;
+    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
 
     const result = await db.$transaction(async tx => {
       // Get current invoice to preserve paidAmount
@@ -402,7 +410,9 @@ export async function updateInvoice(
           isProforma: data.isProforma,
           subtotal: subtotal,
           tax: data.tax,
+          taxPercentage: data.taxPercentage,
           discount: data.discount,
+          shippingCost: data.shippingCost,
           totalAmount: totalAmount,
           remainingAmount: remainingAmount,
           notes: data.notes,
@@ -422,12 +432,13 @@ export async function updateInvoice(
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
+              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId,
+              productId: item.productId || null,
             },
           })
         )
@@ -480,6 +491,19 @@ export async function getPurchaseOrderForInvoice(purchaseOrderId: string) {
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        order: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+              },
+            },
           },
         },
         items: {

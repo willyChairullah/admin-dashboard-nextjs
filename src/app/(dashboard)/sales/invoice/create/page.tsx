@@ -1,8 +1,14 @@
 // app/sales/invoice/create/page.tsx
 "use client";
-import { ManagementForm, ManagementHeader } from "@/components/ui";
+import { ManagementForm, ManagementHeader, FormField } from "@/components/ui";
 import React, { useState, useEffect } from "react";
-import { Input, FormField, InputTextArea, InputDate } from "@/components/ui";
+import {
+  Input,
+  InputTextArea,
+  InputDate,
+  CustomerInfo,
+  Select,
+} from "@/components/ui";
 import {
   createInvoice,
   getAvailableCustomers,
@@ -16,9 +22,13 @@ import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { generateCodeByTable } from "@/utils/getCode";
+import { formatRupiah } from "@/utils/formatRupiah";
+import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface InvoiceItemFormData {
   productId: string;
+  description?: string;
   quantity: number;
   price: number;
   discount: number;
@@ -29,11 +39,14 @@ interface InvoiceFormData {
   code: string;
   invoiceDate: string;
   dueDate: string;
+  paymentDeadline: string | null;
   status: string;
   isProforma: boolean;
   subtotal: number;
   tax: number;
+  taxPercentage: number;
   discount: number;
+  shippingCost: number;
   totalAmount: number;
   notes: string;
   customerId: string;
@@ -46,10 +59,20 @@ interface InvoiceFormErrors {
   code?: string;
   invoiceDate?: string;
   dueDate?: string;
+  paymentDeadline?: string;
   status?: string;
   customerId?: string;
   createdBy?: string;
-  items?: string;
+  taxPercentage?: string;
+  items?:
+    | string
+    | Array<{
+        productId?: string;
+        description?: string;
+        quantity?: string;
+        price?: string;
+        discount?: string;
+      }>;
 }
 
 interface Customer {
@@ -77,6 +100,7 @@ interface User {
 export default function CreateInvoicePage() {
   const data = useSharedData();
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
   const [availablePurchaseOrders, setAvailablePurchaseOrders] = useState<any[]>(
@@ -86,6 +110,11 @@ export default function CreateInvoicePage() {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<"product" | "manual">("product");
+  const [isLockedToProduct, setIsLockedToProduct] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
 
   const [formData, setFormData] = useState<InvoiceFormData>({
     code: "",
@@ -93,18 +122,28 @@ export default function CreateInvoicePage() {
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0], // 30 days from now
+    paymentDeadline: null,
     status: "DRAFT",
     isProforma: false,
     subtotal: 0,
     tax: 0,
+    taxPercentage: 0,
     discount: 0,
+    shippingCost: 0,
     totalAmount: 0,
     notes: "",
     customerId: "",
     purchaseOrderId: "",
     createdBy: "",
     items: [
-      { productId: "", quantity: 0, price: 0, discount: 0, totalPrice: 0 },
+      {
+        productId: "",
+        description: "",
+        quantity: 0,
+        price: 0,
+        discount: 0,
+        totalPrice: 0,
+      },
     ],
   });
 
@@ -133,6 +172,7 @@ export default function CreateInvoicePage() {
         setFormData(prevData => ({
           ...prevData,
           code: newCode,
+          createdBy: user?.id || "",
         }));
       } catch (error: any) {
         console.error("Error fetching initial data or generating code:", error);
@@ -148,7 +188,7 @@ export default function CreateInvoicePage() {
     };
 
     fetchDataAndCode();
-  }, []);
+  }, [user]);
 
   // Auto-fill customer and items when purchase order is selected
   useEffect(() => {
@@ -159,16 +199,35 @@ export default function CreateInvoicePage() {
             formData.purchaseOrderId
           );
           if (purchaseOrderDetails) {
+            // Lock to product mode when PO is selected
+            setIsLockedToProduct(true);
+            setInputMode("product");
+
             setFormData(prev => ({
               ...prev,
+              customerId: purchaseOrderDetails.order?.customerId || "",
+              taxPercentage: purchaseOrderDetails.taxPercentage || 0,
+              shippingCost: purchaseOrderDetails.shippingCost || 0,
+              discount: purchaseOrderDetails.orderLevelDiscount || 0,
+              paymentDeadline: purchaseOrderDetails.paymentDeadline
+                ? new Date(purchaseOrderDetails.paymentDeadline)
+                    .toISOString()
+                    .split("T")[0]
+                : null,
               items: purchaseOrderDetails.items.map(item => ({
                 productId: item.product.id,
+                description: item.product.name,
                 quantity: item.quantity,
                 price: item.price,
-                discount: 0,
-                totalPrice: item.quantity * item.price,
+                discount: item.discount || 0,
+                totalPrice: (item.price - (item.discount || 0)) * item.quantity,
               })),
             }));
+
+            // Set selected customer for CustomerInfo component
+            if (purchaseOrderDetails.order?.customer) {
+              setSelectedCustomer(purchaseOrderDetails.order.customer);
+            }
           }
         } catch (error) {
           console.error("Error fetching purchase order details:", error);
@@ -176,6 +235,10 @@ export default function CreateInvoicePage() {
         }
       };
       fetchPurchaseOrderDetails();
+    } else {
+      // Unlock when PO is cleared
+      setIsLockedToProduct(false);
+      setSelectedCustomer(null);
     }
   }, [formData.purchaseOrderId]);
 
@@ -185,14 +248,32 @@ export default function CreateInvoicePage() {
       (sum, item) => sum + item.totalPrice,
       0
     );
-    const totalAmount = subtotal + formData.tax - formData.discount;
+
+    // Calculate total discount from items (already calculated in totalPrice)
+    const itemDiscountTotal = formData.items.reduce(
+      (sum, item) => sum + (item.discount || 0) * (item.quantity || 0),
+      0
+    );
+
+    // Calculate tax from percentage (applied to subtotal minus overall discount)
+    const taxableAmount = subtotal - formData.discount;
+    const tax = (taxableAmount * formData.taxPercentage) / 100;
+
+    const totalAmount =
+      subtotal - formData.discount + tax + formData.shippingCost;
 
     setFormData(prev => ({
       ...prev,
       subtotal,
+      tax,
       totalAmount,
     }));
-  }, [formData.items, formData.tax, formData.discount]);
+  }, [
+    formData.items,
+    formData.taxPercentage,
+    formData.shippingCost,
+    formData.discount,
+  ]);
 
   const validateForm = (): boolean => {
     const errors: InvoiceFormErrors = {};
@@ -211,6 +292,14 @@ export default function CreateInvoicePage() {
 
     if (!formData.customerId) {
       errors.customerId = "Customer wajib dipilih";
+    }
+
+    // Tax percentage validation - allow 0 as valid value
+    if (
+      formData.taxPercentage === undefined ||
+      formData.taxPercentage === null
+    ) {
+      errors.taxPercentage = "Pajak wajib dipilih";
     }
 
     if (!formData.createdBy) {
@@ -244,10 +333,10 @@ export default function CreateInvoicePage() {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
 
-    // Recalculate totalPrice for this item
+    // Recalculate totalPrice for this item - (price - discount) * quantity
     if (field === "quantity" || field === "price" || field === "discount") {
       const item = newItems[index];
-      item.totalPrice = item.quantity * item.price - item.discount;
+      item.totalPrice = (item.price - item.discount) * item.quantity;
     }
 
     setFormData({ ...formData, items: newItems });
@@ -258,7 +347,14 @@ export default function CreateInvoicePage() {
       ...formData,
       items: [
         ...formData.items,
-        { productId: "", quantity: 0, price: 0, discount: 0, totalPrice: 0 },
+        {
+          productId: "",
+          description: "",
+          quantity: 0,
+          price: 0,
+          discount: 0,
+          totalPrice: 0,
+        },
       ],
     });
   };
@@ -270,7 +366,9 @@ export default function CreateInvoicePage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault(); // Prevent default form submission
+
     if (!validateForm()) {
       console.log("=================== test ===================");
       toast.error("Mohon periksa kembali form yang diisi");
@@ -283,11 +381,16 @@ export default function CreateInvoicePage() {
         code: formData.code,
         invoiceDate: new Date(formData.invoiceDate),
         dueDate: new Date(formData.dueDate),
+        paymentDeadline: formData.paymentDeadline
+          ? new Date(formData.paymentDeadline)
+          : null,
         status: formData.status as any,
         isProforma: formData.isProforma,
         subtotal: formData.subtotal,
         tax: formData.tax,
+        taxPercentage: formData.taxPercentage,
         discount: formData.discount,
+        shippingCost: formData.shippingCost,
         totalAmount: formData.totalAmount,
         notes: formData.notes || undefined,
         customerId: formData.customerId,
@@ -299,8 +402,6 @@ export default function CreateInvoicePage() {
       const result = await createInvoice(invoiceData);
 
       if (result.success) {
-        console.log("test");
-
         toast.success("Invoice berhasil dibuat!");
         router.push("/sales/invoice");
       }
@@ -365,18 +466,37 @@ export default function CreateInvoicePage() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Kode Invoice */}
-          <FormField
-            label="Kode Invoice"
-            required
-            errorMessage={formErrors.code}
-          >
+          <FormField label="Kode Invoice" errorMessage={formErrors.code}>
             <Input
               type="text"
               name="code"
               value={formData.code}
               onChange={e => handleInputChange("code", e.target.value)}
               placeholder="Masukkan kode invoice"
-              disabled={true} // Auto-generated
+              readOnly
+              className="cursor-default"
+            />
+          </FormField>
+
+          {/* Purchase Order (Optional) */}
+          <FormField label="Purchase Order (Opsional)">
+            <Select
+              searchable={true}
+              searchPlaceholder="Cari order..."
+              value={formData.purchaseOrderId}
+              onChange={(value: string) =>
+                handleInputChange("purchaseOrderId", value)
+              }
+              options={[
+                {
+                  value: "",
+                  label: "Pilih Purchase Order (Manual jika kosong)",
+                },
+                ...availablePurchaseOrders.map(purchaseOrder => ({
+                  value: purchaseOrder.id,
+                  label: `${purchaseOrder.code} - ${purchaseOrder.creator.name}`,
+                })),
+              ]}
             />
           </FormField>
 
@@ -397,56 +517,29 @@ export default function CreateInvoicePage() {
             />
           </FormField>
 
-          {/* Tanggal Jatuh Tempo */}
+          {/* Tenggat Pembayaran */}
           <FormField
-            label="Tanggal Jatuh Tempo"
-            required
-            errorMessage={formErrors.dueDate}
+            label="Tenggat Pembayaran"
+            errorMessage={formErrors.paymentDeadline}
           >
             <InputDate
-              value={new Date(formData.dueDate)}
+              value={
+                formData.paymentDeadline
+                  ? new Date(formData.paymentDeadline)
+                  : null
+              }
               onChange={value =>
                 handleInputChange(
-                  "dueDate",
-                  value?.toISOString().split("T")[0] || ""
+                  "paymentDeadline",
+                  value ? value.toISOString().split("T")[0] : null
                 )
               }
+              showNullAsText="Bayar Langsung"
+              allowClearToNull={true}
+              isOptional={true}
+              showClearButton={true}
+              placeholder="Pilih tanggal pembayaran"
             />
-          </FormField>
-
-          {/* Status */}
-          <FormField label="Status" required errorMessage={formErrors.status}>
-            <select
-              value={formData.status}
-              onChange={e => handleInputChange("status", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="DRAFT">Draft</option>
-              <option value="SENT">Terkirim</option>
-              <option value="PAID">Dibayar</option>
-              <option value="OVERDUE">Jatuh Tempo</option>
-              <option value="CANCELLED">Dibatalkan</option>
-            </select>
-          </FormField>
-
-          {/* Purchase Order (Optional) */}
-          <FormField label="Purchase Order (Opsional)">
-            <select
-              value={formData.purchaseOrderId}
-              onChange={e =>
-                handleInputChange("purchaseOrderId", e.target.value)
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="">
-                Pilih Purchase Order (Manual jika kosong)
-              </option>
-              {availablePurchaseOrders.map(purchaseOrder => (
-                <option key={purchaseOrder.id} value={purchaseOrder.id}>
-                  {purchaseOrder.code} - {purchaseOrder.creator.name}
-                </option>
-              ))}
-            </select>
           </FormField>
 
           {/* Customer */}
@@ -455,56 +548,93 @@ export default function CreateInvoicePage() {
             required
             errorMessage={formErrors.customerId}
           >
-            <select
-              value={formData.customerId}
-              onChange={e => handleInputChange("customerId", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-              disabled={!!formData.purchaseOrderId} // Disabled if purchase order is selected
-            >
-              <option value="">Pilih Customer</option>
-              {availableCustomers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
+            {!!formData.purchaseOrderId ? (
+              <Input
+                type="text"
+                name="customerDisplay"
+                value={
+                  availableCustomers.find(c => c.id === formData.customerId)
+                    ?.name || ""
+                }
+                readOnly
+                className="cursor-default text-lg font-normal bg-gray-100 dark:bg-gray-700"
+              />
+            ) : (
+              <Select
+                value={formData.customerId}
+                onChange={(value: string) =>
+                  handleInputChange("customerId", value)
+                }
+                placeholder="Pilih Customer"
+                options={[
+                  { value: "", label: "Pilih Customer" },
+                  ...availableCustomers.map(customer => ({
+                    value: customer.id,
+                    label: customer.name,
+                  })),
+                ]}
+              />
+            )}
           </FormField>
 
-          {/* Created By */}
-          <FormField
-            label="Dibuat Oleh"
-            required
-            errorMessage={formErrors.createdBy}
-          >
-            <select
-              value={formData.createdBy}
-              onChange={e => handleInputChange("createdBy", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
+          {/* Status */}
+          <FormField label="Status" required errorMessage={formErrors.status}>
+            <Select
+              value={formData.status}
+              onChange={(value: string) => handleInputChange("status", value)}
+              placeholder="Pilih Status"
+              options={[
+                { value: "DRAFT", label: "Draft" },
+                { value: "SENT", label: "Terkirim" },
+                { value: "CANCELLED", label: "Dibatalkan" },
+              ]}
+            />
           </FormField>
+
+          {/* Show Customer Info when PO is selected */}
+          {selectedCustomer && (
+            <div className="md:col-span-2">
+              <CustomerInfo
+                customerId={selectedCustomer.id}
+                orderNumber={formData.purchaseOrderId}
+              />
+            </div>
+          )}
+
+          {/* Created By - Hidden input using session */}
+          <input type="hidden" name="createdBy" value={formData.createdBy} />
 
           {/* Is Proforma */}
-          <FormField label="Proforma Invoice">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isProforma}
-                onChange={e =>
-                  handleInputChange("isProforma", e.target.checked)
-                }
-                className="mr-2 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-800"
-              />
-              <span className="text-gray-900 dark:text-gray-300">
-                Invoice Proforma
+          <FormField label=" Biaya Pengiriman">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                Rp
               </span>
-            </label>
+              <Input
+                type="text"
+                name="shippingCost"
+                value={formatInputRupiah(formData.shippingCost)}
+                onChange={e => {
+                  const value = parseInputRupiah(e.target.value);
+                  handleInputChange("shippingCost", value);
+                }}
+                placeholder="0"
+                className="pl-10"
+              />
+            </div>
+          </FormField>
+        </div>
+
+        {/* Notes */}
+        <div className="mt-6">
+          <FormField label="Catatan">
+            <InputTextArea
+              name="notes"
+              value={formData.notes}
+              onChange={e => handleInputChange("notes", e.target.value)}
+              placeholder="Catatan tambahan..."
+              rows={3}
+            />
           </FormField>
         </div>
 
@@ -524,181 +654,423 @@ export default function CreateInvoicePage() {
             </button>
           </div>
 
-          {formErrors.items && (
+          {/* Tab Navigation */}
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => !isLockedToProduct && setInputMode("product")}
+              disabled={isLockedToProduct && inputMode !== "product"}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                inputMode === "product"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+              } ${
+                isLockedToProduct && inputMode !== "product"
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              Produk
+              {isLockedToProduct && <span className="ml-2 text-xs">🔒</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => !isLockedToProduct && setInputMode("manual")}
+              disabled={isLockedToProduct}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                inputMode === "manual"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+              } ${isLockedToProduct ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              Manual
+            </button>
+          </div>
+
+          {formErrors.items && typeof formErrors.items === "string" && (
             <div className="text-red-500 dark:text-red-400 text-sm mb-4">
               {formErrors.items}
             </div>
           )}
 
-          <div className="space-y-4">
-            {formData.items.map((item, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800"
-              >
-                {/* Product */}
-                <div className="md:col-span-2">
-                  <FormField label="Produk" required>
-                    <select
-                      value={item.productId}
-                      onChange={e => {
-                        handleItemChange(index, "productId", e.target.value);
-                        // Auto-fill price when product is selected
-                        const selectedProduct = availableProducts.find(
-                          p => p.id === e.target.value
-                        );
-                        if (selectedProduct) {
-                          handleItemChange(
-                            index,
-                            "price",
-                            selectedProduct.price
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-300"
+          {formData.items.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Belum ada item. Klik 'Tambah Item' untuk menambah item.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800">
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-1/3">
+                      {inputMode === "product" ? "Produk" : "Deskripsi"}
+                    </th>
+                    {inputMode == "product" ? (
+                      <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[90px]">
+                        Stok
+                      </th>
+                    ) : (
+                      ""
+                    )}
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[90px]">
+                      Jumlah
+                    </th>
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Harga
+                    </th>
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Potongan Per Item
+                    </th>
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Total
+                    </th>
+                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-[60px]">
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.items.map((item, index) => (
+                    <tr
+                      key={index}
+                      className="border-t border-gray-200 dark:border-gray-600"
                     >
-                      <option value="">Pilih Produk</option>
-                      {availableProducts.map(product => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} ({product.unit}) - Stok:{" "}
-                          {product.currentStock}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                </div>
+                      {/* Product/Description */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        {inputMode === "product" ? (
+                          <div>
+                            <select
+                              value={item.productId}
+                              onChange={e => {
+                                handleItemChange(
+                                  index,
+                                  "productId",
+                                  e.target.value
+                                );
+                                // Auto-fill price when product is selected
+                                const selectedProduct = availableProducts.find(
+                                  p => p.id === e.target.value
+                                );
+                                if (selectedProduct) {
+                                  handleItemChange(
+                                    index,
+                                    "price",
+                                    selectedProduct.price
+                                  );
+                                }
+                              }}
+                              className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 ${
+                                formErrors.items?.[index] &&
+                                typeof formErrors.items[index] === "object" &&
+                                "productId" in formErrors.items[index]
+                                  ? "border-red-500 bg-red-50 dark:bg-red-900"
+                                  : "border-gray-300 bg-white"
+                              }`}
+                            >
+                              <option value="">Pilih Produk</option>
+                              {availableProducts.map(product => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name} - Stok: {product.currentStock}
+                                </option>
+                              ))}
+                            </select>
+                            {formErrors.items?.[index] &&
+                              typeof formErrors.items[index] === "object" &&
+                              "productId" in formErrors.items[index] && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  {(formErrors.items[index] as any).productId}
+                                </div>
+                              )}
+                          </div>
+                        ) : (
+                          <div>
+                            <Input
+                              type="text"
+                              name={`description_${index}`}
+                              value={item.description || ""}
+                              onChange={e =>
+                                handleItemChange(
+                                  index,
+                                  "description",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Masukkan deskripsi item..."
+                              className="w-full"
+                            />
+                            {formErrors.items?.[index] &&
+                              typeof formErrors.items[index] === "object" &&
+                              "description" in formErrors.items[index] && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  {(formErrors.items[index] as any).description}
+                                </div>
+                              )}
+                          </div>
+                        )}
+                      </td>
 
-                {/* Quantity */}
-                <div>
-                  <FormField label="Qty" required>
-                    <Input
-                      type="number"
-                      name={`quantity_${index}`}
-                      value={item.quantity.toString()}
-                      onChange={e =>
-                        handleItemChange(
-                          index,
-                          "quantity",
-                          parseFloat(e.target.value) || 0
+                      {inputMode == "product" ? (
+                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 font-medium text-gray-900 dark:text-gray-100 text-center">
+                          {(() => {
+                            const product = availableProducts.find(
+                              p => p.id === item.productId
+                            );
+                            return product
+                              ? `${product.currentStock} ${product.unit}`
+                              : "-";
+                          })()}
+                        </td>
+                      ) : null}
+
+                      {/* Quantity */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        <Input
+                          type="text"
+                          name={`quantity_${index}`}
+                          value={item.quantity.toString()}
+                          onChange={e =>
+                            handleItemChange(
+                              index,
+                              "quantity",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0"
+                          className="w-full"
+                        />
+                        {formErrors.items?.[index] &&
+                          typeof formErrors.items[index] === "object" &&
+                          "quantity" in formErrors.items[index] && (
+                            <div className="text-xs text-red-500 mt-1">
+                              {(formErrors.items[index] as any).quantity}
+                            </div>
+                          )}
+                      </td>
+
+                      {/* Price */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                            Rp
+                          </span>
+                          <Input
+                            type="text"
+                            name={`price_${index}`}
+                            value={formatInputRupiah(item.price)}
+                            onChange={e =>
+                              handleItemChange(
+                                index,
+                                "price",
+                                parseInputRupiah(e.target.value)
+                              )
+                            }
+                            className="pl-10 w-full"
+                            placeholder="0"
+                          />
+                        </div>
+                        {formErrors.items?.[index] &&
+                          typeof formErrors.items[index] === "object" &&
+                          "price" in formErrors.items[index] && (
+                            <div className="text-xs text-red-500 mt-1">
+                              {(formErrors.items[index] as any).price}
+                            </div>
+                          )}
+                      </td>
+
+                      {/* Discount */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                            Rp
+                          </span>
+                          <Input
+                            type="text"
+                            name={`discount_${index}`}
+                            value={formatInputRupiah(item.discount)}
+                            onChange={e =>
+                              handleItemChange(
+                                index,
+                                "discount",
+                                parseInputRupiah(e.target.value)
+                              )
+                            }
+                            className="pl-10 w-full"
+                            placeholder="0"
+                          />
+                        </div>
+                        {formErrors.items?.[index] &&
+                          typeof formErrors.items[index] === "object" &&
+                          "discount" in formErrors.items[index] && (
+                            <div className="text-xs text-red-500 mt-1">
+                              {(formErrors.items[index] as any).discount}
+                            </div>
+                          )}
+                      </td>
+
+                      {/* Total Price */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        {formatRupiah(item.totalPrice)}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-center">
+                        {formData.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
+          {/* Summary Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Additional Fields */}
+            <div className="space-y-4">
+              <FormField label="Potongan Akhir">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    Rp
+                  </span>
+                  <Input
+                    type="text"
+                    name="discount"
+                    value={formatInputRupiah(formData.discount)}
+                    onChange={e => {
+                      const value = parseInputRupiah(e.target.value);
+                      handleInputChange("discount", value);
+                    }}
+                    placeholder="0"
+                    className="pl-10"
+                  />
+                </div>
+              </FormField>
+
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Detail Potongan
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Total Potongan Item:
+                    </span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      -
+                      {formatRupiah(
+                        formData.items.reduce(
+                          (sum, item) =>
+                            sum + (item.discount || 0) * (item.quantity || 0),
+                          0
                         )
-                      }
-                      placeholder="0"
-                    />
-                  </FormField>
-                </div>
-
-                {/* Price */}
-                <div>
-                  <FormField label="Harga" required>
-                    <Input
-                      type="number"
-                      name={`price_${index}`}
-                      value={item.price.toString()}
-                      onChange={e =>
-                        handleItemChange(
-                          index,
-                          "price",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      placeholder="0"
-                    />
-                  </FormField>
-                </div>
-
-                {/* Discount */}
-                <div>
-                  <FormField label="Diskon">
-                    <Input
-                      type="number"
-                      name={`discount_${index}`}
-                      value={item.discount.toString()}
-                      onChange={e =>
-                        handleItemChange(
-                          index,
-                          "discount",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      placeholder="0"
-                    />
-                  </FormField>
-                </div>
-
-                {/* Total Price */}
-                <div className="flex items-end">
-                  <div className="w-full">
-                    <FormField label="Total">
-                      <Input
-                        type="text"
-                        name={`total_${index}`}
-                        value={`Rp ${item.totalPrice.toLocaleString("id-ID")}`}
-                        disabled
-                      />
-                    </FormField>
+                      )}
+                    </span>
                   </div>
-                  {formData.items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="ml-2 p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Potongan Keseluruhan:
+                    </span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      -{formatRupiah(formData.discount)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Right Column - Totals */}
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Subtotal:
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.subtotal)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Total Potongan:
+                </span>
+                <span className="font-medium text-red-600 dark:text-red-400">
+                  -
+                  {formatRupiah(
+                    formData.items.reduce(
+                      (sum, item) =>
+                        sum + (item.discount || 0) * (item.quantity || 0),
+                      0
+                    ) + formData.discount
+                  )}
+                </span>
+              </div>
+              {/* Pajak */}
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <span>Pajak</span>
+                    <select
+                      value={
+                        formData.taxPercentage === null ||
+                        formData.taxPercentage === undefined
+                          ? ""
+                          : formData.taxPercentage
+                      }
+                      onChange={e => {
+                        const value = e.target.value;
+                        const taxPercentage =
+                          value === "" ? null : parseFloat(value);
+                        handleInputChange("taxPercentage", taxPercentage);
+                      }}
+                      className={`px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                        formErrors.taxPercentage ? "border-red-500" : ""
+                      }`}
+                    >
+                      <option value="">Pilih Pajak</option>
+                      <option value={0}>0%</option>
+                      <option value={11}>11%</option>
+                      <option value={12}>12%</option>
+                    </select>
+                  </div>
+                  {formErrors.taxPercentage && (
+                    <div className="text-xs text-red-500 mt-1">
+                      {formErrors.taxPercentage}
+                    </div>
+                  )}
+                </div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.tax)}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Biaya Pengiriman:
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.shippingCost)}
+                </span>
+              </div>
+
+              <div className="flex justify-between border-t pt-2 border-gray-200 dark:border-gray-600">
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Total Pembayaran:
+                </span>
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.totalAmount)}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Tax and Discount */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField label="Pajak">
-            <Input
-              type="number"
-              name="tax"
-              value={formData.tax.toString()}
-              onChange={e =>
-                handleInputChange("tax", parseFloat(e.target.value) || 0)
-              }
-              placeholder="0"
-            />
-          </FormField>
-
-          <FormField label="Diskon">
-            <Input
-              type="number"
-              name="discount"
-              value={formData.discount.toString()}
-              onChange={e =>
-                handleInputChange("discount", parseFloat(e.target.value) || 0)
-              }
-              placeholder="0"
-            />
-          </FormField>
-
-          <FormField label="Total Amount">
-            <Input
-              type="text"
-              name="totalAmount"
-              value={`Rp ${formData.totalAmount.toLocaleString("id-ID")}`}
-              disabled
-            />
-          </FormField>
-        </div>
-
-        {/* Notes */}
-        <div className="mt-6">
-          <FormField label="Catatan">
-            <InputTextArea
-              name="notes"
-              value={formData.notes}
-              onChange={e => handleInputChange("notes", e.target.value)}
-              placeholder="Catatan tambahan..."
-              rows={3}
-            />
-          </FormField>
         </div>
       </ManagementForm>
     </div>
