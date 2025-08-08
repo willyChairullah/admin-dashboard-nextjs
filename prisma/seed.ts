@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { v4 as uuid } from "uuid";
 import { seedUsers } from "./seeds/seedUsers";
 import { seedStores } from "./seeds/seedStores";
 import { seedCategoriesAndProducts } from "./seeds/seedCategoriesAndProducts";
@@ -8,109 +9,110 @@ import { seedOrders } from "./seeds/seedOrders";
 const prisma = new PrismaClient();
 
 /**
- * Membersihkan database dengan menghapus data dalam urutan yang benar
- * untuk menghindari error foreign key constraint.
+ * Main seeding function that clears database and creates sample data
+ * for menghindari error foreign key constraint.
  */
-async function clearDatabase() {
+async function main() {
   console.log("🗑️ Clearing existing data...");
 
-    // Clear in order due to foreign key constraints
-    // Use try-catch to handle missing tables gracefully
-    try {
-      await prisma.userNotifications.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ userNotifications table not found, skipping...");
-    }
-    try {
-      await prisma.payments.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ payments table not found, skipping...");
-    }
-    try {
-      await prisma.invoiceItems.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ invoiceItems table not found, skipping...");
-    }
-    try {
-      await prisma.invoices.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ invoices table not found, skipping...");
-    }
-    try {
-      await prisma.purchaseOrderItems.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ purchaseOrderItems table not found, skipping...");
-    }
-    try {
-      await prisma.purchaseOrders.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ purchaseOrders table not found, skipping...");
-    }
-    try {
-      await prisma.orderItems.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ orderItems table not found, skipping...");
-    }
-    try {
-      await prisma.deliveryNotes.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ deliveryNotes table not found, skipping...");
-    }
-    try {
-      await prisma.customerVisits.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ customerVisits table not found, skipping...");
-    }
-    try {
-      await prisma.fieldVisit.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ fieldVisit table not found, skipping...");
-    }
-    try {
-      await prisma.orders.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ orders table not found, skipping...");
-    }
-    try {
-      await prisma.stockMovements.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ stockMovements table not found, skipping...");
-    }
-    try {
-      await prisma.transactions.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ transactions table not found, skipping...");
-    }
-    try {
-      await prisma.store.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ store table not found, skipping...");
-    }
-    try {
-      await prisma.products.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ products table not found, skipping...");
-    }
-    try {
-      await prisma.categories.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ categories table not found, skipping...");
-    }
-    try {
-      await prisma.customers.deleteMany({});
-    } catch (e) {
-      console.log("⚠️ customers table not found, skipping...");
-    }
+  // Clear in order due to foreign key constraints
+  // Use try-catch to handle missing tables gracefully
+  try {
+    await prisma.userNotifications.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ userNotifications table not found, skipping...");
+  }
+  try {
+    await prisma.payments.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ payments table not found, skipping...");
+  }
+  try {
+    await prisma.invoiceItems.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ invoiceItems table not found, skipping...");
+  }
+  try {
+    await prisma.invoices.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ invoices table not found, skipping...");
+  }
+  try {
+    await prisma.purchaseOrderItems.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ purchaseOrderItems table not found, skipping...");
+  }
+  try {
+    await prisma.purchaseOrders.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ purchaseOrders table not found, skipping...");
+  }
+  try {
+    await prisma.orderItems.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ orderItems table not found, skipping...");
+  }
+  try {
+    await prisma.deliveryNotes.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ deliveryNotes table not found, skipping...");
+  }
+  try {
+    await prisma.customerVisits.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ customerVisits table not found, skipping...");
+  }
+  try {
+    await prisma.fieldVisit.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ fieldVisit table not found, skipping...");
+  }
+  try {
+    await prisma.orders.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ orders table not found, skipping...");
+  }
+  try {
+    await prisma.stockMovements.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ stockMovements table not found, skipping...");
+  }
+  try {
+    await prisma.transactions.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ transactions table not found, skipping...");
+  }
+  try {
+    await prisma.store.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ store table not found, skipping...");
+  }
+  try {
+    await prisma.products.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ products table not found, skipping...");
+  }
+  try {
+    await prisma.categories.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ categories table not found, skipping...");
+  }
+  try {
+    await prisma.customers.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ customers table not found, skipping...");
+  }
 
-    let deletedUsersCount = 0;
-    try {
-      const deletedUsers = await prisma.users.deleteMany({});
-      deletedUsersCount = deletedUsers.count;
-    } catch (e) {
-      console.log("⚠️ users table not found, skipping...");
-    }
-    console.log(`✅ Cleared ${deletedUsersCount} users and related data`);
+  let deletedUsersCount = 0;
+  try {
+    const deletedUsers = await prisma.users.deleteMany({});
+    deletedUsersCount = deletedUsers.count;
+  } catch (e) {
+    console.log("⚠️ users table not found, skipping...");
+  }
+  console.log(`✅ Cleared ${deletedUsersCount} users and related data`);
 
+  try {
     console.log("👥 Creating 4 users with proper roles...");
 
     // Create users with consistent IDs for easier testing
@@ -1153,7 +1155,7 @@ async function clearDatabase() {
   }
 }
 
-main().catch((e) => {
+main().catch((e: any) => {
   console.error(e);
   process.exit(1);
 });
