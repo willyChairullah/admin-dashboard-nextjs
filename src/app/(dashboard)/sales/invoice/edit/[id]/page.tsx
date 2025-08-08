@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { InvoiceType } from "@prisma/client";
 import { Plus } from "lucide-react";
 
 interface InvoiceItemFormData {
@@ -45,7 +46,7 @@ interface InvoiceFormData {
   dueDate: string;
   paymentDeadline: string | null;
   status: string;
-  isProforma: boolean;
+  type: InvoiceType;
   subtotal: number;
   tax: number;
   taxPercentage: number;
@@ -128,7 +129,7 @@ export default function EditInvoicePage() {
       .split("T")[0],
     paymentDeadline: null,
     status: "DRAFT",
-    isProforma: false,
+    type: InvoiceType.PRODUCT,
     subtotal: 0,
     tax: 0,
     taxPercentage: 0,
@@ -191,7 +192,7 @@ export default function EditInvoicePage() {
                 .split("T")[0]
             : null,
           status: invoice.status,
-          isProforma: invoice.isProforma,
+          type: invoice.type || InvoiceType.PRODUCT,
           subtotal: invoice.subtotal,
           tax: invoice.tax,
           taxPercentage: invoice.taxPercentage || 0, // Use from database if available
@@ -366,7 +367,7 @@ export default function EditInvoicePage() {
           ? new Date(formData.paymentDeadline)
           : null,
         status: formData.status as any,
-        isProforma: formData.isProforma,
+        type: formData.type,
         subtotal: formData.subtotal,
         tax: formData.tax,
         taxPercentage: formData.taxPercentage,
@@ -590,21 +591,19 @@ export default function EditInvoicePage() {
             </select>
           </FormField>
 
-          {/* Is Proforma */}
-          <FormField label="Proforma Invoice">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isProforma}
-                onChange={e =>
-                  handleInputChange("isProforma", e.target.checked)
-                }
-                className="mr-2 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-800"
-              />
-              <span className="text-gray-900 dark:text-gray-300">
-                Invoice Proforma
-              </span>
-            </label>
+          {/* Invoice Type */}
+          <FormField label="Invoice Type">
+            <select
+              name="type"
+              value={formData.type}
+              onChange={e =>
+                handleInputChange("type", e.target.value as InvoiceType)
+              }
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            >
+              <option value={InvoiceType.PRODUCT}>Product Invoice</option>
+              <option value={InvoiceType.MANUAL}>Manual Invoice</option>
+            </select>
           </FormField>
 
           {/* Biaya Pengiriman */}

@@ -14,8 +14,8 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "DPO";
     case "Invoices":
       return "INV";
-    // case "Payments":
-    //   return "PMT";
+    case "Payments":
+      return "PAY";
     case "StockOpnames":
       return "SOP";
     case "ProductionLogs":
@@ -118,18 +118,18 @@ async function getLastCodeForCurrentMonth(
         lastCode = lastInvoice?.code || null;
         break;
 
-      // case "Payments":
-      //   const lastPayment = await db.payments.findFirst({
-      //     where: {
-      //       code: {
-      //         startsWith: codePrefix,
-      //       },
-      //     },
-      //     orderBy: { code: "desc" },
-      //     select: { code: true },
-      //   });
-      //   lastCode = lastPayment?.code || null;
-      //   break;
+      case "Payments":
+        const lastPayment = await db.payments.findFirst({
+          where: {
+            paymentCode: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { paymentCode: "desc" },
+          select: { paymentCode: true },
+        });
+        lastCode = lastPayment?.paymentCode || null;
+        break;
 
       case "StockOpnames":
         const lastStockOpname = await db.stockOpnames.findFirst({
@@ -145,7 +145,7 @@ async function getLastCodeForCurrentMonth(
         break;
 
       case "ProductionLogs":
-        const lastProductionLog = await db.productionLogs.findFirst({
+        const lastProductionLog = await db.productions.findFirst({
           where: {
             code: {
               startsWith: codePrefix,

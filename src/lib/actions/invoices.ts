@@ -6,6 +6,7 @@ import {
   Invoices,
   InvoiceItems,
   InvoiceStatus,
+  InvoiceType,
   PurchaseOrderStatus,
   StockConfirmationStatus,
 } from "@prisma/client";
@@ -25,7 +26,7 @@ export type InvoiceFormData = {
   invoiceDate: Date;
   dueDate: Date;
   status: InvoiceStatus;
-  isProforma: boolean;
+  type: InvoiceType;
   subtotal: number;
   tax: number;
   taxPercentage: number;
@@ -329,7 +330,7 @@ export async function createInvoice(data: InvoiceFormData) {
           invoiceDate: data.invoiceDate,
           dueDate: data.dueDate,
           status: data.status,
-          isProforma: data.isProforma,
+          type: data.type,
           subtotal: subtotal,
           tax: data.tax,
           taxPercentage: data.taxPercentage,
@@ -367,7 +368,7 @@ export async function createInvoice(data: InvoiceFormData) {
 
     // revalidatePath("/sales/invoice");
     console.log("backend");
-    
+
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating invoice:", error);
@@ -407,7 +408,7 @@ export async function updateInvoice(
           invoiceDate: data.invoiceDate,
           dueDate: data.dueDate,
           status: data.status,
-          isProforma: data.isProforma,
+          type: data.type,
           subtotal: subtotal,
           tax: data.tax,
           taxPercentage: data.taxPercentage,

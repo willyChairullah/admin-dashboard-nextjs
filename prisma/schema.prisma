@@ -111,6 +111,7 @@ model Users {
   salesTargets          SalesTargets[]
   Productions        Productions[]
   ManagementStocks      ManagementStocks[]
+  Payments      Payments[]
   PurchaseOrders        PurchaseOrders[]      @relation("CreatedPurchaseOrders")
   ConfirmedStocks       PurchaseOrders[]      @relation("StockConfirmationUser")
   ConfirmedDeliveries   DeliveryNotes[]       @relation("WarehouseConfirmDelivery") // <--- Tambahan untuk konfirmasi kesiapan pengiriman
@@ -288,7 +289,8 @@ model Invoices {
   dueDate         DateTime
   status          InvoiceStatus  @default(DRAFT)
   paymentStatus   PaymentStatus  @default(UNPAID)
-  isProforma      Boolean        @default(false)
+  type            InvoiceType    @default(PRODUCT) // <--- Tambahan: Tipe invoice (PRODUCT/MANUAL)
+  // isProforma      Boolean        @default(false)
   subtotal        Float          @default(0)
   tax             Float          @default(0)
   taxPercentage   Float          @default(0) // Tax percentage used to calculate tax amount
@@ -339,16 +341,21 @@ model InvoiceItems {
 // =================================
 
 model Payments {
-  id          String   @id @default(cuid())
-  paymentDate DateTime @default(now())
-  amount      Float
-  method      String
-  reference   String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  invoiceId   String
-  invoice     Invoices @relation(fields: [invoiceId], references: [id])
+  id              String         @id @default(cuid())
+  paymentCode     String         @unique
+  paymentDate     DateTime       @default(now())
+  amount          Float
+  method          String
+  reference       String?
+  notes           String?
+  proofUrl        String?        // <--- Tambahan: URL ke file bukti pembayaran
+  status          PaidStatus  @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  invoiceId       String
+  userId          String
+  invoice         Invoices       @relation(fields: [invoiceId], references: [id])
+  user            Users          @relation(fields: [userId], references: [id])
 
   @@map("payments")
 }
@@ -629,11 +636,22 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum InvoiceType {
+  PRODUCT  // Invoice berdasarkan produk dari Purchase Order
+  MANUAL   // Invoice manual/custom
+}
+
 enum PaymentStatus {
   UNPAID
   PARTIALLY_PAID
   PAID
   OVERPAID
+}
+
+enum PaidStatus {
+  PENDING
+  CLEARED
+  CANCELED
 }
 
 enum OrderStatus {

@@ -25,6 +25,7 @@ import { generateCodeByTable } from "@/utils/getCode";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { InvoiceType } from "@prisma/client";
 
 interface InvoiceItemFormData {
   productId: string;
@@ -41,7 +42,7 @@ interface InvoiceFormData {
   dueDate: string;
   paymentDeadline: string | null;
   status: string;
-  isProforma: boolean;
+  type: InvoiceType;
   subtotal: number;
   tax: number;
   taxPercentage: number;
@@ -124,7 +125,7 @@ export default function CreateInvoicePage() {
       .split("T")[0], // 30 days from now
     paymentDeadline: null,
     status: "DRAFT",
-    isProforma: false,
+    type: InvoiceType.PRODUCT,
     subtotal: 0,
     tax: 0,
     taxPercentage: 0,
@@ -385,7 +386,7 @@ export default function CreateInvoicePage() {
           ? new Date(formData.paymentDeadline)
           : null,
         status: formData.status as any,
-        isProforma: formData.isProforma,
+        type: formData.type,
         subtotal: formData.subtotal,
         tax: formData.tax,
         taxPercentage: formData.taxPercentage,
@@ -604,8 +605,23 @@ export default function CreateInvoicePage() {
           {/* Created By - Hidden input using session */}
           <input type="hidden" name="createdBy" value={formData.createdBy} />
 
-          {/* Is Proforma */}
-          <FormField label=" Biaya Pengiriman">
+          {/* Invoice Type */}
+          <FormField label="Invoice Type">
+            <select
+              name="type"
+              value={formData.type}
+              onChange={e =>
+                handleInputChange("type", e.target.value as InvoiceType)
+              }
+              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+            >
+              <option value={InvoiceType.PRODUCT}>Product Invoice</option>
+              <option value={InvoiceType.MANUAL}>Manual Invoice</option>
+            </select>
+          </FormField>
+
+          {/* Biaya Pengiriman */}
+          <FormField label="Biaya Pengiriman">
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
                 Rp

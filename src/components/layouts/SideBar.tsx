@@ -238,6 +238,14 @@ export default function SideBar({
             children: [],
             roles: ["OWNER", "ADMIN"],
           },
+          {
+            id: "pembayaran",
+            label: "Pembayaran",
+            icon: "💳",
+            href: "/sales/pembayaran",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
+          },
         ],
       },
       {
