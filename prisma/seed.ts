@@ -1,14 +1,18 @@
 import { PrismaClient } from "@prisma/client";
-import { v4 as uuid } from "uuid";
+import { seedUsers } from "./seeds/seedUsers";
+import { seedStores } from "./seeds/seedStores";
+import { seedCategoriesAndProducts } from "./seeds/seedCategoriesAndProducts";
+import { seedCustomers } from "./seeds/seedCustomers";
+import { seedOrders } from "./seeds/seedOrders";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  try {
-    console.log("🌱 Starting seed with current schema...");
-
-    // Clear existing users and related data
-    console.log("🗑️ Clearing existing data...");
+/**
+ * Membersihkan database dengan menghapus data dalam urutan yang benar
+ * untuk menghindari error foreign key constraint.
+ */
+async function clearDatabase() {
+  console.log("🗑️ Clearing existing data...");
 
     // Clear in order due to foreign key constraints
     // Use try-catch to handle missing tables gracefully
@@ -1141,9 +1145,10 @@ async function main() {
       `\n📈 Generated ${additionalOrders} additional orders with growth trends for comprehensive analytics.`
     );
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
-    throw error;
+    console.error("❌ An error occurred during the seed process:", error);
+    process.exit(1);
   } finally {
+    // Pastikan koneksi prisma ditutup
     await prisma.$disconnect();
   }
 }

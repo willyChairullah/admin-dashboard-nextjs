@@ -30,6 +30,7 @@ interface OrderItem {
   productName: string;
   quantity: number;
   price: number;
+  discount?: number; // Diskon per item
 }
 
 export default function OrdersPage() {
@@ -49,8 +50,16 @@ export default function OrdersPage() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
+  
+  // New form states for shipping, discount, and payment
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [discountType, setDiscountType] = useState<"PER_ITEM" | "TOTAL">("TOTAL");
+  const [totalDiscount, setTotalDiscount] = useState<number>(0);
+  const [shippingCost, setShippingCost] = useState<number>(0);
+  const [paymentDeadline, setPaymentDeadline] = useState("");
+  
   const [items, setItems] = useState<OrderItem[]>([
-    { productName: "", quantity: 1, price: 0 },
+    { productName: "", quantity: 1, price: 0, discount: 0 },
   ]);
 
   // Load data on component mount
@@ -83,7 +92,7 @@ export default function OrdersPage() {
   };
 
   const addItem = () => {
-    setItems([...items, { productName: "", quantity: 1, price: 0 }]);
+    setItems([...items, { productName: "", quantity: 1, price: 0, discount: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -98,16 +107,26 @@ export default function OrdersPage() {
     value: string | number
   ) => {
     const updatedItems = [...items];
-    if (field === "quantity" || field === "price") {
+    if (field === "quantity" || field === "price" || field === "discount") {
       updatedItems[index][field] = Number(value);
     } else {
-      updatedItems[index][field] = value as string;
+      (updatedItems[index] as any)[field] = value as string;
     }
     setItems(updatedItems);
   };
 
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => {
+      const itemTotal = item.quantity * item.price;
+      const itemDiscount = discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0;
+      return sum + (itemTotal - itemDiscount);
+    }, 0);
+  };
+
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+    const subtotal = calculateSubtotal();
+    const discount = discountType === "TOTAL" ? totalDiscount : 0;
+    return subtotal - discount + shippingCost;
   };
 
   const handleSubmitOrder = async () => {
@@ -156,6 +175,11 @@ export default function OrdersPage() {
             customerPhone: customerPhone || undefined,
             items,
             notes: notes || undefined,
+            deliveryAddress: deliveryAddress || undefined,
+            discountType,
+            discount: totalDiscount,
+            shippingCost,
+            paymentDeadline: paymentDeadline ? new Date(paymentDeadline) : undefined,
             requiresConfirmation: true, // Always require confirmation
           });
 
@@ -170,7 +194,12 @@ export default function OrdersPage() {
             setCustomerEmail("");
             setCustomerPhone("");
             setNotes("");
-            setItems([{ productName: "", quantity: 1, price: 0 }]);
+            setDeliveryAddress("");
+            setTotalDiscount(0);
+            setShippingCost(0);
+            setPaymentDeadline("");
+            setDiscountType("TOTAL");
+            setItems([{ productName: "", quantity: 1, price: 0, discount: 0 }]);
           } else {
             alert(
               "Gagal menyimpan order: " + (result.error || "Unknown error")
@@ -371,6 +400,100 @@ export default function OrdersPage() {
                 </div>
               </div>
 
+              {/* Delivery & Payment Information */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+                <h4 className="text-sm sm:text-md font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">
+                  Informasi Pengiriman & Pembayaran
+                </h4>
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                  <div className="min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                      Alamat Pengiriman *
+                    </label>
+                    <textarea
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="Masukkan alamat lengkap pengiriman"
+                      rows={2}
+                      className="block w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="min-w-0">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                        Biaya Pengiriman
+                      </label>
+                      <input
+                        type="number"
+                        value={shippingCost}
+                        onChange={(e) => setShippingCost(Number(e.target.value))}
+                        placeholder="0"
+                        min="0"
+                        step="1000"
+                        className="block w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                      />
+                    </div>
+                    
+                    <div className="min-w-0">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                        Tenggat Pembayaran
+                      </label>
+                      <input
+                        type="date"
+                        value={paymentDeadline}
+                        onChange={(e) => setPaymentDeadline(e.target.value)}
+                        className="block w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                      Jenis Diskon
+                    </label>
+                    <div className="flex space-x-4 mb-3">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="discountType"
+                          checked={discountType === "TOTAL"}
+                          onChange={() => setDiscountType("TOTAL")}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Diskon Total
+                        </span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="discountType"
+                          checked={discountType === "PER_ITEM"}
+                          onChange={() => setDiscountType("PER_ITEM")}
+                          className="mr-2"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Diskon Per Pcs
+                        </span>
+                      </label>
+                    </div>
+                    
+                    {discountType === "TOTAL" && (
+                      <input
+                        type="number"
+                        value={totalDiscount}
+                        onChange={(e) => setTotalDiscount(Number(e.target.value))}
+                        placeholder="Masukkan total diskon"
+                        min="0"
+                        step="1000"
+                        className="block w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Order Items */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
@@ -449,9 +572,27 @@ export default function OrdersPage() {
                             className="block w-full px-2 py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                           />
                         </div>
+                        {discountType === "PER_ITEM" && (
+                          <div className="w-20 sm:w-24 md:w-32 flex-shrink-0">
+                            <input
+                              type="number"
+                              value={item.discount || 0}
+                              onChange={(e) =>
+                                updateItem(index, "discount", e.target.value)
+                              }
+                              placeholder="Per pcs"
+                              min="0"
+                              step="100"
+                              className="block w-full px-2 py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                            />
+                          </div>
+                        )}
                         <div className="w-20 sm:w-24 md:w-32 text-xs sm:text-sm font-medium text-gray-900 dark:text-white flex-shrink-0 text-right">
                           Rp{" "}
-                          {(item.quantity * item.price).toLocaleString("id-ID")}
+                          {(
+                            (item.quantity * item.price) - 
+                            (discountType === "PER_ITEM" ? (item.quantity * (item.discount || 0)) : 0)
+                          ).toLocaleString("id-ID")}
                         </div>
                         <Button
                           variant="ghost"
@@ -469,13 +610,37 @@ export default function OrdersPage() {
 
                 {/* Total */}
                 <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
-                      Total:
-                    </span>
-                    <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-                      Rp {calculateTotal().toLocaleString("id-ID")}
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600 dark:text-gray-300">Subtotal:</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Rp {calculateSubtotal().toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                    {discountType === "TOTAL" && totalDiscount > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 dark:text-gray-300">Diskon:</span>
+                        <span className="font-medium text-red-600">
+                          -Rp {totalDiscount.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    )}
+                    {shippingCost > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 dark:text-gray-300">Biaya Pengiriman:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          Rp {shippingCost.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
+                        Total:
+                      </span>
+                      <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                        Rp {calculateTotal().toLocaleString("id-ID")}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

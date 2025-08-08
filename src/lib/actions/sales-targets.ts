@@ -194,7 +194,8 @@ export async function createCompanyTarget(data: CompanyTargetFormData) {
     if (existingTarget) {
       return {
         success: false,
-        error: "Company target for this period already exists. Please edit the existing target.",
+        error:
+          "Company target for this period already exists. Please edit the existing target.",
       };
     }
 
@@ -486,7 +487,10 @@ async function calculateCompanyWideRevenue(
 ): Promise<number> {
   try {
     // Get date range based on target type and period
-    const { startDate, endDate } = getDateRangeFromPeriod(targetPeriod, targetType);
+    const { startDate, endDate } = getDateRangeFromPeriod(
+      targetPeriod,
+      targetType
+    );
 
     const result = await db.invoices.aggregate({
       _sum: {
@@ -525,7 +529,15 @@ function getDateRangeFromPeriod(
     const quarterNum = parseInt(quarter.replace("Q", ""));
     const startMonth = (quarterNum - 1) * 3;
     const startDate = new Date(parseInt(year), startMonth, 1);
-    const endDate = new Date(parseInt(year), startMonth + 3, 0, 23, 59, 59, 999);
+    const endDate = new Date(
+      parseInt(year),
+      startMonth + 3,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
     return { startDate, endDate };
   } else if (targetType === "YEARLY") {
     // Format: YYYY
@@ -538,7 +550,15 @@ function getDateRangeFromPeriod(
   // Fallback to current month
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const endDate = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
   return { startDate, endDate };
 }
 

@@ -153,6 +153,13 @@ model PurchaseOrders {
   status                  PurchaseOrderStatus     @default(PENDING)
   notes                   String?
   totalAmount             Float                   @default(0)
+  orderLevelDiscount      Float                   @default(0) // Potongan keseluruhan
+  totalDiscount           Float                   @default(0) // Total semua potongan
+  totalTax                Float                   @default(0) // Total pajak
+  taxPercentage           Float                   @default(0) // Persentase pajak
+  shippingCost            Float                   @default(0) // Biaya pengiriman
+  totalPayment            Float                   @default(0) // Total pembayaran akhir
+  paymentDeadline         DateTime? // Tenggat pembayaran
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   statusStockConfirmation StockConfirmationStatus @default(WAITING_CONFIRMATION)
@@ -171,30 +178,34 @@ model PurchaseOrders {
 }
 
 model PurchaseOrderItems {
-  id                     String         @id @default(cuid())
+  id                     String  @id @default(cuid())
   quantity               Float
-  price                  Float          @default(0)
-  totalPrice             Float          @default(0)
-  notesStockConfirmation String?
-  purchaseOrderId        String
-  productId              String
-  product                Products       @relation(fields: [productId], references: [id])
-  purchaseOrder          PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  price                  Float   @default(0) // Harga per unit saat PO dibuat (price snapshot)
+  discount               Float   @default(0) // Potongan per item
+  totalPrice             Float   @default(0) // Total harga untuk item ini (quantity * (price - discount))
+  notesStockConfirmation String? // Notes from warehouse regarding stock confirmation
+
+  // Relasi penting
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Products @relation(fields: [productId], references: [id])
 
   @@map("purchase_order_items")
 }
 
 model Orders {
-  id                   String           @id @default(cuid())
-  orderNumber          String           @unique
-  orderDate            DateTime         @default(now())
+  id                   String      @id @default(cuid())
+  orderNumber          String      @unique
+  orderDate            DateTime    @default(now())
   dueDate              DateTime
   deliveryDate         DateTime?
-  status               OrderStatus      @default(NEW)
-  totalAmount          Float            @default(0)
+  status               OrderStatus @default(NEW)
+  totalAmount          Float       @default(0)
   notes                String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
   customerId           String
   salesId              String
   adminNotes           String?
@@ -202,20 +213,25 @@ model Orders {
   completedAt          DateTime?
   confirmedAt          DateTime?
   confirmedBy          String?
-  requiresConfirmation Boolean          @default(false)
-  discount             Float            @default(0)
-  shippingCost         Float            @default(0)
-  deliveryAddress      String
-  deliveryCity         String?
-  deliveryPostalCode   String?
-  deliveryNotesOrder   String?
-  deliveryNotes        DeliveryNotes?
-  orderItems           OrderItems[]
-  customer             Customers        @relation(fields: [customerId], references: [id])
-  sales                Users            @relation(fields: [salesId], references: [id])
-  purchaseOrders       PurchaseOrders[]
-  salesReturns         SalesReturns[]
-  StockMovements       StockMovements[]
+  requiresConfirmation Boolean     @default(false)
+
+  // Tambahan berdasarkan diskusi
+  discount           Float         @default(0) // Diskon di level order
+  discountType       DiscountType? @default(TOTAL) // Jenis diskon: PER_ITEM atau TOTAL  
+  shippingCost       Float         @default(0) // Biaya pengiriman di level order
+  paymentDeadline    DateTime? // Tenggat pembayaran
+  deliveryAddress    String // Alamat pengiriman spesifik untuk order ini
+  deliveryCity       String? // Kota pengiriman (opsional)
+  deliveryPostalCode String? // Kode pos pengiriman (opsional)
+  deliveryNotesOrder String? // Catatan khusus untuk pengiriman dari sisi order
+
+  deliveryNotes  DeliveryNotes?
+  orderItems     OrderItems[]
+  customer       Customers        @relation(fields: [customerId], references: [id])
+  sales          Users            @relation(fields: [salesId], references: [id])
+  salesReturns   SalesReturns[]
+  StockMovements StockMovements[]
+  purchaseOrders PurchaseOrders[]
 
   @@map("orders")
 }
@@ -224,6 +240,7 @@ model OrderItems {
   id         String   @id @default(cuid())
   quantity   Float
   price      Float
+  discount   Float    @default(0) // Diskon per item
   totalPrice Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -587,6 +604,13 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERPAID
+}
+
 enum OrderStatus {
   NEW
   PROCESSING
@@ -663,16 +687,14 @@ enum StockConfirmationStatus {
   INSUFFICIENT_STOCK
 }
 
-enum PaymentStatus {
-  UNPAID
-  PARTIALLY_PAID
-  PAID
-  OVERPAID
+enum PreparationStatus {
+  WAITING_PREPARATION // Menunggu barang disiapkan gudang
+  PREPARING // Sedang disiapkan
+  READY_FOR_DELIVERY // Barang sudah disiapkan & siap kirim
+  CANCELLED_PREPARATION // Pembatalan persiapan
 }
 
-enum PreparationStatus {
-  WAITING_PREPARATION
-  PREPARING
-  READY_FOR_DELIVERY
-  CANCELLED_PREPARATION
+enum DiscountType {
+  PER_ITEM // Diskon per item
+  TOTAL // Diskon total order
 }

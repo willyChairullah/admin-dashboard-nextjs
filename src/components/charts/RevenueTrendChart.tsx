@@ -272,40 +272,52 @@ export function RevenueTrendChart({
   const bestMonth = data.reduce((best, current) =>
     current.revenue > best.revenue ? current : best
   );
-  
+
   // Calculate current month trend
   const getCurrentMonthTrend = () => {
     const currentDate = new Date();
-    const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
-    const previousMonthName = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-      .toLocaleString('default', { month: 'long' });
-    
+    const currentMonthName = currentDate.toLocaleString("default", {
+      month: "long",
+    });
+    const previousMonthName = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      1
+    ).toLocaleString("default", { month: "long" });
+
     // Find current and previous month data
-    const currentMonthData = data.find(item => 
-      item.month.toLowerCase() === currentMonthName.toLowerCase()
+    const currentMonthData = data.find(
+      (item) => item.month.toLowerCase() === currentMonthName.toLowerCase()
     );
-    const previousMonthData = data.find(item => 
-      item.month.toLowerCase() === previousMonthName.toLowerCase()
+    const previousMonthData = data.find(
+      (item) => item.month.toLowerCase() === previousMonthName.toLowerCase()
     );
-    
+
     if (currentMonthData && previousMonthData) {
-      return ((currentMonthData.revenue - previousMonthData.revenue) / previousMonthData.revenue) * 100;
+      return (
+        ((currentMonthData.revenue - previousMonthData.revenue) /
+          previousMonthData.revenue) *
+        100
+      );
     }
-    
+
     // Fallback to current month's growth if available
     if (currentMonthData) {
       return currentMonthData.growth;
     }
-    
+
     // Last fallback: compare last two available data points
     if (data.length > 1) {
-      return ((data[data.length - 1].revenue - data[data.length - 2].revenue) /
-        data[data.length - 2].revenue) * 100;
+      return (
+        ((data[data.length - 1].revenue - data[data.length - 2].revenue) /
+          data[data.length - 2].revenue) *
+        100
+      );
     }
-    
+
     return 0;
   };
-  
+
   const currentTrend = getCurrentMonthTrend();
 
   return (
@@ -355,7 +367,8 @@ export function RevenueTrendChart({
             {currentTrend.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {new Date().toLocaleString('default', { month: 'long' })} vs Previous
+            {new Date().toLocaleString("default", { month: "long" })} vs
+            Previous
           </p>
         </div>
       </div>

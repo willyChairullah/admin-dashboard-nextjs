@@ -62,12 +62,15 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform targets to include calculated metrics
-    const transformedTargets = targets.map(target => ({
+    const transformedTargets = targets.map((target) => ({
       id: target.id,
       period: target.targetPeriod,
       target: target.targetAmount,
       achieved: target.achievedAmount, // We'll calculate this properly later
-      percentage: target.targetAmount > 0 ? (target.achievedAmount / target.targetAmount) * 100 : 0,
+      percentage:
+        target.targetAmount > 0
+          ? (target.achievedAmount / target.targetAmount) * 100
+          : 0,
     }));
 
     return NextResponse.json({

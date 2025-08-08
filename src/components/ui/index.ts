@@ -8,3 +8,6 @@ export * from "./data";
 export * from "./forms";
 
 export * from "./managementPage";
+
+// Customer Info Component
+export { default as CustomerInfo } from "./CustomerInfo";

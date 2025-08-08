@@ -92,9 +92,11 @@ export default function RevenueAnalytics() {
           ? "QUARTERLY"
           : "YEARLY";
 
-      const response = await fetch(`/api/company-targets?targetType=${targetType}`);
+      const response = await fetch(
+        `/api/company-targets?targetType=${targetType}`
+      );
       const result = await response.json();
-      
+
       if (result.success) {
         setTargets(result.data || []);
       } else {
@@ -296,9 +298,7 @@ export default function RevenueAnalytics() {
                 {user?.id &&
                   (user?.role === "OWNER" || user?.role === "ADMIN") && (
                     <div className="flex-shrink-0">
-                      <TargetForm
-                        onSuccess={handleTargetSuccess}
-                      />
+                      <TargetForm onSuccess={handleTargetSuccess} />
                     </div>
                   )}
 
@@ -524,7 +524,8 @@ export default function RevenueAnalytics() {
                   Company Revenue Targets Overview
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                  Company-wide revenue targets and achievements across all revenue streams
+                  Company-wide revenue targets and achievements across all
+                  revenue streams
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {targets.slice(0, 6).map((target) => (
@@ -626,8 +627,8 @@ export default function RevenueAnalytics() {
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <p className="mb-2">No company revenue targets set yet.</p>
                     <p className="text-sm">
-                      Use the "Add Company Target" button above to create your first
-                      company target.
+                      Use the "Add Company Target" button above to create your
+                      first company target.
                     </p>
                   </div>
                 )}

@@ -3,15 +3,33 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const timeRange = searchParams.get("timeRange") as "month" | "quarter" | "year" || "month";
+    const timeRange =
+      (searchParams.get("timeRange") as "month" | "quarter" | "year") ||
+      "month";
 
     // Comprehensive dashboard data with charts
     const dummyData = {
       revenue: {
-        current: timeRange === "month" ? 750000000 : timeRange === "quarter" ? 2100000000 : 8500000000,
-        previous: timeRange === "month" ? 680000000 : timeRange === "quarter" ? 1950000000 : 7800000000,
-        growth: timeRange === "month" ? 10.3 : timeRange === "quarter" ? 7.7 : 9.0,
-        target: timeRange === "month" ? 800000000 : timeRange === "quarter" ? 2400000000 : 9000000000,
+        current:
+          timeRange === "month"
+            ? 750000000
+            : timeRange === "quarter"
+            ? 2100000000
+            : 8500000000,
+        previous:
+          timeRange === "month"
+            ? 680000000
+            : timeRange === "quarter"
+            ? 1950000000
+            : 7800000000,
+        growth:
+          timeRange === "month" ? 10.3 : timeRange === "quarter" ? 7.7 : 9.0,
+        target:
+          timeRange === "month"
+            ? 800000000
+            : timeRange === "quarter"
+            ? 2400000000
+            : 9000000000,
         monthlyTrend: [
           { month: "Jan", value: 650000000 },
           { month: "Feb", value: 680000000 },
@@ -54,10 +72,20 @@ export async function GET(request: NextRequest) {
       ],
       kpis: [
         { name: "Sales Growth", current: 10.3, target: 12.0, change: 2.1 },
-        { name: "Customer Acquisition", current: 152, target: 180, change: 15.2 },
+        {
+          name: "Customer Acquisition",
+          current: 152,
+          target: 180,
+          change: 15.2,
+        },
         { name: "Order Frequency", current: 2.3, target: 2.8, change: -5.8 },
         { name: "Conversion Rate", current: 32.5, target: 35.0, change: 8.2 },
-        { name: "Avg Deal Size", current: 2500000, target: 2800000, change: 12.5 },
+        {
+          name: "Avg Deal Size",
+          current: 2500000,
+          target: 2800000,
+          change: 12.5,
+        },
       ],
       topProducts: [
         {
@@ -117,6 +145,7 @@ export async function GET(request: NextRequest) {
           title: "Payment Received",
           message: "Large payment of Rp 50,000,000 received from PT Indana",
           timestamp: "3 hours ago",
+        },
         {
           id: "4",
           type: "error" as const,
