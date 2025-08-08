@@ -8,80 +8,58 @@ export interface CreateRevenueAnalyticsData {
   period: string;
   timeRange: "MONTH" | "QUARTER" | "YEAR";
   totalRevenue: number;
-  growth: number;
-  bestMonth?: string;
-  topProduct?: string;
-  topSalesRep?: string;
-  monthlyTrends: Array<{
-    month: string;
-    revenue: number;
-    growth: number;
-  }>;
-  productPerformance: Array<{
-    productId?: string;
-    name: string;
-    revenue: number;
-    units: number;
-    growth: number;
-    category: string;
-  }>;
-  salesByRep: Array<{
-    salesRepId?: string;
-    name: string;
-    revenue: number;
-    deals: number;
-    conversion: number;
-  }>;
-  storePerformance: Array<{
-    storeId?: string;
-    name: string;
-    location: string;
-    revenue: number;
-    growth: number;
-  }>;
-  avgOrderValue: Array<{
-    current: number;
-    previous: number;
-    trend: number;
-    period: string;
-    value: number;
-  }>;
+  monthlyTrends: MonthlyTrend[];
+  productPerformance: ProductPerformance[];
+  salesByRep: SalesByRep[];
+  storePerformance: StorePerformance[];
+  avgOrderValue: AvgOrderValue[];
 }
 
+export interface MonthlyTrend {
+  month: string;
+  revenue: number;
+  growth: number;
+  orders: number;
+  customers: number;
+}
+
+export interface ProductPerformance {
+  productId: string;
+  productName: string;
+  revenue: number;
+  quantity: number;
+  growth: number;
+}
+
+export interface SalesByRep {
+  salesRepId: string;
+  salesRepName: string;
+  revenue: number;
+  orders: number;
+  customers: number;
+  growth: number;
+}
+
+export interface StorePerformance {
+  storeId: string;
+  storeName: string;
+  revenue: number;
+  orders: number;
+  growth: number;
+}
+
+export interface AvgOrderValue {
+  period: string;
+  averageValue: number;
+  trend: number;
+  value: number;
+}
+
+// Temporary stubs - TODO: Implement with actual data or remove
 export async function getRevenueAnalytics() {
   try {
-    const revenueAnalytics = await db.revenueAnalytics.findMany({
-      where: {
-        isActive: true,
-      },
-      include: {
-        monthlyTrends: {
-          where: { isActive: true },
-          orderBy: { createdAt: "asc" },
-        },
-        productPerformance: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        salesByRep: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        storePerformance: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        avgOrderValue: {
-          where: { isActive: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return revenueAnalytics;
+    console.warn("getRevenueAnalytics is not implemented - use getRevenueOverTime instead");
+    return [];
   } catch (error) {
     console.error("Error fetching revenue analytics:", error);
     throw new Error("Failed to fetch revenue analytics");
@@ -90,40 +68,8 @@ export async function getRevenueAnalytics() {
 
 export async function getRevenueAnalyticsById(id: string) {
   try {
-    const revenueAnalytics = await db.revenueAnalytics.findUnique({
-      where: {
-        id,
-        isActive: true,
-      },
-      include: {
-        monthlyTrends: {
-          where: { isActive: true },
-          orderBy: { createdAt: "asc" },
-        },
-        productPerformance: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        salesByRep: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        storePerformance: {
-          where: { isActive: true },
-          orderBy: { revenue: "desc" },
-        },
-        avgOrderValue: {
-          where: { isActive: true },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
-
-    if (!revenueAnalytics) {
-      throw new Error("Revenue analytics not found");
-    }
-
-    return revenueAnalytics;
+    console.warn("getRevenueAnalyticsById is not implemented");
+    return null;
   } catch (error) {
     console.error("Error fetching revenue analytics by ID:", error);
     throw new Error("Failed to fetch revenue analytics");
@@ -132,68 +78,11 @@ export async function getRevenueAnalyticsById(id: string) {
 
 export async function createRevenueAnalytics(data: CreateRevenueAnalyticsData) {
   try {
-    // Check if period already exists
-    const existing = await db.revenueAnalytics.findUnique({
-      where: {
-        period_timeRange: {
-          period: data.period,
-          timeRange: data.timeRange,
-        },
-      },
-    });
-
-    if (existing) {
-      throw new Error("Revenue analytics for this period already exists");
-    }
-
-    const revenueAnalytics = await db.revenueAnalytics.create({
-      data: {
-        period: data.period,
-        timeRange: data.timeRange,
-        totalRevenue: data.totalRevenue,
-        growth: data.growth,
-        bestMonth: data.bestMonth,
-        topProduct: data.topProduct,
-        topSalesRep: data.topSalesRep,
-        monthlyTrends: {
-          createMany: {
-            data: data.monthlyTrends,
-          },
-        },
-        productPerformance: {
-          createMany: {
-            data: data.productPerformance,
-          },
-        },
-        salesByRep: {
-          createMany: {
-            data: data.salesByRep,
-          },
-        },
-        storePerformance: {
-          createMany: {
-            data: data.storePerformance,
-          },
-        },
-        avgOrderValue: {
-          createMany: {
-            data: data.avgOrderValue,
-          },
-        },
-      },
-    });
-
-    revalidatePath("/management/revenue-data");
-    return { success: true, data: revenueAnalytics };
+    console.warn("createRevenueAnalytics is not implemented");
+    return { success: false, error: "Not implemented" };
   } catch (error) {
     console.error("Error creating revenue analytics:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to create revenue analytics",
-    };
+    return { success: false, error: "Failed to create revenue analytics" };
   }
 }
 
@@ -202,228 +91,165 @@ export async function updateRevenueAnalytics(
   data: Partial<CreateRevenueAnalyticsData>
 ) {
   try {
-    const revenueAnalytics = await db.revenueAnalytics.update({
-      where: { id },
-      data: {
-        period: data.period,
-        timeRange: data.timeRange,
-        totalRevenue: data.totalRevenue,
-        growth: data.growth,
-        bestMonth: data.bestMonth,
-        topProduct: data.topProduct,
-        topSalesRep: data.topSalesRep,
-      },
-    });
-
-    // Update related data if provided
-    if (data.monthlyTrends) {
-      // Delete existing trends
-      await db.monthlyTrend.updateMany({
-        where: { revenueAnalyticsId: id },
-        data: { isActive: false },
-      });
-
-      // Create new trends
-      await db.monthlyTrend.createMany({
-        data: data.monthlyTrends.map((trend) => ({
-          ...trend,
-          revenueAnalyticsId: id,
-        })),
-      });
-    }
-
-    if (data.productPerformance) {
-      await db.productPerformance.updateMany({
-        where: { revenueAnalyticsId: id },
-        data: { isActive: false },
-      });
-
-      await db.productPerformance.createMany({
-        data: data.productPerformance.map((product) => ({
-          ...product,
-          revenueAnalyticsId: id,
-        })),
-      });
-    }
-
-    if (data.salesByRep) {
-      await db.salesByRep.updateMany({
-        where: { revenueAnalyticsId: id },
-        data: { isActive: false },
-      });
-
-      await db.salesByRep.createMany({
-        data: data.salesByRep.map((rep) => ({
-          ...rep,
-          revenueAnalyticsId: id,
-        })),
-      });
-    }
-
-    if (data.storePerformance) {
-      await db.storePerformance.updateMany({
-        where: { revenueAnalyticsId: id },
-        data: { isActive: false },
-      });
-
-      await db.storePerformance.createMany({
-        data: data.storePerformance.map((store) => ({
-          ...store,
-          revenueAnalyticsId: id,
-        })),
-      });
-    }
-
-    if (data.avgOrderValue) {
-      await db.avgOrderValue.updateMany({
-        where: { revenueAnalyticsId: id },
-        data: { isActive: false },
-      });
-
-      await db.avgOrderValue.createMany({
-        data: data.avgOrderValue.map((aov) => ({
-          ...aov,
-          revenueAnalyticsId: id,
-        })),
-      });
-    }
-
-    revalidatePath("/management/revenue-data");
-    return { success: true, data: revenueAnalytics };
+    console.warn("updateRevenueAnalytics is not implemented");
+    return { success: false, error: "Not implemented" };
   } catch (error) {
     console.error("Error updating revenue analytics:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to update revenue analytics",
-    };
+    return { success: false, error: "Failed to update revenue analytics" };
   }
 }
 
 export async function deleteRevenueAnalytics(id: string) {
   try {
-    await db.revenueAnalytics.update({
-      where: { id },
-      data: { isActive: false },
-    });
-
-    revalidatePath("/management/revenue-data");
-    return { success: true };
+    console.warn("deleteRevenueAnalytics is not implemented");
+    return { success: false, error: "Not implemented" };
   } catch (error) {
     console.error("Error deleting revenue analytics:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to delete revenue analytics",
-    };
+    return { success: false, error: "Failed to delete revenue analytics" };
   }
 }
 
+// Form action wrappers
 export async function createRevenueAnalyticsAction(formData: FormData) {
-  const period = formData.get("period") as string;
-  const timeRange = formData.get("timeRange") as "MONTH" | "QUARTER" | "YEAR";
-  const totalRevenue = parseFloat(formData.get("totalRevenue") as string) || 0;
-  const growth = parseFloat(formData.get("growth") as string) || 0;
-  const bestMonth = formData.get("bestMonth") as string;
-  const topProduct = formData.get("topProduct") as string;
-  const topSalesRep = formData.get("topSalesRep") as string;
-
-  // Parse JSON arrays
-  const monthlyTrends = JSON.parse(
-    (formData.get("monthlyTrends") as string) || "[]"
-  );
-  const productPerformance = JSON.parse(
-    (formData.get("productPerformance") as string) || "[]"
-  );
-  const salesByRep = JSON.parse((formData.get("salesByRep") as string) || "[]");
-  const storePerformance = JSON.parse(
-    (formData.get("storePerformance") as string) || "[]"
-  );
-  const avgOrderValue = JSON.parse(
-    (formData.get("avgOrderValue") as string) || "[]"
-  );
-
-  const result = await createRevenueAnalytics({
-    period,
-    timeRange,
-    totalRevenue,
-    growth,
-    bestMonth,
-    topProduct,
-    topSalesRep,
-    monthlyTrends,
-    productPerformance,
-    salesByRep,
-    storePerformance,
-    avgOrderValue,
-  });
-
-  if (result.success) {
-    redirect("/management/revenue-data");
-  } else {
-    throw new Error(result.error);
-  }
+  console.warn("createRevenueAnalyticsAction is not implemented");
+  return { success: false, error: "Not implemented" };
 }
 
 export async function updateRevenueAnalyticsAction(formData: FormData) {
-  const id = formData.get("id") as string;
-  const period = formData.get("period") as string;
-  const timeRange = formData.get("timeRange") as "MONTH" | "QUARTER" | "YEAR";
-  const totalRevenue = parseFloat(formData.get("totalRevenue") as string) || 0;
-  const growth = parseFloat(formData.get("growth") as string) || 0;
-  const bestMonth = formData.get("bestMonth") as string;
-  const topProduct = formData.get("topProduct") as string;
-  const topSalesRep = formData.get("topSalesRep") as string;
-
-  // Parse JSON arrays
-  const monthlyTrends = JSON.parse(
-    (formData.get("monthlyTrends") as string) || "[]"
-  );
-  const productPerformance = JSON.parse(
-    (formData.get("productPerformance") as string) || "[]"
-  );
-  const salesByRep = JSON.parse((formData.get("salesByRep") as string) || "[]");
-  const storePerformance = JSON.parse(
-    (formData.get("storePerformance") as string) || "[]"
-  );
-  const avgOrderValue = JSON.parse(
-    (formData.get("avgOrderValue") as string) || "[]"
-  );
-
-  const result = await updateRevenueAnalytics(id, {
-    period,
-    timeRange,
-    totalRevenue,
-    growth,
-    bestMonth,
-    topProduct,
-    topSalesRep,
-    monthlyTrends,
-    productPerformance,
-    salesByRep,
-    storePerformance,
-    avgOrderValue,
-  });
-
-  if (result.success) {
-    redirect("/management/revenue-data");
-  } else {
-    throw new Error(result.error);
-  }
+  console.warn("updateRevenueAnalyticsAction is not implemented");
+  return { success: false, error: "Not implemented" };
 }
 
 export async function deleteRevenueAnalyticsAction(formData: FormData) {
-  const id = formData.get("id") as string;
+  console.warn("deleteRevenueAnalyticsAction is not implemented");
+  return { success: false, error: "Not implemented" };
+}
 
-  const result = await deleteRevenueAnalytics(id);
+// Working functions that use actual database tables
 
-  if (result.success) {
-    revalidatePath("/management/revenue-data");
-  } else {
-    throw new Error(result.error);
+/**
+ * Calculate revenue over time from actual invoice data
+ */
+export async function getRevenueOverTime(
+  startDate: Date,
+  endDate: Date,
+  groupBy: "day" | "week" | "month" | "quarter" | "year" = "month"
+) {
+  try {
+    // Get paid invoices within the date range
+    const invoices = await db.invoices.findMany({
+      where: {
+        status: "PAID",
+        invoiceDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        invoiceDate: true,
+        totalAmount: true,
+      },
+      orderBy: {
+        invoiceDate: "asc",
+      },
+    });
+
+    // Group by specified period
+    const revenueByPeriod = new Map<string, number>();
+    
+    invoices.forEach(invoice => {
+      let periodKey: string;
+      const date = new Date(invoice.invoiceDate);
+      
+      switch (groupBy) {
+        case "day":
+          periodKey = date.toISOString().split("T")[0];
+          break;
+        case "week":
+          const week = getWeekNumber(date);
+          periodKey = `${date.getFullYear()}-W${week}`;
+          break;
+        case "month":
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+          break;
+        case "quarter":
+          const quarter = Math.ceil((date.getMonth() + 1) / 3);
+          periodKey = `${date.getFullYear()}-Q${quarter}`;
+          break;
+        case "year":
+          periodKey = date.getFullYear().toString();
+          break;
+        default:
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+      
+      const currentRevenue = revenueByPeriod.get(periodKey) || 0;
+      revenueByPeriod.set(periodKey, currentRevenue + invoice.totalAmount);
+    });
+
+    // Convert to array format
+    return Array.from(revenueByPeriod.entries()).map(([period, revenue]) => ({
+      period,
+      revenue,
+    }));
+  } catch (error) {
+    console.error("Error calculating revenue over time:", error);
+    throw new Error("Failed to calculate revenue over time");
+  }
+}
+
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/**
+ * Get top performing products by revenue
+ */
+export async function getTopProducts(limit: number = 10) {
+  try {
+    const products = await db.invoiceItems.groupBy({
+      by: ["productId"],
+      _sum: {
+        totalPrice: true,
+      },
+      _count: {
+        id: true,
+      },
+      orderBy: {
+        _sum: {
+          totalPrice: "desc",
+        },
+      },
+      take: limit,
+    });
+
+    // Get product details
+    const productDetails = await Promise.all(
+      products.map(async (item) => {
+        const product = await db.products.findUnique({
+          where: { id: item.productId },
+          select: {
+            name: true,
+            unit: true,
+          },
+        });
+        
+        return {
+          productId: item.productId,
+          productName: product?.name || "Unknown Product",
+          revenue: item._sum.totalPrice || 0,
+          quantity: item._count.id,
+        };
+      })
+    );
+
+    return productDetails;
+  } catch (error) {
+    console.error("Error getting top products:", error);
+    throw new Error("Failed to get top products");
   }
 }

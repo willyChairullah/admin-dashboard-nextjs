@@ -215,9 +215,7 @@ export async function getAvailablePurchaseOrders() {
     const purchaseOrders = await db.purchaseOrders.findMany({
       where: {
         // PO should not already have an invoice
-        invoices: {
-          none: {},
-        },
+        invoices: null,
         // PO status should be PROCESSING
         status: PurchaseOrderStatus.PROCESSING,
         // Stock confirmation should NOT be WAITING_CONFIRMATION

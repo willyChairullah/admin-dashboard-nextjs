@@ -76,72 +76,26 @@ export default function CreateRevenueAnalyticsPage() {
     setIsSubmitting(true);
 
     try {
+      // Since createRevenueAnalytics is not implemented, show a warning
+      toast.warning("Fitur ini belum diimplementasikan. Gunakan data invoice untuk analisis revenue.");
+      router.push("/management/revenue-data");
+      return;
+      
+      /* TODO: Uncomment when revenue analytics is properly implemented
       const result = await createRevenueAnalytics({
         period: formData.period,
         timeRange: formData.timeRange,
         totalRevenue: parseFloat(formData.totalRevenue) || 0,
-        growth: parseFloat(formData.growth) || 0,
-        bestMonth: formData.bestMonth,
-        topProduct: formData.topProduct,
-        topSalesRep: formData.topSalesRep,
-        monthlyTrends: [
-          {
-            month: formData.period,
-            revenue: parseFloat(formData.totalRevenue) || 0,
-            growth: parseFloat(formData.growth) || 0,
-          },
-        ],
-        productPerformance: formData.topProduct
-          ? [
-              {
-                name: formData.topProduct,
-                revenue: parseFloat(formData.totalRevenue) || 0,
-                units: 1,
-                growth: parseFloat(formData.growth) || 0,
-                category: "General",
-              },
-            ]
-          : [],
-        salesByRep: formData.topSalesRep
-          ? [
-              {
-                name: formData.topSalesRep,
-                revenue: parseFloat(formData.totalRevenue) || 0,
-                deals: 1,
-                conversion: 100,
-              },
-            ]
-          : [],
-        storePerformance: [
-          {
-            name: "Main Store",
-            location: "Default",
-            revenue: parseFloat(formData.totalRevenue) || 0,
-            growth: parseFloat(formData.growth) || 0,
-          },
-        ],
-        avgOrderValue: [
-          {
-            current: parseFloat(formData.totalRevenue) || 0,
-            previous: 0,
-            trend: parseFloat(formData.growth) || 0,
-            period: formData.period,
-            value: parseFloat(formData.totalRevenue) || 0,
-          },
-        ],
+        // ... other data
       });
 
       if (result.success) {
-        toast.success(
-          `Revenue Analytics untuk periode "${formData.period}" berhasil dibuat.`
-        );
-        router.push(`/${data.module}/${data.subModule}`);
+        toast.success("Revenue Analytics berhasil dibuat!");
+        router.push("/management/revenue-data");
       } else {
-        const errorMessage =
-          result.error || "Gagal membuat revenue analytics data";
-        toast.error(errorMessage);
-        setFormErrors({ period: errorMessage });
+        toast.error(result.error || "Gagal membuat revenue analytics");
       }
+      */
     } catch (error) {
       console.error("Terjadi kesalahan saat membuat revenue analytics:", error);
       const errorMessage = "Terjadi kesalahan yang tidak terduga";

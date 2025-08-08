@@ -50,22 +50,9 @@ export default function EditRevenueAnalyticsPage() {
       if (!id) return;
 
       try {
-        const revenueData = await getRevenueAnalyticsById(id);
-
-        if (revenueData) {
-          setFormData({
-            period: revenueData.period || "",
-            timeRange: revenueData.timeRange || "MONTH",
-            totalRevenue: revenueData.totalRevenue?.toString() || "0",
-            growth: revenueData.growth?.toString() || "0",
-            bestMonth: revenueData.bestMonth || "",
-            topProduct: revenueData.topProduct || "",
-            topSalesRep: revenueData.topSalesRep || "",
-          });
-        } else {
-          toast.error("Data revenue analytics tidak ditemukan");
-          router.push(`/${data.module}/${data.subModule}`);
-        }
+        // Revenue analytics editing is temporarily disabled
+        toast.error("Fitur edit revenue analytics belum tersedia");
+        router.push(`/${data.module}/${data.subModule}`);
       } catch (error) {
         console.error("Error loading revenue analytics data:", error);
         toast.error("Gagal memuat data revenue analytics");
@@ -106,94 +93,10 @@ export default function EditRevenueAnalyticsPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      toast.warning("Harap periksa kembali data yang Anda masukkan.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const updateData = {
-        period: formData.period,
-        timeRange: formData.timeRange,
-        totalRevenue: parseFloat(formData.totalRevenue) || 0,
-        growth: parseFloat(formData.growth) || 0,
-        bestMonth: formData.bestMonth,
-        topProduct: formData.topProduct,
-        topSalesRep: formData.topSalesRep,
-        monthlyTrends: [
-          {
-            month: formData.period,
-            revenue: parseFloat(formData.totalRevenue) || 0,
-            growth: parseFloat(formData.growth) || 0,
-          },
-        ],
-        productPerformance: formData.topProduct
-          ? [
-              {
-                name: formData.topProduct,
-                revenue: parseFloat(formData.totalRevenue) || 0,
-                units: 1,
-                growth: parseFloat(formData.growth) || 0,
-                category: "General",
-              },
-            ]
-          : [],
-        salesByRep: formData.topSalesRep
-          ? [
-              {
-                name: formData.topSalesRep,
-                revenue: parseFloat(formData.totalRevenue) || 0,
-                deals: 1,
-                conversion: 100,
-              },
-            ]
-          : [],
-        storePerformance: [
-          {
-            name: "Main Store",
-            location: "Default",
-            revenue: parseFloat(formData.totalRevenue) || 0,
-            growth: parseFloat(formData.growth) || 0,
-          },
-        ],
-        avgOrderValue: [
-          {
-            current: parseFloat(formData.totalRevenue) || 0,
-            previous: 0,
-            trend: parseFloat(formData.growth) || 0,
-            period: formData.period,
-            value: parseFloat(formData.totalRevenue) || 0,
-          },
-        ],
-      };
-
-      const result = await updateRevenueAnalytics(id, updateData);
-
-      if (result.success) {
-        toast.success(
-          `Revenue Analytics untuk periode "${formData.period}" berhasil diupdate.`
-        );
-        router.push(`/${data.module}/${data.subModule}`);
-      } else {
-        const errorMessage =
-          result.error || "Gagal mengupdate revenue analytics data";
-        toast.error(errorMessage);
-        setFormErrors({ period: errorMessage });
-      }
-    } catch (error) {
-      console.error(
-        "Terjadi kesalahan saat mengupdate revenue analytics:",
-        error
-      );
-      const errorMessage = "Terjadi kesalahan yang tidak terduga";
-      toast.error(errorMessage);
-      setFormErrors({ period: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
+    
+    // Revenue analytics editing is temporarily disabled
+    toast.error("Fitur edit revenue analytics belum tersedia");
+    router.push(`/${data.module}/${data.subModule}`);
   };
 
   if (isLoading) {
