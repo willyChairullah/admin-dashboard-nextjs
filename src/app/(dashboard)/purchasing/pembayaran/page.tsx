@@ -15,7 +15,8 @@ const columns = [
   },
   {
     header: "Customer",
-    accessor: "invoice.customer.name",
+    accessor: "invoice.customer",
+    render: (value: any) => value?.name || "No Customer",
   },
   {
     header: "Tanggal Pembayaran",

@@ -29,7 +29,7 @@ export type PaymentWithDetails = Payments & {
       id: string;
       name: string;
       code: string;
-    };
+    } | null;
   };
   user: {
     id: string;
@@ -49,7 +49,7 @@ export type InvoiceOption = {
     id: string;
     name: string;
     code: string;
-  };
+  } | null;
 };
 
 // Get all payments
