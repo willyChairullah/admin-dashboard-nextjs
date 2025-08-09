@@ -1,4 +1,4 @@
-// app/sales/daftar-po/edit/[id]/page.tsx
+// app/purchasing/daftar-po/edit/[id]/page.tsx
 "use client";
 
 import { ManagementHeader } from "@/components/ui";
@@ -165,7 +165,7 @@ export default function EditPurchaseOrderPage() {
 
         if (!purchaseOrder) {
           toast.error("Purchase Order tidak ditemukan");
-          router.push("/sales/daftar-po");
+          router.push("/purchasing/daftar-po");
           return;
         }
 
@@ -213,7 +213,7 @@ export default function EditPurchaseOrderPage() {
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
-        router.push("/sales/daftar-po");
+        router.push("/purchasing/daftar-po");
       } finally {
         setIsLoading(false);
       }
@@ -469,7 +469,7 @@ export default function EditPurchaseOrderPage() {
 
       if (result.success) {
         toast.success("Purchase Order berhasil diperbarui!");
-        router.push("/sales/daftar-po");
+        router.push("/purchasing/daftar-po");
       } else {
         toast.error(result.error || "Gagal memperbarui Purchase Order");
       }
@@ -489,7 +489,7 @@ export default function EditPurchaseOrderPage() {
 
       if (result.success) {
         toast.success("Purchase Order berhasil dihapus!");
-        router.push("/sales/daftar-po");
+        router.push("/purchasing/daftar-po");
       } else {
         toast.error(result.error || "Gagal menghapus Purchase Order");
       }
@@ -522,12 +522,12 @@ export default function EditPurchaseOrderPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         allowedRoles={["ADMIN", "OWNER", "WAREHOUSE"]}
-        mainPageName="/sales/daftar-po"
+        mainPageName="/purchasing/daftar-po"
         headerTittle="Purchase Order"
       />
       <ManagementForm
         subModuleName="daftar-po"
-        moduleName="sales"
+        moduleName="purchasing"
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
         handleDelete={() => setShowDeleteModal(true)}

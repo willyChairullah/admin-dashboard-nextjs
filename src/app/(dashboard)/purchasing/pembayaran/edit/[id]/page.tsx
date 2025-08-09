@@ -1,6 +1,5 @@
-// app/sales/pembayaran/create/page.tsx
+// app/purchasing/pembayaran/edit/[id]/page.tsx
 "use client";
-import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
   Input,
@@ -8,17 +7,23 @@ import {
   InputTextArea,
   ManagementForm,
   InputDate,
+  ManagementHeader,
   Select,
   InputFileUpload,
 } from "@/components/ui";
-import { createPayment, getAvailableInvoices } from "@/lib/actions/payments";
-import { useRouter } from "next/navigation";
+import {
+  updatePayment,
+  getPaymentById,
+  getAvailableInvoices,
+  getAvailableUsers,
+  deletePayment,
+} from "@/lib/actions/payments";
+import { useRouter, useParams } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
-import { generateCodeByTable } from "@/utils/getCode";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PaidStatus } from "@prisma/client";
 
 interface PaymentFormData {
@@ -42,6 +47,7 @@ interface PaymentFormErrors {
   proofUrl?: string;
   status?: string;
   invoiceId?: string;
+  userId?: string;
 }
 
 interface InvoiceOption {
@@ -50,6 +56,7 @@ interface InvoiceOption {
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  paymentStatus?: string;
   customer: {
     id: string;
     name: string;
@@ -63,14 +70,19 @@ interface User {
   role: string;
 }
 
-export default function CreatePaymentPage() {
+export default function EditPaymentPage() {
   const data = useSharedData();
   const router = useRouter();
-  const { user } = useCurrentUser();
+  const params = useParams();
+  const paymentId = params.id as string;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [availableInvoices, setAvailableInvoices] = useState<InvoiceOption[]>(
     []
   );
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(
     null
   );
@@ -85,29 +97,57 @@ export default function CreatePaymentPage() {
     proofUrl: "",
     status: PaidStatus.PENDING,
     invoiceId: "",
-    userId: user?.id || "",
+    userId: "",
   });
 
   const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
   const [isUploading, setIsUploading] = useState(false);
 
-  console.log(formData);
-
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [invoices] = await Promise.all([getAvailableInvoices()]);
+        const [payment, invoices, users] = await Promise.all([
+          getPaymentById(paymentId),
+          getAvailableInvoices(),
+          getAvailableUsers(),
+        ]);
 
-        setAvailableInvoices(invoices);
+        if (!payment) {
+          toast.error("Payment tidak ditemukan");
+          router.push(`/${data.module}/${data.subModule}`);
+          return;
+        }
 
-        // Generate payment code
-        const code = await generateCodeByTable("Payments");
-        setFormData(prev => ({
-          ...prev,
-          paymentCode: code,
-          userId: user?.id || prev.userId,
-        }));
+        // Add current invoice to available invoices if not already there
+        const currentInvoice = {
+          id: payment.invoice.id,
+          code: payment.invoice.code,
+          totalAmount: payment.invoice.totalAmount,
+          paidAmount: payment.invoice.paidAmount,
+          remainingAmount: payment.invoice.remainingAmount,
+          customer: payment.invoice.customer,
+        };
+
+        const allInvoices = invoices.some(inv => inv.id === currentInvoice.id)
+          ? invoices
+          : [currentInvoice, ...invoices];
+
+        setAvailableInvoices(allInvoices);
+        setAvailableUsers(users);
+        setSelectedInvoice(currentInvoice);
+
+        setFormData({
+          paymentCode: payment.paymentCode,
+          paymentDate: payment.paymentDate.toISOString().split("T")[0],
+          amount: payment.amount,
+          method: payment.method,
+          notes: payment.notes || "",
+          proofUrl: payment.proofUrl || "",
+          status: payment.status,
+          invoiceId: payment.invoiceId,
+          userId: payment.userId,
+        });
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Gagal memuat data");
@@ -116,10 +156,8 @@ export default function CreatePaymentPage() {
       }
     };
 
-    if (user?.id) {
-      loadData();
-    }
-  }, [user?.id]);
+    loadData();
+  }, [paymentId, data.module, data.subModule, router]);
 
   const handleInputChange = (
     field: keyof PaymentFormData,
@@ -130,7 +168,7 @@ export default function CreatePaymentPage() {
       [field]: value,
     }));
 
-    if (field !== "userId" && formErrors[field as keyof PaymentFormErrors]) {
+    if (formErrors[field]) {
       setFormErrors(prev => ({
         ...prev,
         [field]: undefined,
@@ -142,10 +180,10 @@ export default function CreatePaymentPage() {
     const invoice = availableInvoices.find(inv => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
 
+    // Don't auto-fill amount when changing invoice in edit mode
     setFormData(prev => ({
       ...prev,
       invoiceId,
-      amount: invoice?.remainingAmount || 0,
     }));
 
     if (formErrors.invoiceId) {
@@ -171,16 +209,16 @@ export default function CreatePaymentPage() {
       errors.invoiceId = "Invoice wajib dipilih";
     }
 
+    if (!formData.userId) {
+      errors.userId = "User wajib dipilih";
+    }
+
     if (!formData.method.trim()) {
       errors.method = "Metode pembayaran wajib diisi";
     }
 
     if (!formData.amount || formData.amount <= 0) {
       errors.amount = "Jumlah pembayaran harus lebih dari 0";
-    }
-
-    if (selectedInvoice && formData.amount > selectedInvoice.remainingAmount) {
-      errors.amount = "Jumlah pembayaran tidak boleh melebihi sisa tagihan";
     }
 
     setFormErrors(errors);
@@ -237,7 +275,7 @@ export default function CreatePaymentPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await createPayment({
+      const result = await updatePayment(paymentId, {
         paymentCode: formData.paymentCode,
         paymentDate: new Date(formData.paymentDate),
         amount: Number(formData.amount),
@@ -250,17 +288,36 @@ export default function CreatePaymentPage() {
       });
 
       if (result.success) {
-        toast.success("Pembayaran berhasil dibuat.");
+        toast.success("Pembayaran berhasil diperbarui.");
         router.push(`/${data.module}/${data.subModule}`);
       } else {
-        const errorMessage = result.error || "Gagal membuat pembayaran";
+        const errorMessage = result.error || "Gagal memperbarui pembayaran";
         toast.error(errorMessage);
       }
     } catch (error) {
-      console.error("Error creating payment:", error);
-      toast.error("Terjadi kesalahan saat membuat pembayaran");
+      console.error("Error updating payment:", error);
+      toast.error("Terjadi kesalahan saat memperbarui pembayaran");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deletePayment(paymentId);
+      if (result.success) {
+        toast.success("Pembayaran berhasil dihapus.");
+        router.push(`/${data.module}/${data.subModule}`);
+      } else {
+        toast.error(result.error || "Gagal menghapus pembayaran");
+      }
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      toast.error("Terjadi kesalahan saat menghapus pembayaran");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -278,7 +335,7 @@ export default function CreatePaymentPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Tambah Pembayaran"
+        headerTittle="Edit Pembayaran"
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
@@ -288,6 +345,8 @@ export default function CreatePaymentPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        hideDeleteButton={false}
+        handleDelete={() => setIsDeleteModalOpen(true)}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Kode Pembayaran */}
@@ -303,7 +362,6 @@ export default function CreatePaymentPage() {
               value={formData.paymentCode}
               readOnly
               className="bg-gray-100 dark:bg-gray-800 cursor-default"
-              placeholder="Auto Generate"
             />
           </FormField>
 
@@ -320,6 +378,7 @@ export default function CreatePaymentPage() {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("paymentDate", dateString);
               }}
+              errorMessage={formErrors.paymentDate}
               placeholder="Pilih tanggal pembayaran"
             />
           </FormField>
@@ -344,6 +403,30 @@ export default function CreatePaymentPage() {
               searchPlaceholder="Cari invoice..."
               className={formErrors.invoiceId ? "border-red-500" : ""}
             />
+          </FormField>
+
+          {/* User */}
+          <FormField
+            label="Dibuat Oleh"
+            errorMessage={formErrors.userId}
+            required
+          >
+            <select
+              value={formData.userId}
+              onChange={e => handleInputChange("userId", e.target.value)}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
+                formErrors.userId
+                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
+                  : "border-gray-300 dark:border-gray-600"
+              }`}
+            >
+              <option value="">Pilih User</option>
+              {availableUsers.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
+            </select>
           </FormField>
         </div>
 
@@ -387,27 +470,18 @@ export default function CreatePaymentPage() {
             errorMessage={formErrors.amount}
             required
           >
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                Rp
-              </span>
-              <Input
-                type="text"
-                name="amount"
-                value={formatInputRupiah(formData.amount)}
-                onChange={e => {
-                  const value = parseInputRupiah(e.target.value);
-                  handleInputChange("amount", value);
-                }}
-                placeholder="0"
-                className="pl-10"
-              />
-            </div>
-            {selectedInvoice && (
-              <p className="text-xs text-gray-500 mt-1">
-                Maksimal: {formatRupiah(selectedInvoice.remainingAmount)}
-              </p>
-            )}
+            <Input
+              type="number"
+              name="amount"
+              min="0"
+              step="0.01"
+              value={formData.amount.toString()}
+              onChange={e =>
+                handleInputChange("amount", parseFloat(e.target.value) || 0)
+              }
+              errorMessage={formErrors.amount}
+              placeholder="0"
+            />
           </FormField>
 
           {/* Metode Pembayaran */}
@@ -484,10 +558,26 @@ export default function CreatePaymentPage() {
             placeholder="Catatan pembayaran (opsional)"
             value={formData.notes}
             onChange={e => handleInputChange("notes", e.target.value)}
+            errorMessage={formErrors.notes}
             rows={3}
           />
         </FormField>
       </ManagementForm>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Hapus Pembayaran"
+        isLoading={isDeleting}
+      >
+        <p>
+          Apakah Anda yakin ingin menghapus pembayaran{" "}
+          <strong>{formData.paymentCode}</strong>? Tindakan ini tidak dapat
+          dibatalkan.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 }

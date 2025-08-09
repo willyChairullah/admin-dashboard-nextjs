@@ -1,4 +1,4 @@
-// app/sales/daftar-po/create/page.tsx
+// app/purchasing/daftar-po/create/page.tsx
 "use client";
 import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect, useCallback } from "react";
@@ -383,7 +383,7 @@ export default function CreatePurchaseOrderPage() {
 
       if (result.success) {
         toast.success("Purchase Order berhasil dibuat!");
-        router.push("/sales/daftar-po");
+        router.push("/purchasing/daftar-po");
       } else {
         toast.error(result.error || "Gagal membuat Purchase Order");
       }
@@ -415,7 +415,7 @@ export default function CreatePurchaseOrderPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         allowedRoles={["ADMIN", "OWNER", "WAREHOUSE"]}
-        mainPageName="/sales/daftar-po"
+        mainPageName="/purchasing/daftar-po"
         headerTittle="Purchase Order"
       />
       <ManagementForm

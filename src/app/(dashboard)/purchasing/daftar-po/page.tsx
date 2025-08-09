@@ -1,4 +1,4 @@
-// app/sales/daftar-po/page.tsx
+// app/purchasing/daftar-po/page.tsx
 "use client"; // This component MUST be a Client Component
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";

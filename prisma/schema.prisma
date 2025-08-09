@@ -285,7 +285,7 @@ model Invoices {
   code            String         @unique
   invoiceDate     DateTime       @default(now())
   dueDate         DateTime?
-  status          InvoiceStatus  @default(DRAFT)
+  // status          InvoiceStatus  @default(DRAFT)
   paymentStatus   PaymentStatus  @default(UNPAID)
   type            InvoiceType    @default(PRODUCT) // <--- Tambahan: Tipe invoice (PRODUCT/MANUAL)
   // isProforma      Boolean        @default(false)

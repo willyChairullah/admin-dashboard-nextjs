@@ -1,5 +1,6 @@
-// app/sales/pembayaran/edit/[id]/page.tsx
+// app/purchasing/pembayaran/create/page.tsx
 "use client";
+import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import {
   Input,
@@ -7,23 +8,17 @@ import {
   InputTextArea,
   ManagementForm,
   InputDate,
-  ManagementHeader,
   Select,
   InputFileUpload,
 } from "@/components/ui";
-import {
-  updatePayment,
-  getPaymentById,
-  getAvailableInvoices,
-  getAvailableUsers,
-  deletePayment,
-} from "@/lib/actions/payments";
-import { useRouter, useParams } from "next/navigation";
+import { createPayment, getAvailableInvoices } from "@/lib/actions/payments";
+import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
-import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
+import { generateCodeByTable } from "@/utils/getCode";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PaidStatus } from "@prisma/client";
 
 interface PaymentFormData {
@@ -47,7 +42,6 @@ interface PaymentFormErrors {
   proofUrl?: string;
   status?: string;
   invoiceId?: string;
-  userId?: string;
 }
 
 interface InvoiceOption {
@@ -56,7 +50,6 @@ interface InvoiceOption {
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
-  paymentStatus?: string;
   customer: {
     id: string;
     name: string;
@@ -70,19 +63,14 @@ interface User {
   role: string;
 }
 
-export default function EditPaymentPage() {
+export default function CreatePaymentPage() {
   const data = useSharedData();
   const router = useRouter();
-  const params = useParams();
-  const paymentId = params.id as string;
-
+  const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [availableInvoices, setAvailableInvoices] = useState<InvoiceOption[]>(
     []
   );
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(
     null
   );
@@ -97,57 +85,29 @@ export default function EditPaymentPage() {
     proofUrl: "",
     status: PaidStatus.PENDING,
     invoiceId: "",
-    userId: "",
+    userId: user?.id || "",
   });
 
   const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
   const [isUploading, setIsUploading] = useState(false);
 
+  console.log(formData);
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [payment, invoices, users] = await Promise.all([
-          getPaymentById(paymentId),
-          getAvailableInvoices(),
-          getAvailableUsers(),
-        ]);
+        const [invoices] = await Promise.all([getAvailableInvoices()]);
 
-        if (!payment) {
-          toast.error("Payment tidak ditemukan");
-          router.push(`/${data.module}/${data.subModule}`);
-          return;
-        }
+        setAvailableInvoices(invoices);
 
-        // Add current invoice to available invoices if not already there
-        const currentInvoice = {
-          id: payment.invoice.id,
-          code: payment.invoice.code,
-          totalAmount: payment.invoice.totalAmount,
-          paidAmount: payment.invoice.paidAmount,
-          remainingAmount: payment.invoice.remainingAmount,
-          customer: payment.invoice.customer,
-        };
-
-        const allInvoices = invoices.some(inv => inv.id === currentInvoice.id)
-          ? invoices
-          : [currentInvoice, ...invoices];
-
-        setAvailableInvoices(allInvoices);
-        setAvailableUsers(users);
-        setSelectedInvoice(currentInvoice);
-
-        setFormData({
-          paymentCode: payment.paymentCode,
-          paymentDate: payment.paymentDate.toISOString().split("T")[0],
-          amount: payment.amount,
-          method: payment.method,
-          notes: payment.notes || "",
-          proofUrl: payment.proofUrl || "",
-          status: payment.status,
-          invoiceId: payment.invoiceId,
-          userId: payment.userId,
-        });
+        // Generate payment code
+        const code = await generateCodeByTable("Payments");
+        setFormData(prev => ({
+          ...prev,
+          paymentCode: code,
+          userId: user?.id || prev.userId,
+        }));
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Gagal memuat data");
@@ -156,8 +116,10 @@ export default function EditPaymentPage() {
       }
     };
 
-    loadData();
-  }, [paymentId, data.module, data.subModule, router]);
+    if (user?.id) {
+      loadData();
+    }
+  }, [user?.id]);
 
   const handleInputChange = (
     field: keyof PaymentFormData,
@@ -168,7 +130,7 @@ export default function EditPaymentPage() {
       [field]: value,
     }));
 
-    if (formErrors[field]) {
+    if (field !== "userId" && formErrors[field as keyof PaymentFormErrors]) {
       setFormErrors(prev => ({
         ...prev,
         [field]: undefined,
@@ -180,10 +142,10 @@ export default function EditPaymentPage() {
     const invoice = availableInvoices.find(inv => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
 
-    // Don't auto-fill amount when changing invoice in edit mode
     setFormData(prev => ({
       ...prev,
       invoiceId,
+      amount: invoice?.remainingAmount || 0,
     }));
 
     if (formErrors.invoiceId) {
@@ -209,16 +171,16 @@ export default function EditPaymentPage() {
       errors.invoiceId = "Invoice wajib dipilih";
     }
 
-    if (!formData.userId) {
-      errors.userId = "User wajib dipilih";
-    }
-
     if (!formData.method.trim()) {
       errors.method = "Metode pembayaran wajib diisi";
     }
 
     if (!formData.amount || formData.amount <= 0) {
       errors.amount = "Jumlah pembayaran harus lebih dari 0";
+    }
+
+    if (selectedInvoice && formData.amount > selectedInvoice.remainingAmount) {
+      errors.amount = "Jumlah pembayaran tidak boleh melebihi sisa tagihan";
     }
 
     setFormErrors(errors);
@@ -275,7 +237,7 @@ export default function EditPaymentPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await updatePayment(paymentId, {
+      const result = await createPayment({
         paymentCode: formData.paymentCode,
         paymentDate: new Date(formData.paymentDate),
         amount: Number(formData.amount),
@@ -288,36 +250,17 @@ export default function EditPaymentPage() {
       });
 
       if (result.success) {
-        toast.success("Pembayaran berhasil diperbarui.");
+        toast.success("Pembayaran berhasil dibuat.");
         router.push(`/${data.module}/${data.subModule}`);
       } else {
-        const errorMessage = result.error || "Gagal memperbarui pembayaran";
+        const errorMessage = result.error || "Gagal membuat pembayaran";
         toast.error(errorMessage);
       }
     } catch (error) {
-      console.error("Error updating payment:", error);
-      toast.error("Terjadi kesalahan saat memperbarui pembayaran");
+      console.error("Error creating payment:", error);
+      toast.error("Terjadi kesalahan saat membuat pembayaran");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const result = await deletePayment(paymentId);
-      if (result.success) {
-        toast.success("Pembayaran berhasil dihapus.");
-        router.push(`/${data.module}/${data.subModule}`);
-      } else {
-        toast.error(result.error || "Gagal menghapus pembayaran");
-      }
-    } catch (error) {
-      console.error("Error deleting payment:", error);
-      toast.error("Terjadi kesalahan saat menghapus pembayaran");
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteModalOpen(false);
     }
   };
 
@@ -335,7 +278,7 @@ export default function EditPaymentPage() {
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle="Edit Pembayaran"
+        headerTittle="Tambah Pembayaran"
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
@@ -345,8 +288,6 @@ export default function EditPaymentPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
-        hideDeleteButton={false}
-        handleDelete={() => setIsDeleteModalOpen(true)}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Kode Pembayaran */}
@@ -362,6 +303,7 @@ export default function EditPaymentPage() {
               value={formData.paymentCode}
               readOnly
               className="bg-gray-100 dark:bg-gray-800 cursor-default"
+              placeholder="Auto Generate"
             />
           </FormField>
 
@@ -378,7 +320,6 @@ export default function EditPaymentPage() {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("paymentDate", dateString);
               }}
-              errorMessage={formErrors.paymentDate}
               placeholder="Pilih tanggal pembayaran"
             />
           </FormField>
@@ -395,7 +336,7 @@ export default function EditPaymentPage() {
               options={availableInvoices.map(invoice => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
-                  invoice.customer.name
+                  invoice.customer.name || null
                 } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
@@ -403,30 +344,6 @@ export default function EditPaymentPage() {
               searchPlaceholder="Cari invoice..."
               className={formErrors.invoiceId ? "border-red-500" : ""}
             />
-          </FormField>
-
-          {/* User */}
-          <FormField
-            label="Dibuat Oleh"
-            errorMessage={formErrors.userId}
-            required
-          >
-            <select
-              value={formData.userId}
-              onChange={e => handleInputChange("userId", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                formErrors.userId
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
           </FormField>
         </div>
 
@@ -470,18 +387,27 @@ export default function EditPaymentPage() {
             errorMessage={formErrors.amount}
             required
           >
-            <Input
-              type="number"
-              name="amount"
-              min="0"
-              step="0.01"
-              value={formData.amount.toString()}
-              onChange={e =>
-                handleInputChange("amount", parseFloat(e.target.value) || 0)
-              }
-              errorMessage={formErrors.amount}
-              placeholder="0"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                Rp
+              </span>
+              <Input
+                type="text"
+                name="amount"
+                value={formatInputRupiah(formData.amount)}
+                onChange={e => {
+                  const value = parseInputRupiah(e.target.value);
+                  handleInputChange("amount", value);
+                }}
+                placeholder="0"
+                className="pl-10"
+              />
+            </div>
+            {selectedInvoice && (
+              <p className="text-xs text-gray-500 mt-1">
+                Maksimal: {formatRupiah(selectedInvoice.remainingAmount)}
+              </p>
+            )}
           </FormField>
 
           {/* Metode Pembayaran */}
@@ -558,26 +484,10 @@ export default function EditPaymentPage() {
             placeholder="Catatan pembayaran (opsional)"
             value={formData.notes}
             onChange={e => handleInputChange("notes", e.target.value)}
-            errorMessage={formErrors.notes}
             rows={3}
           />
         </FormField>
       </ManagementForm>
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        title="Hapus Pembayaran"
-        isLoading={isDeleting}
-      >
-        <p>
-          Apakah Anda yakin ingin menghapus pembayaran{" "}
-          <strong>{formData.paymentCode}</strong>? Tindakan ini tidak dapat
-          dibatalkan.
-        </p>
-      </ConfirmationModal>
     </div>
   );
 }

@@ -141,6 +141,12 @@ export async function getAvailableInvoices(): Promise<InvoiceOption[]> {
   try {
     const invoices = await db.invoices.findMany({
       where: {
+        type: {
+          equals: "PRODUCT",
+        },
+        customerId: {
+          not: null,
+        },
         paymentStatus: {
           in: ["UNPAID", "PARTIALLY_PAID"],
         },
@@ -266,7 +272,7 @@ export async function createPayment(data: PaymentFormData) {
       return payment;
     });
 
-    revalidatePath("/sales/pembayaran");
+    revalidatePath("/purchasing/pembayaran");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating payment:", error);
@@ -412,8 +418,8 @@ export async function updatePayment(id: string, data: PaymentFormData) {
       return updatedPayment;
     });
 
-    revalidatePath("/sales/pembayaran");
-    revalidatePath(`/sales/pembayaran/edit/${id}`);
+    revalidatePath("/purchasing/pembayaran");
+    revalidatePath(`/purchasing/pembayaran/edit/${id}`);
     return { success: true, data: result };
   } catch (error) {
     console.error("Error updating payment:", error);
@@ -476,7 +482,7 @@ export async function deletePayment(id: string) {
       });
     });
 
-    revalidatePath("/sales/pembayaran");
+    revalidatePath("/purchasing/pembayaran");
     return { success: true };
   } catch (error) {
     console.error("Error deleting payment:", error);

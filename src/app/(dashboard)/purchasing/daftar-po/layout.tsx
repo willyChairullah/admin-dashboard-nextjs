@@ -1,4 +1,4 @@
-// app/sales/daftar-po/layout.tsx
+// app/purchasing/daftar-po/layout.tsx
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
@@ -13,7 +13,7 @@ export default async function DaftarPOLayout({
 }>) {
   // Data defined or fetched on the server side
   const myStaticData = {
-    module: "sales",
+    module: "purchasing",
     subModule: "daftar-po",
     allowedRole: ["OWNER", "ADMIN"],
     data: await getPurchaseOrders(), // Await the async function

@@ -58,31 +58,11 @@ model InvoiceItems {
   @@map("invoice_items")
 }
 
-
-model Payments {
-  id              String         @id @default(cuid())
-  paymentCode     String         @unique
-  paymentDate     DateTime       @default(now())
-  amount          Float
-  method          String
-  reference       String?
-  notes           String?
-  proofUrl        String?        // <--- Tambahan: URL ke file bukti pembayaran
-  status          PaidStatus  @default(PENDING)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  invoiceId       String
-  userId          String
-  invoice         Invoices       @relation(fields: [invoiceId], references: [id])
-  user            Users          @relation(fields: [userId], references: [id])
-
-  @@map("payments")
-}
 ```
 
 ## Reference
 
-Consistance layout and style will reference the folder page "/inventori/produksi"
+Consistance layout and style will reference the folder page "/inventori/konfirmasi-stok"
 Use custom UI from component
 
 ## application flow:
@@ -111,10 +91,8 @@ Admin can confirm preparation from invoice
 
 ### Data Storage:
 
-Update Invoice statusPreparation
+Update Invoice table column statusPreparation 
 
 ### Example Scenarios:
 
-Admin can add
-
-Make everything complete so that it can CRUD the data.
+Admin can choose invoice want to change statusPreparation and save
