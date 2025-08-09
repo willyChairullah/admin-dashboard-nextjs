@@ -22,6 +22,8 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "PRI";
     case "ManagementStocks":
       return "SMN";
+    case "Productions":
+      return "PDK";
     // Tambahkan singkatan untuk tabel lain yang akan memiliki kode
     // case 'Users': return 'USR'; // Contoh jika Users juga punya kode format ini
     // case 'Orders': return 'ORD'; // Contoh jika Orders juga punya kode format ini

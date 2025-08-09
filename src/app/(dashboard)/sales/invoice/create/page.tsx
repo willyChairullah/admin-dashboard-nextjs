@@ -39,8 +39,7 @@ interface InvoiceItemFormData {
 interface InvoiceFormData {
   code: string;
   invoiceDate: string;
-  dueDate: string;
-  paymentDeadline: string | null;
+  dueDate: string | null;
   status: string;
   type: InvoiceType;
   subtotal: number;
@@ -50,7 +49,7 @@ interface InvoiceFormData {
   shippingCost: number;
   totalAmount: number;
   notes: string;
-  customerId: string;
+  customerId: string | null;
   purchaseOrderId: string;
   createdBy: string;
   items: InvoiceItemFormData[];
@@ -60,7 +59,6 @@ interface InvoiceFormErrors {
   code?: string;
   invoiceDate?: string;
   dueDate?: string;
-  paymentDeadline?: string;
   status?: string;
   customerId?: string;
   createdBy?: string;
@@ -120,10 +118,7 @@ export default function CreateInvoicePage() {
   const [formData, setFormData] = useState<InvoiceFormData>({
     code: "",
     invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0], // 30 days from now
-    paymentDeadline: null,
+    dueDate: null, // Default to null for "Bayar Langsung"
     status: "DRAFT",
     type: InvoiceType.PRODUCT,
     subtotal: 0,
@@ -147,6 +142,8 @@ export default function CreateInvoicePage() {
       },
     ],
   });
+
+  console.log(formData);
 
   const [formErrors, setFormErrors] = useState<InvoiceFormErrors>({});
 
@@ -210,11 +207,11 @@ export default function CreateInvoicePage() {
               taxPercentage: purchaseOrderDetails.taxPercentage || 0,
               shippingCost: purchaseOrderDetails.shippingCost || 0,
               discount: purchaseOrderDetails.orderLevelDiscount || 0,
-              paymentDeadline: purchaseOrderDetails.paymentDeadline
+              dueDate: purchaseOrderDetails.paymentDeadline
                 ? new Date(purchaseOrderDetails.paymentDeadline)
                     .toISOString()
                     .split("T")[0]
-                : null,
+                : new Date(Date.now()).toISOString().split("T")[0],
               items: purchaseOrderDetails.items.map(item => ({
                 productId: item.product.id,
                 description: item.product.name,
@@ -258,10 +255,11 @@ export default function CreateInvoicePage() {
 
     // Calculate tax from percentage (applied to subtotal minus overall discount)
     const taxableAmount = subtotal - formData.discount;
-    const tax = (taxableAmount * formData.taxPercentage) / 100;
+    const tax = Math.round((taxableAmount * formData.taxPercentage) / 100);
 
-    const totalAmount =
-      subtotal - formData.discount + tax + formData.shippingCost;
+    const totalAmount = Math.round(
+      subtotal - formData.discount + tax + formData.shippingCost
+    );
 
     setFormData(prev => ({
       ...prev,
@@ -276,6 +274,18 @@ export default function CreateInvoicePage() {
     formData.discount,
   ]);
 
+  // Auto-set invoice type based on input mode
+  useEffect(() => {
+    const newType =
+      inputMode === "product" ? InvoiceType.PRODUCT : InvoiceType.MANUAL;
+    if (formData.type !== newType) {
+      setFormData(prev => ({
+        ...prev,
+        type: newType,
+      }));
+    }
+  }, [inputMode, formData.type]);
+
   const validateForm = (): boolean => {
     const errors: InvoiceFormErrors = {};
 
@@ -287,13 +297,13 @@ export default function CreateInvoicePage() {
       errors.invoiceDate = "Tanggal invoice wajib diisi";
     }
 
-    if (!formData.dueDate) {
-      errors.dueDate = "Tanggal jatuh tempo wajib diisi";
-    }
+    // if (!formData.dueDate) {
+    //   errors.dueDate = "Tanggal jatuh tempo wajib diisi";
+    // }
 
-    if (!formData.customerId) {
-      errors.customerId = "Customer wajib dipilih";
-    }
+    // if (!formData.customerId) {
+    //   errors.customerId = "Customer wajib dipilih";
+    // }
 
     // Tax percentage validation - allow 0 as valid value
     if (
@@ -308,8 +318,8 @@ export default function CreateInvoicePage() {
     }
 
     if (
-      formData.items.length === 0 ||
-      formData.items.every(item => !item.productId)
+      formData.items.length === 0
+      // formData.items.every(item => !item.productId)
     ) {
       errors.items = "Minimal harus ada satu item";
     }
@@ -381,10 +391,7 @@ export default function CreateInvoicePage() {
       const invoiceData = {
         code: formData.code,
         invoiceDate: new Date(formData.invoiceDate),
-        dueDate: new Date(formData.dueDate),
-        paymentDeadline: formData.paymentDeadline
-          ? new Date(formData.paymentDeadline)
-          : null,
+        dueDate: formData.dueDate ? new Date(formData.dueDate) : null,
         status: formData.status as any,
         type: formData.type,
         subtotal: formData.subtotal,
@@ -394,7 +401,7 @@ export default function CreateInvoicePage() {
         shippingCost: formData.shippingCost,
         totalAmount: formData.totalAmount,
         notes: formData.notes || undefined,
-        customerId: formData.customerId,
+        customerId: formData.customerId || null,
         purchaseOrderId: formData.purchaseOrderId || undefined,
         createdBy: formData.createdBy,
         items: formData.items,
@@ -491,11 +498,11 @@ export default function CreateInvoicePage() {
               options={[
                 {
                   value: "",
-                  label: "Pilih Purchase Order (Manual jika kosong)",
+                  label: "Pilih Purchase Order",
                 },
                 ...availablePurchaseOrders.map(purchaseOrder => ({
                   value: purchaseOrder.id,
-                  label: `${purchaseOrder.code} - ${purchaseOrder.creator.name}`,
+                  label: `${purchaseOrder.code} - ${purchaseOrder.order.customer.name}`,
                 })),
               ]}
             />
@@ -521,17 +528,13 @@ export default function CreateInvoicePage() {
           {/* Tenggat Pembayaran */}
           <FormField
             label="Tenggat Pembayaran"
-            errorMessage={formErrors.paymentDeadline}
+            errorMessage={formErrors.dueDate}
           >
             <InputDate
-              value={
-                formData.paymentDeadline
-                  ? new Date(formData.paymentDeadline)
-                  : null
-              }
+              value={formData.dueDate ? new Date(formData.dueDate) : null}
               onChange={value =>
                 handleInputChange(
-                  "paymentDeadline",
+                  "dueDate",
                   value ? value.toISOString().split("T")[0] : null
                 )
               }
@@ -544,11 +547,7 @@ export default function CreateInvoicePage() {
           </FormField>
 
           {/* Customer */}
-          <FormField
-            label="Customer"
-            required
-            errorMessage={formErrors.customerId}
-          >
+          <FormField label="Customer" errorMessage={formErrors.customerId}>
             {!!formData.purchaseOrderId ? (
               <Input
                 type="text"
@@ -562,7 +561,7 @@ export default function CreateInvoicePage() {
               />
             ) : (
               <Select
-                value={formData.customerId}
+                value={formData.customerId || ""}
                 onChange={(value: string) =>
                   handleInputChange("customerId", value)
                 }
@@ -604,21 +603,6 @@ export default function CreateInvoicePage() {
 
           {/* Created By - Hidden input using session */}
           <input type="hidden" name="createdBy" value={formData.createdBy} />
-
-          {/* Invoice Type */}
-          <FormField label="Invoice Type">
-            <select
-              name="type"
-              value={formData.type}
-              onChange={e =>
-                handleInputChange("type", e.target.value as InvoiceType)
-              }
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-            >
-              <option value={InvoiceType.PRODUCT}>Product Invoice</option>
-              <option value={InvoiceType.MANUAL}>Manual Invoice</option>
-            </select>
-          </FormField>
 
           {/* Biaya Pengiriman */}
           <FormField label="Biaya Pengiriman">
@@ -756,24 +740,28 @@ export default function CreateInvoicePage() {
                         {inputMode === "product" ? (
                           <div>
                             <select
-                              value={item.productId}
+                              value={item.productId || ""}
                               onChange={e => {
-                                handleItemChange(
-                                  index,
-                                  "productId",
-                                  e.target.value
-                                );
-                                // Auto-fill price when product is selected
+                                const selectedProductId = e.target.value;
                                 const selectedProduct = availableProducts.find(
-                                  p => p.id === e.target.value
+                                  p => p.id === selectedProductId
                                 );
-                                if (selectedProduct) {
-                                  handleItemChange(
-                                    index,
-                                    "price",
-                                    selectedProduct.price
-                                  );
-                                }
+
+                                const newItems = [...formData.items];
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  productId: selectedProductId,
+                                  price: selectedProduct
+                                    ? selectedProduct.price
+                                    : newItems[index].price,
+                                };
+
+                                // Recalculate totalPrice
+                                const item = newItems[index];
+                                item.totalPrice =
+                                  (item.price - item.discount) * item.quantity;
+
+                                setFormData({ ...formData, items: newItems });
                               }}
                               className={`w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300 ${
                                 formErrors.items?.[index] &&

@@ -267,9 +267,7 @@ model DeliveryNotes {
   customerId         String
   orderId            String            @unique
   warehouseUserId    String
-  
-  // Konfirmasi Kesiapan Pengiriman (dari gudang)
-  statusPreparation  PreparationStatus @default(WAITING_PREPARATION) // <--- Enum baru
+
   datePreparation    DateTime?
   userPreparationId  String?                                          // <--- ID User Gudang yang mengkonfirmasi kesiapan
   notesPreparation   String?                                          // <--- Catatan dari gudang saat persiapan
@@ -286,7 +284,7 @@ model Invoices {
   id              String         @id @default(cuid())
   code            String         @unique
   invoiceDate     DateTime       @default(now())
-  dueDate         DateTime
+  dueDate         DateTime?
   status          InvoiceStatus  @default(DRAFT)
   paymentStatus   PaymentStatus  @default(UNPAID)
   type            InvoiceType    @default(PRODUCT) // <--- Tambahan: Tipe invoice (PRODUCT/MANUAL)
@@ -305,10 +303,13 @@ model Invoices {
   updatedAt       DateTime       @updatedAt
   createdBy       String?
   updatedBy       String?
-  customerId      String
+  customerId      String?
   purchaseOrderId String?        @unique // <--- purchaseOrderId sudah cukup
+  
+  // Konfirmasi Kesiapan Pengiriman (dari gudang)
+  statusPreparation  PreparationStatus @default(WAITING_PREPARATION) // <--- 
   invoiceItems    InvoiceItems[]
-  customer        Customers      @relation(fields: [customerId], references: [id])
+  customer        Customers?     @relation(fields: [customerId], references: [id])
   purchaseOrder   PurchaseOrders? @relation(fields: [purchaseOrderId], references: [id])
   payments        Payments[]
   salesReturns    SalesReturns[]

@@ -9,16 +9,14 @@ import {
   ManagementForm,
   InputDate,
   Select,
+  InputFileUpload,
 } from "@/components/ui";
-import {
-  createPayment,
-  getAvailableInvoices,
-  getAvailableUsers,
-} from "@/lib/actions/payments";
+import { createPayment, getAvailableInvoices } from "@/lib/actions/payments";
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
 import { generateCodeByTable } from "@/utils/getCode";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PaidStatus } from "@prisma/client";
@@ -28,7 +26,6 @@ interface PaymentFormData {
   paymentDate: string;
   amount: number;
   method: string;
-  reference: string;
   notes: string;
   proofUrl: string;
   status: PaidStatus;
@@ -41,12 +38,10 @@ interface PaymentFormErrors {
   paymentDate?: string;
   amount?: string;
   method?: string;
-  reference?: string;
   notes?: string;
   proofUrl?: string;
   status?: string;
   invoiceId?: string;
-  userId?: string;
 }
 
 interface InvoiceOption {
@@ -73,9 +68,12 @@ export default function CreatePaymentPage() {
   const router = useRouter();
   const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableInvoices, setAvailableInvoices] = useState<InvoiceOption[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(null);
+  const [availableInvoices, setAvailableInvoices] = useState<InvoiceOption[]>(
+    []
+  );
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const [formData, setFormData] = useState<PaymentFormData>({
@@ -83,7 +81,6 @@ export default function CreatePaymentPage() {
     paymentDate: new Date().toISOString().split("T")[0],
     amount: 0,
     method: "",
-    reference: "",
     notes: "",
     proofUrl: "",
     status: PaidStatus.PENDING,
@@ -92,6 +89,7 @@ export default function CreatePaymentPage() {
   });
 
   const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   console.log(formData);
 
@@ -99,13 +97,9 @@ export default function CreatePaymentPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [invoices, users] = await Promise.all([
-          getAvailableInvoices(),
-          getAvailableUsers(),
-        ]);
+        const [invoices] = await Promise.all([getAvailableInvoices()]);
 
         setAvailableInvoices(invoices);
-        setAvailableUsers(users);
 
         // Generate payment code
         const code = await generateCodeByTable("Payments");
@@ -136,7 +130,7 @@ export default function CreatePaymentPage() {
       [field]: value,
     }));
 
-    if (formErrors[field]) {
+    if (field !== "userId" && formErrors[field as keyof PaymentFormErrors]) {
       setFormErrors(prev => ({
         ...prev,
         [field]: undefined,
@@ -147,7 +141,7 @@ export default function CreatePaymentPage() {
   const handleInvoiceChange = (invoiceId: string) => {
     const invoice = availableInvoices.find(inv => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
-    
+
     setFormData(prev => ({
       ...prev,
       invoiceId,
@@ -177,10 +171,6 @@ export default function CreatePaymentPage() {
       errors.invoiceId = "Invoice wajib dipilih";
     }
 
-    if (!formData.userId) {
-      errors.userId = "User wajib dipilih";
-    }
-
     if (!formData.method.trim()) {
       errors.method = "Metode pembayaran wajib diisi";
     }
@@ -195,6 +185,45 @@ export default function CreatePaymentPage() {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setFormData(prev => ({ ...prev, proofUrl: "" }));
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", files[0]);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.files.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          proofUrl: result.files[0],
+        }));
+        toast.success("File berhasil diupload");
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      toast.error("Gagal mengupload file");
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -213,7 +242,6 @@ export default function CreatePaymentPage() {
         paymentDate: new Date(formData.paymentDate),
         amount: Number(formData.amount),
         method: formData.method,
-        reference: formData.reference || undefined,
         notes: formData.notes || undefined,
         proofUrl: formData.proofUrl || undefined,
         status: formData.status,
@@ -307,37 +335,15 @@ export default function CreatePaymentPage() {
               onChange={handleInvoiceChange}
               options={availableInvoices.map(invoice => ({
                 value: invoice.id,
-                label: `${invoice.code} - ${invoice.customer.name} (${formatRupiah(invoice.remainingAmount)})`,
+                label: `${invoice.code} - ${
+                  invoice.customer.name
+                } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
               searchable={true}
               searchPlaceholder="Cari invoice..."
               className={formErrors.invoiceId ? "border-red-500" : ""}
             />
-          </FormField>
-
-          {/* User */}
-          <FormField
-            label="Dibuat Oleh"
-            errorMessage={formErrors.userId}
-            required
-          >
-            <select
-              value={formData.userId}
-              onChange={e => handleInputChange("userId", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                formErrors.userId
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
           </FormField>
         </div>
 
@@ -349,16 +355,26 @@ export default function CreatePaymentPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Customer:</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  Customer:
+                </span>
                 <p className="font-medium">{selectedInvoice.customer.name}</p>
               </div>
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Total Invoice:</span>
-                <p className="font-medium">{formatRupiah(selectedInvoice.totalAmount)}</p>
+                <span className="text-gray-600 dark:text-gray-400">
+                  Total Invoice:
+                </span>
+                <p className="font-medium">
+                  {formatRupiah(selectedInvoice.totalAmount)}
+                </p>
               </div>
               <div>
-                <span className="text-gray-600 dark:text-gray-400">Sisa Tagihan:</span>
-                <p className="font-medium text-red-600">{formatRupiah(selectedInvoice.remainingAmount)}</p>
+                <span className="text-gray-600 dark:text-gray-400">
+                  Sisa Tagihan:
+                </span>
+                <p className="font-medium text-red-600">
+                  {formatRupiah(selectedInvoice.remainingAmount)}
+                </p>
               </div>
             </div>
           </div>
@@ -371,15 +387,22 @@ export default function CreatePaymentPage() {
             errorMessage={formErrors.amount}
             required
           >
-            <Input
-              type="number"
-              name="amount"
-              min="0"
-              step="0.01"
-              value={formData.amount.toString()}
-              onChange={e => handleInputChange("amount", parseFloat(e.target.value) || 0)}
-              placeholder="0"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                Rp
+              </span>
+              <Input
+                type="text"
+                name="amount"
+                value={formatInputRupiah(formData.amount)}
+                onChange={e => {
+                  const value = parseInputRupiah(e.target.value);
+                  handleInputChange("amount", value);
+                }}
+                placeholder="0"
+                className="pl-10"
+              />
+            </div>
             {selectedInvoice && (
               <p className="text-xs text-gray-500 mt-1">
                 Maksimal: {formatRupiah(selectedInvoice.remainingAmount)}
@@ -412,26 +435,8 @@ export default function CreatePaymentPage() {
             </select>
           </FormField>
 
-          {/* Referensi */}
-          <FormField
-            label="Referensi"
-            errorMessage={formErrors.reference}
-          >
-            <Input
-              type="text"
-              name="reference"
-              value={formData.reference}
-              onChange={e => handleInputChange("reference", e.target.value)}
-              placeholder="Nomor referensi (opsional)"
-            />
-          </FormField>
-
           {/* Status */}
-          <FormField
-            label="Status"
-            errorMessage={formErrors.status}
-            required
-          >
+          <FormField label="Status" errorMessage={formErrors.status} required>
             <select
               value={formData.status}
               onChange={e => handleInputChange("status", e.target.value)}
@@ -449,17 +454,27 @@ export default function CreatePaymentPage() {
         </div>
 
         {/* Bukti Pembayaran */}
-        <FormField
-          label="URL Bukti Pembayaran"
-          errorMessage={formErrors.proofUrl}
-        >
-          <Input
-            type="url"
+        <FormField label="Bukti Pembayaran" errorMessage={formErrors.proofUrl}>
+          <InputFileUpload
             name="proofUrl"
-            value={formData.proofUrl}
-            onChange={e => handleInputChange("proofUrl", e.target.value)}
-            placeholder="https://example.com/proof.jpg (opsional)"
+            onChange={handleFileUpload}
+            disabled={isUploading}
+            fileTypes={[
+              "image/jpeg",
+              "image/png",
+              "image/jpg",
+              "application/pdf",
+            ]}
+            className={isUploading ? "opacity-50" : ""}
           />
+          {isUploading && (
+            <p className="text-sm text-gray-500 mt-1">Mengupload file...</p>
+          )}
+          {formData.proofUrl && (
+            <p className="text-sm text-green-600 mt-1">
+              File terupload: {formData.proofUrl.split("/").pop()}
+            </p>
+          )}
         </FormField>
 
         {/* Catatan */}

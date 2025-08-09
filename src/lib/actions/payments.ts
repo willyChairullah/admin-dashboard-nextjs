@@ -10,7 +10,6 @@ export type PaymentFormData = {
   paymentDate: Date;
   amount: number;
   method: string;
-  reference?: string;
   notes?: string;
   proofUrl?: string;
   status: PaidStatus;
@@ -223,34 +222,37 @@ export async function createPayment(data: PaymentFormData) {
         throw new Error("Payment amount cannot exceed remaining amount");
       }
 
-      // Create payment
+      // Update invoice payment status and amounts
+      const newPaidAmount = invoice.paidAmount + data.amount;
+      const newRemainingAmount = invoice.totalAmount - newPaidAmount;
+
+      let newPaymentStatus: PaymentStatus;
+      let paymentStatus = data.status; // Default to the provided status
+
+      if (newRemainingAmount <= 0) {
+        newPaymentStatus = "PAID";
+        // Automatically set payment status to CLEARED if invoice is fully paid
+        paymentStatus = "CLEARED" as PaidStatus;
+      } else if (newPaidAmount > 0) {
+        newPaymentStatus = "PARTIALLY_PAID";
+      } else {
+        newPaymentStatus = "UNPAID";
+      }
+
+      // Create payment with potentially updated status
       const payment = await tx.payments.create({
         data: {
           paymentCode: data.paymentCode,
           paymentDate: data.paymentDate,
           amount: data.amount,
           method: data.method,
-          reference: data.reference || null,
           notes: data.notes || null,
           proofUrl: data.proofUrl || null,
-          status: data.status,
+          status: paymentStatus,
           invoiceId: data.invoiceId,
           userId: data.userId,
         },
       });
-
-      // Update invoice payment status and amounts
-      const newPaidAmount = invoice.paidAmount + data.amount;
-      const newRemainingAmount = invoice.totalAmount - newPaidAmount;
-
-      let newPaymentStatus: PaymentStatus;
-      if (newRemainingAmount <= 0) {
-        newPaymentStatus = "PAID";
-      } else if (newPaidAmount > 0) {
-        newPaymentStatus = "PARTIALLY_PAID";
-      } else {
-        newPaymentStatus = "UNPAID";
-      }
 
       await tx.invoices.update({
         where: { id: data.invoiceId },
@@ -333,6 +335,29 @@ export async function updatePayment(id: string, data: PaymentFormData) {
         throw new Error("Payment amount exceeds available amount");
       }
 
+      // Calculate the payment status based on invoice totals
+      // Update target invoice calculations first
+      let basePaidAmount = targetInvoice.paidAmount;
+      if (data.invoiceId === existingPayment.invoiceId) {
+        basePaidAmount -= existingPayment.amount; // Subtract old payment
+      }
+
+      const newPaidAmount = basePaidAmount + data.amount;
+      const newRemainingAmount = targetInvoice.totalAmount - newPaidAmount;
+
+      let newPaymentStatus: PaymentStatus;
+      let paymentStatus = data.status; // Default to the provided status
+
+      if (newRemainingAmount <= 0) {
+        newPaymentStatus = "PAID";
+        // Automatically set payment status to CLEARED if invoice is fully paid
+        paymentStatus = "CLEARED" as PaidStatus;
+      } else if (newPaidAmount > 0) {
+        newPaymentStatus = "PARTIALLY_PAID";
+      } else {
+        newPaymentStatus = "UNPAID";
+      }
+
       // Update payment
       const updatedPayment = await tx.payments.update({
         where: { id },
@@ -341,10 +366,9 @@ export async function updatePayment(id: string, data: PaymentFormData) {
           paymentDate: data.paymentDate,
           amount: data.amount,
           method: data.method,
-          reference: data.reference || null,
           notes: data.notes || null,
           proofUrl: data.proofUrl || null,
-          status: data.status,
+          status: paymentStatus, // Use the potentially auto-updated status
           invoiceId: data.invoiceId,
           userId: data.userId,
         },
@@ -374,24 +398,6 @@ export async function updatePayment(id: string, data: PaymentFormData) {
             paymentStatus: oldPaymentStatus,
           },
         });
-      }
-
-      // Update target invoice
-      let basePaidAmount = targetInvoice.paidAmount;
-      if (data.invoiceId === existingPayment.invoiceId) {
-        basePaidAmount -= existingPayment.amount; // Subtract old payment
-      }
-
-      const newPaidAmount = basePaidAmount + data.amount;
-      const newRemainingAmount = targetInvoice.totalAmount - newPaidAmount;
-
-      let newPaymentStatus: PaymentStatus;
-      if (newRemainingAmount <= 0) {
-        newPaymentStatus = "PAID";
-      } else if (newPaidAmount > 0) {
-        newPaymentStatus = "PARTIALLY_PAID";
-      } else {
-        newPaymentStatus = "UNPAID";
       }
 
       await tx.invoices.update({

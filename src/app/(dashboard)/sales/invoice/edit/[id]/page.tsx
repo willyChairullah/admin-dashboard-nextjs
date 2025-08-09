@@ -18,7 +18,6 @@ import {
   getAvailableCustomers,
   getAvailablePurchaseOrders,
   getAvailableProducts,
-  getAvailableUsers,
   getPurchaseOrderForInvoice,
   deleteInvoice,
 } from "@/lib/actions/invoices";
@@ -43,8 +42,7 @@ interface InvoiceItemFormData {
 interface InvoiceFormData {
   code: string;
   invoiceDate: string;
-  dueDate: string;
-  paymentDeadline: string | null;
+  dueDate: string | null;
   status: string;
   type: InvoiceType;
   subtotal: number;
@@ -55,7 +53,7 @@ interface InvoiceFormData {
   shippingCost: number;
   totalAmount: number;
   notes: string;
-  customerId: string;
+  customerId: string | null;
   purchaseOrderId: string;
   createdBy: string;
   items: InvoiceItemFormData[];
@@ -65,10 +63,8 @@ interface InvoiceFormErrors {
   code?: string;
   invoiceDate?: string;
   dueDate?: string;
-  paymentDeadline?: string;
   status?: string;
   customerId?: string;
-  createdBy?: string;
   taxPercentage?: string;
   items?: string;
 }
@@ -109,7 +105,6 @@ export default function EditInvoicePage() {
     []
   );
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -124,10 +119,7 @@ export default function EditInvoicePage() {
   const [formData, setFormData] = useState<InvoiceFormData>({
     code: "",
     invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0],
-    paymentDeadline: null,
+    dueDate: null, // Default to null for "Bayar Langsung"
     status: "DRAFT",
     type: InvoiceType.PRODUCT,
     subtotal: 0,
@@ -159,15 +151,12 @@ export default function EditInvoicePage() {
         setIsLoadingData(true);
         setErrorLoadingData(null);
 
-        const [invoice, customers, orders, products, users] = await Promise.all(
-          [
-            getInvoiceById(invoiceId),
-            getAvailableCustomers(),
-            getAvailablePurchaseOrders(),
-            getAvailableProducts(),
-            getAvailableUsers(),
-          ]
-        );
+        const [invoice, customers, orders, products] = await Promise.all([
+          getInvoiceById(invoiceId),
+          getAvailableCustomers(),
+          getAvailablePurchaseOrders(),
+          getAvailableProducts(),
+        ]);
 
         if (!invoice) {
           setErrorLoadingData("Invoice tidak ditemukan");
@@ -177,7 +166,6 @@ export default function EditInvoicePage() {
         setAvailableCustomers(customers);
         setAvailablePurchaseOrders(orders);
         setAvailableProducts(products);
-        setAvailableUsers(users);
 
         // Fill form data with existing invoice data
         setFormData({
@@ -185,11 +173,8 @@ export default function EditInvoicePage() {
           invoiceDate: new Date(invoice.invoiceDate)
             .toISOString()
             .split("T")[0],
-          dueDate: new Date(invoice.dueDate).toISOString().split("T")[0],
-          paymentDeadline: (invoice as any).paymentDeadline
-            ? new Date((invoice as any).paymentDeadline)
-                .toISOString()
-                .split("T")[0]
+          dueDate: invoice.dueDate
+            ? new Date(invoice.dueDate).toISOString().split("T")[0]
             : null,
           status: invoice.status,
           type: invoice.type || InvoiceType.PRODUCT,
@@ -200,11 +185,11 @@ export default function EditInvoicePage() {
           shippingCost: invoice.shippingCost || 0,
           totalAmount: invoice.totalAmount,
           notes: invoice.notes || "",
-          customerId: invoice.customerId,
+          customerId: invoice.customerId || null,
           purchaseOrderId: invoice.purchaseOrderId || "",
           createdBy: invoice.createdBy || "",
           items: invoice.invoiceItems.map(item => ({
-            productId: item.productId || undefined,
+            productId: item.productId || "",
             description: item.description || "",
             quantity: item.quantity,
             price: item.price,
@@ -218,6 +203,11 @@ export default function EditInvoicePage() {
           c => c.id === invoice.customerId
         );
         setSelectedCustomer(customer || null);
+
+        // Set input mode based on invoice type
+        setInputMode(
+          invoice.type === InvoiceType.MANUAL ? "manual" : "product"
+        );
       } catch (error: any) {
         console.error("Error fetching data:", error);
         setErrorLoadingData(error.message || "Gagal memuat data invoice.");
@@ -247,10 +237,11 @@ export default function EditInvoicePage() {
 
     // Calculate tax from percentage (applied to subtotal minus overall discount)
     const taxableAmount = subtotal - formData.discount;
-    const tax = (taxableAmount * formData.taxPercentage) / 100;
+    const tax = Math.round((taxableAmount * formData.taxPercentage) / 100);
 
-    const totalAmount =
-      subtotal - formData.discount + tax + formData.shippingCost;
+    const totalAmount = Math.round(
+      subtotal - formData.discount + tax + formData.shippingCost
+    );
 
     setFormData(prev => ({
       ...prev,
@@ -264,6 +255,18 @@ export default function EditInvoicePage() {
     formData.shippingCost,
     formData.discount,
   ]);
+
+  // Auto-set invoice type based on input mode
+  useEffect(() => {
+    const newType =
+      inputMode === "product" ? InvoiceType.PRODUCT : InvoiceType.MANUAL;
+    if (formData.type !== newType) {
+      setFormData(prev => ({
+        ...prev,
+        type: newType,
+      }));
+    }
+  }, [inputMode, formData.type]);
 
   const validateForm = (): boolean => {
     const errors: InvoiceFormErrors = {};
@@ -280,10 +283,6 @@ export default function EditInvoicePage() {
       errors.dueDate = "Tanggal jatuh tempo wajib diisi";
     }
 
-    if (!formData.customerId) {
-      errors.customerId = "Customer wajib dipilih";
-    }
-
     // Tax percentage validation - allow 0 as valid value
     if (
       formData.taxPercentage === undefined ||
@@ -292,13 +291,9 @@ export default function EditInvoicePage() {
       errors.taxPercentage = "Pajak wajib dipilih";
     }
 
-    if (!formData.createdBy) {
-      errors.createdBy = "User pembuat wajib dipilih";
-    }
-
     if (
-      formData.items.length === 0 ||
-      formData.items.every(item => !item.productId)
+      formData.items.length === 0
+      // formData.items.every(item => !item.productId)
     ) {
       errors.items = "Minimal harus ada satu item";
     }
@@ -362,10 +357,7 @@ export default function EditInvoicePage() {
       const invoiceData = {
         code: formData.code,
         invoiceDate: new Date(formData.invoiceDate),
-        dueDate: new Date(formData.dueDate),
-        paymentDeadline: formData.paymentDeadline
-          ? new Date(formData.paymentDeadline)
-          : null,
+        dueDate: formData.dueDate ? new Date(formData.dueDate) : null,
         status: formData.status as any,
         type: formData.type,
         subtotal: formData.subtotal,
@@ -375,17 +367,14 @@ export default function EditInvoicePage() {
         shippingCost: formData.shippingCost,
         totalAmount: formData.totalAmount,
         notes: formData.notes || undefined,
-        customerId: formData.customerId,
+        customerId: formData.customerId || null,
         purchaseOrderId: formData.purchaseOrderId || undefined,
         createdBy: formData.createdBy,
         items: formData.items,
       };
 
-      // We'll need to get current user ID for updatedBy
-      const currentUser = availableUsers.find(
-        user => user.id === formData.createdBy
-      );
-      const updatedBy = currentUser?.id || formData.createdBy;
+      // Use current user ID for updatedBy
+      const updatedBy = user?.id || formData.createdBy;
 
       const result = await updateInvoice(invoiceId, invoiceData, updatedBy);
 
@@ -494,6 +483,21 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
+          {/* Purchase Order (Read-only in edit) */}
+          <FormField label="Purchase Order">
+            <Input
+              type="text"
+              name="purchaseOrderDisplay"
+              value={
+                availablePurchaseOrders.find(
+                  po => po.id === formData.purchaseOrderId
+                )?.code || "Tidak ada"
+              }
+              readOnly
+              className="cursor-default bg-gray-100 dark:bg-gray-700"
+            />
+          </FormField>
+
           {/* Tanggal Invoice */}
           <FormField
             label="Tanggal Invoice"
@@ -514,17 +518,13 @@ export default function EditInvoicePage() {
           {/* Tenggat Pembayaran */}
           <FormField
             label="Tenggat Pembayaran"
-            errorMessage={formErrors.paymentDeadline}
+            errorMessage={formErrors.dueDate}
           >
             <InputDate
-              value={
-                formData.paymentDeadline
-                  ? new Date(formData.paymentDeadline)
-                  : null
-              }
+              value={formData.dueDate ? new Date(formData.dueDate) : null}
               onChange={value =>
                 handleInputChange(
-                  "paymentDeadline",
+                  "dueDate",
                   value ? value.toISOString().split("T")[0] : null
                 )
               }
@@ -538,72 +538,36 @@ export default function EditInvoicePage() {
 
           {/* Status */}
           <FormField label="Status" required errorMessage={formErrors.status}>
-            <select
+            <Select
               value={formData.status}
-              onChange={e => handleInputChange("status", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="DRAFT">Draft</option>
-              <option value="SENT">Terkirim</option>
-              <option value="PAID">Dibayar</option>
-              <option value="OVERDUE">Jatuh Tempo</option>
-              <option value="CANCELLED">Dibatalkan</option>
-            </select>
+              onChange={(value: string) => handleInputChange("status", value)}
+              placeholder="Pilih Status"
+              options={[
+                { value: "DRAFT", label: "Draft" },
+                { value: "SENT", label: "Terkirim" },
+                { value: "PAID", label: "Dibayar" },
+                { value: "OVERDUE", label: "Jatuh Tempo" },
+                { value: "CANCELLED", label: "Dibatalkan" },
+              ]}
+            />
           </FormField>
 
           {/* Customer */}
-          <FormField
-            label="Customer"
-            required
-            errorMessage={formErrors.customerId}
-          >
-            <select
-              value={formData.customerId}
-              onChange={e => handleInputChange("customerId", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="">Pilih Customer</option>
-              {availableCustomers.map(customer => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          {/* Created By */}
-          <FormField
-            label="Dibuat Oleh"
-            required
-            errorMessage={formErrors.createdBy}
-          >
-            <select
-              value={formData.createdBy}
-              onChange={e => handleInputChange("createdBy", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          {/* Invoice Type */}
-          <FormField label="Invoice Type">
-            <select
-              name="type"
-              value={formData.type}
-              onChange={e =>
-                handleInputChange("type", e.target.value as InvoiceType)
+          <FormField label="Customer" errorMessage={formErrors.customerId}>
+            <Select
+              value={formData.customerId || ""}
+              onChange={(value: string) =>
+                handleInputChange("customerId", value)
               }
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-            >
-              <option value={InvoiceType.PRODUCT}>Product Invoice</option>
-              <option value={InvoiceType.MANUAL}>Manual Invoice</option>
-            </select>
+              placeholder="Pilih Customer"
+              options={[
+                { value: "", label: "Pilih Customer" },
+                ...availableCustomers.map(customer => ({
+                  value: customer.id,
+                  label: customer.name,
+                })),
+              ]}
+            />
           </FormField>
 
           {/* Biaya Pengiriman */}
@@ -626,6 +590,16 @@ export default function EditInvoicePage() {
             </div>
           </FormField>
         </div>
+
+        {/* Show Customer Info when customer is selected */}
+        {selectedCustomer && (
+          <div className="mt-6">
+            <CustomerInfo
+              customerId={selectedCustomer.id}
+              orderNumber={formData.purchaseOrderId}
+            />
+          </div>
+        )}
 
         {/* Catatan */}
         <div className="mt-6">
@@ -734,31 +708,50 @@ export default function EditInvoicePage() {
                         {inputMode === "product" ? (
                           <div>
                             <select
-                              value={item.productId}
+                              value={item.productId || ""}
                               onChange={e => {
-                                handleItemChange(
-                                  index,
-                                  "productId",
-                                  e.target.value
-                                );
-                                // Auto-fill price when product is selected
+                                const selectedProductId = e.target.value;
                                 const selectedProduct = availableProducts.find(
-                                  p => p.id === e.target.value
+                                  p => p.id === selectedProductId
                                 );
-                                if (selectedProduct) {
-                                  handleItemChange(
-                                    index,
-                                    "price",
-                                    selectedProduct.price
-                                  );
-                                }
+
+                                console.log(
+                                  "Debug - Selected Product ID:",
+                                  selectedProductId
+                                );
+                                console.log(
+                                  "Debug - Current form item productId:",
+                                  formData.items[index]?.productId
+                                );
+                                console.log(
+                                  "Debug - Found product:",
+                                  selectedProduct
+                                );
+
+                                // Update both productId and price in a single update
+                                const newItems = [...formData.items];
+                                newItems[index] = {
+                                  ...newItems[index],
+                                  productId: selectedProductId,
+                                  price: selectedProduct
+                                    ? selectedProduct.price
+                                    : newItems[index].price,
+                                };
+
+                                // Recalculate totalPrice
+                                const updatedItem = newItems[index];
+                                updatedItem.totalPrice =
+                                  (updatedItem.price - updatedItem.discount) *
+                                  updatedItem.quantity;
+
+                                setFormData({ ...formData, items: newItems });
                               }}
                               className="w-full px-3 py-2 border rounded-md dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
                             >
                               <option value="">Pilih Produk</option>
                               {availableProducts.map(product => (
                                 <option key={product.id} value={product.id}>
-                                  {product.name} ({product.unit}) - Stok:{" "}
+                                  {product.name} - Stok:{" "}
                                   {product.currentStock}
                                 </option>
                               ))}

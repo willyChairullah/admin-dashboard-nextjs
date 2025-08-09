@@ -9,6 +9,7 @@ import {
   InputDate,
   ManagementHeader,
   Select,
+  InputFileUpload,
 } from "@/components/ui";
 import {
   updatePayment,
@@ -22,6 +23,7 @@ import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
 import { PaidStatus } from "@prisma/client";
 
 interface PaymentFormData {
@@ -29,7 +31,6 @@ interface PaymentFormData {
   paymentDate: string;
   amount: number;
   method: string;
-  reference: string;
   notes: string;
   proofUrl: string;
   status: PaidStatus;
@@ -42,7 +43,6 @@ interface PaymentFormErrors {
   paymentDate?: string;
   amount?: string;
   method?: string;
-  reference?: string;
   notes?: string;
   proofUrl?: string;
   status?: string;
@@ -93,7 +93,6 @@ export default function EditPaymentPage() {
     paymentDate: new Date().toISOString().split("T")[0],
     amount: 0,
     method: "",
-    reference: "",
     notes: "",
     proofUrl: "",
     status: PaidStatus.PENDING,
@@ -102,6 +101,7 @@ export default function EditPaymentPage() {
   });
 
   const [formErrors, setFormErrors] = useState<PaymentFormErrors>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -142,7 +142,6 @@ export default function EditPaymentPage() {
           paymentDate: payment.paymentDate.toISOString().split("T")[0],
           amount: payment.amount,
           method: payment.method,
-          reference: payment.reference || "",
           notes: payment.notes || "",
           proofUrl: payment.proofUrl || "",
           status: payment.status,
@@ -226,6 +225,45 @@ export default function EditPaymentPage() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      setFormData(prev => ({ ...prev, proofUrl: "" }));
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", files[0]);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.files.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          proofUrl: result.files[0],
+        }));
+        toast.success("File berhasil diupload");
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (error) {
+      toast.error("Gagal mengupload file");
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -242,7 +280,6 @@ export default function EditPaymentPage() {
         paymentDate: new Date(formData.paymentDate),
         amount: Number(formData.amount),
         method: formData.method,
-        reference: formData.reference || undefined,
         notes: formData.notes || undefined,
         proofUrl: formData.proofUrl || undefined,
         status: formData.status,
@@ -472,18 +509,6 @@ export default function EditPaymentPage() {
             </select>
           </FormField>
 
-          {/* Referensi */}
-          <FormField label="Referensi" errorMessage={formErrors.reference}>
-            <Input
-              type="text"
-              name="reference"
-              value={formData.reference}
-              onChange={e => handleInputChange("reference", e.target.value)}
-              errorMessage={formErrors.reference}
-              placeholder="Nomor referensi (opsional)"
-            />
-          </FormField>
-
           {/* Status */}
           <FormField label="Status" errorMessage={formErrors.status} required>
             <select
@@ -503,18 +528,27 @@ export default function EditPaymentPage() {
         </div>
 
         {/* Bukti Pembayaran */}
-        <FormField
-          label="URL Bukti Pembayaran"
-          errorMessage={formErrors.proofUrl}
-        >
-          <Input
-            type="url"
+        <FormField label="Bukti Pembayaran" errorMessage={formErrors.proofUrl}>
+          <InputFileUpload
             name="proofUrl"
-            value={formData.proofUrl}
-            onChange={e => handleInputChange("proofUrl", e.target.value)}
-            errorMessage={formErrors.proofUrl}
-            placeholder="https://example.com/proof.jpg (opsional)"
+            onChange={handleFileUpload}
+            disabled={isUploading}
+            fileTypes={[
+              "image/jpeg",
+              "image/png",
+              "image/jpg",
+              "application/pdf",
+            ]}
+            className={isUploading ? "opacity-50" : ""}
           />
+          {isUploading && (
+            <p className="text-sm text-gray-500 mt-1">Mengupload file...</p>
+          )}
+          {formData.proofUrl && (
+            <p className="text-sm text-green-600 mt-1">
+              File terupload: {formData.proofUrl.split("/").pop()}
+            </p>
+          )}
         </FormField>
 
         {/* Catatan */}
