@@ -192,13 +192,29 @@ export async function createCompanyTarget(data: CompanyTargetFormData) {
     });
 
     if (existingTarget) {
+      // Update existing target instead of creating new one
+      const updatedTarget = await db.companyTargets.update({
+        where: { id: existingTarget.id },
+        data: {
+          targetAmount: data.targetAmount,
+          isActive: data.isActive,
+          updatedAt: new Date(),
+        },
+      });
+
+      revalidatePath("/management/sales-target");
+      revalidatePath("/management/finance/revenue-analytics");
       return {
-        success: false,
-        error:
-          "Company target for this period already exists. Please edit the existing target.",
+        success: true,
+        data: updatedTarget,
+        message: `Updated existing ${data.targetType.toLowerCase()} target for period "${
+          data.targetPeriod
+        }"`,
+        action: "updated",
       };
     }
 
+    // Create new target if none exists
     const target = await db.companyTargets.create({
       data: {
         targetType: data.targetType,
@@ -210,12 +226,19 @@ export async function createCompanyTarget(data: CompanyTargetFormData) {
 
     revalidatePath("/management/sales-target");
     revalidatePath("/management/finance/revenue-analytics");
-    return { success: true, data: target };
+    return {
+      success: true,
+      data: target,
+      message: `Created new ${data.targetType.toLowerCase()} target for period "${
+        data.targetPeriod
+      }"`,
+      action: "created",
+    };
   } catch (error) {
-    console.error("Error creating company target:", error);
+    console.error("Error creating/updating company target:", error);
     return {
       success: false,
-      error: `Failed to create company target: ${
+      error: `Failed to create/update company target: ${
         error instanceof Error ? error.message : String(error)
       }`,
     };

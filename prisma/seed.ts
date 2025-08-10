@@ -405,7 +405,7 @@ async function main() {
         now.getMonth() - monthOffset,
         1
       );
-      const ordersInMonth = Math.floor(Math.random() * 15) + 5; // 5-20 orders per month
+      const ordersInMonth = Math.floor(Math.random() * 50) + 30; // 30-80 orders per month (increased for 50M target)
 
       for (let i = 0; i < ordersInMonth; i++) {
         const orderDay = new Date(orderDate);
@@ -466,13 +466,14 @@ async function main() {
     let totalOrderItems = 0;
 
     for (const order of createdOrders) {
-      const itemsInOrder = Math.floor(Math.random() * 4) + 1; // 1-4 items per order
+      const itemsInOrder = Math.floor(Math.random() * 6) + 2; // 2-7 items per order
       let orderTotal = 0;
 
       for (let i = 0; i < itemsInOrder; i++) {
         const randomProduct =
           createdProducts[Math.floor(Math.random() * createdProducts.length)];
-        const quantity = Math.floor(Math.random() * 10) + 1; // 1-10 quantity
+        // Simulate bulk orders with larger quantities (50-500 units per item)
+        const quantity = Math.floor(Math.random() * 450) + 50; // 50-500 quantity for bulk orders
         const unitPrice = randomProduct.price;
         const totalPrice = quantity * unitPrice;
         orderTotal += totalPrice;
@@ -526,12 +527,11 @@ async function main() {
           createdBy: order.salesId, // Add sales rep to track achievements
           invoiceDate: invoiceDate,
           dueDate: dueDate,
-          status: (Math.random() > 0.2 ? "PAID" : Math.random() > 0.5 ? "SENT" : "DRAFT") as
-            | "DRAFT"
-            | "SENT"
-            | "PAID"
-            | "OVERDUE"
-            | "CANCELLED", // 80% PAID, 10% SENT, 10% DRAFT for better analytics
+          status: (Math.random() > 0.2
+            ? "PAID"
+            : Math.random() > 0.5
+            ? "SENT"
+            : "DRAFT") as "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED", // 80% PAID, 10% SENT, 10% DRAFT for better analytics
           totalAmount: order.totalAmount,
           notes: `Invoice for order ${order.orderNumber}`,
           createdAt: invoiceDate,
@@ -570,6 +570,7 @@ async function main() {
       where: { status: "PAID" },
     });
 
+    let paymentCounter = 1;
     for (const invoice of paidInvoices) {
       const paymentDate = new Date(invoice.invoiceDate);
       paymentDate.setDate(
@@ -581,19 +582,22 @@ async function main() {
           id: uuid(),
           paymentCode: `PAY-${paymentDate.getFullYear()}${String(
             paymentDate.getMonth() + 1
-          ).padStart(2, "0")}-${String(totalInvoices + Math.floor(Math.random() * 1000)).padStart(4, "0")}`,
+          ).padStart(2, "0")}-${String(paymentCounter).padStart(4, "0")}`,
           invoiceId: invoice.id,
           userId: invoice.createdBy || salesUser.id, // Use the sales rep who created the invoice, fallback to default sales user
           amount: invoice.totalAmount,
           paymentDate: paymentDate,
           method: Math.random() > 0.5 ? "CASH" : "TRANSFER",
-          reference: `REF-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`,
+          reference: `REF-${Math.floor(Math.random() * 10000)
+            .toString()
+            .padStart(4, "0")}`,
           status: "CLEARED", // Set as cleared for analytics
           notes: `Payment for invoice ${invoice.code}`,
           createdAt: paymentDate,
           updatedAt: paymentDate,
         },
       });
+      paymentCounter++;
     }
     console.log(`✅ Created ${paidInvoices.length} payments`);
 
@@ -905,8 +909,8 @@ async function main() {
           // Calculate achieved amount (more realistic for past months)
           let achievedAmount = 0;
           if (monthOffset < 0) {
-            // Past months - random achievement between 70%-120%
-            const achievementRate = 0.7 + Math.random() * 0.5;
+            // Past months - random achievement between 85%-115% (tighter range)
+            const achievementRate = 0.85 + Math.random() * 0.3;
             achievedAmount = Math.floor(targetAmount * achievementRate);
           } else if (monthOffset === 0) {
             // Current month - partial achievement
@@ -918,7 +922,7 @@ async function main() {
             ).getDate();
             const progressRate = dayOfMonth / daysInMonth;
             achievedAmount = Math.floor(
-              targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+              targetAmount * progressRate * (0.88 + Math.random() * 0.2)
             );
           }
           // Future months - no achievement yet
@@ -957,7 +961,7 @@ async function main() {
 
           let achievedAmount = 0;
           if (quarterOffset < 0) {
-            const achievementRate = 0.7 + Math.random() * 0.5;
+            const achievementRate = 0.88 + Math.random() * 0.24; // 88-112% range
             achievedAmount = Math.floor(targetAmount * achievementRate);
           } else if (quarterOffset === 0) {
             // Current quarter partial achievement
@@ -967,7 +971,7 @@ async function main() {
               const currentMonthInQuarter = (now.getMonth() % 3) + 1;
               const progressRate = currentMonthInQuarter / monthsInQuarter;
               achievedAmount = Math.floor(
-                targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+                targetAmount * progressRate * (0.9 + Math.random() * 0.18)
               );
             }
           }
@@ -1002,7 +1006,7 @@ async function main() {
 
           let achievedAmount = 0;
           if (yearOffset < 0) {
-            const achievementRate = 0.7 + Math.random() * 0.5;
+            const achievementRate = 0.9 + Math.random() * 0.2; // 90-110% range
             achievedAmount = Math.floor(targetAmount * achievementRate);
           } else if (yearOffset === 0) {
             // Current year partial achievement
@@ -1013,7 +1017,7 @@ async function main() {
             const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
             const progressRate = dayOfYear / daysInYear;
             achievedAmount = Math.floor(
-              targetAmount * progressRate * (0.8 + Math.random() * 0.4)
+              targetAmount * progressRate * (0.92 + Math.random() * 0.16)
             );
           }
 
@@ -1043,24 +1047,31 @@ async function main() {
     // Create monthly company targets for current year
     for (let month = 0; month < 12; month++) {
       const targetDate = new Date(now.getFullYear(), month, 1);
-      const targetPeriod = `${now.getFullYear()}-${String(month + 1).padStart(2, '0')}`;
-      
+      const targetPeriod = `${now.getFullYear()}-${String(month + 1).padStart(
+        2,
+        "0"
+      )}`;
+
       // Base monthly target with seasonal variation
       const baseMonthlyTarget = 50000000; // 50M per month
-      const seasonalFactor = 1 + Math.sin((month / 12) * 2 * Math.PI) * 0.3; // ±30% seasonal variation
+      const seasonalFactor = 1 + Math.sin((month / 12) * 2 * Math.PI) * 0.15; // ±15% seasonal variation (reduced from 30%)
       const targetAmount = Math.floor(baseMonthlyTarget * seasonalFactor);
-      
+
       // Calculate achieved amount based on current date
       let achievedAmount = 0;
       if (month < now.getMonth()) {
-        // Past months: 80-120% achievement
-        achievedAmount = Math.floor(targetAmount * (0.8 + Math.random() * 0.4));
+        // Past months: 85-105% achievement (tighter range for better look)
+        achievedAmount = Math.floor(
+          targetAmount * (0.85 + Math.random() * 0.2)
+        );
       } else if (month === now.getMonth()) {
         // Current month: progress based on days elapsed
         const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
         const dayOfMonth = now.getDate();
         const progressRate = dayOfMonth / daysInMonth;
-        achievedAmount = Math.floor(targetAmount * progressRate * (0.8 + Math.random() * 0.4));
+        achievedAmount = Math.floor(
+          targetAmount * progressRate * (0.88 + Math.random() * 0.15)
+        );
       }
       // Future months: achievedAmount remains 0
 
@@ -1084,24 +1095,26 @@ async function main() {
       const targetPeriod = `${now.getFullYear()}-Q${quarter}`;
       const quarterStartMonth = (quarter - 1) * 3;
       const targetDate = new Date(now.getFullYear(), quarterStartMonth, 1);
-      
+
       const baseQuarterlyTarget = 150000000; // 150M per quarter
-      const seasonalFactor = 1 + Math.sin((quarter / 4) * 2 * Math.PI) * 0.2; // ±20% seasonal variation
+      const seasonalFactor = 1 + Math.sin((quarter / 4) * 2 * Math.PI) * 0.1; // ±10% seasonal variation (reduced from 20%)
       const targetAmount = Math.floor(baseQuarterlyTarget * seasonalFactor);
-      
+
       // Calculate achieved amount based on current quarter
       let achievedAmount = 0;
       const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
-      
+
       if (quarter < currentQuarter) {
-        // Past quarters: 85-115% achievement
-        achievedAmount = Math.floor(targetAmount * (0.85 + Math.random() * 0.3));
+        // Past quarters: 90-110% achievement (tighter range)
+        achievedAmount = Math.floor(targetAmount * (0.9 + Math.random() * 0.2));
       } else if (quarter === currentQuarter) {
         // Current quarter: progress based on months elapsed
         const monthsInQuarter = 3;
         const monthsElapsed = (now.getMonth() % 3) + 1;
         const progressRate = monthsElapsed / monthsInQuarter;
-        achievedAmount = Math.floor(targetAmount * progressRate * (0.85 + Math.random() * 0.3));
+        achievedAmount = Math.floor(
+          targetAmount * progressRate * (0.92 + Math.random() * 0.16)
+        );
       }
 
       await prisma.companyTargets.create({
@@ -1122,12 +1135,17 @@ async function main() {
     // Create yearly company target
     const yearlyTargetPeriod = now.getFullYear().toString();
     const yearlyTargetAmount = 600000000; // 600M per year
-    
+
     // Calculate achieved amount based on year progress
-    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+    const dayOfYear = Math.floor(
+      (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
     const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
     const yearProgressRate = dayOfYear / daysInYear;
-    const yearlyAchievedAmount = Math.floor(yearlyTargetAmount * yearProgressRate * (0.85 + Math.random() * 0.3));
+    const yearlyAchievedAmount = Math.floor(
+      yearlyTargetAmount * yearProgressRate * (0.92 + Math.random() * 0.16)
+    ); // 92-108% range
 
     await prisma.companyTargets.create({
       data: {
@@ -1158,11 +1176,11 @@ async function main() {
       );
 
       // Create more orders for recent months to show growth trend
-      const baseOrdersPerMonth = 15;
+      const baseOrdersPerMonth = 25; // Increased from 15
       const growthFactor = 1 + (12 - monthOffset) * 0.05; // 5% growth per month
       const ordersInMonth =
         Math.floor(baseOrdersPerMonth * growthFactor) +
-        Math.floor(Math.random() * 5);
+        Math.floor(Math.random() * 10); // Increased variance
 
       for (let i = 0; i < ordersInMonth; i++) {
         const orderDay = new Date(orderDate);
@@ -1175,13 +1193,13 @@ async function main() {
           createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
 
         // Vary order values to create realistic AOV trends
-        const baseOrderValue = 500000; // 500K base
+        const baseOrderValue = 1500000; // 1.5M base (increased from 500K)
         const seasonalFactor =
           1 + Math.sin((orderDate.getMonth() / 12) * 2 * Math.PI) * 0.2; // Seasonal variation
         const growthFactor2 = 1 + (12 - monthOffset) * 0.03; // 3% value growth per month
-        const randomFactor = 0.5 + Math.random() * 1.5; // Random variation 50%-200%
+        const randomFactor = 0.7 + Math.random() * 1.0; // Random variation 70%-170%
 
-        const itemsInOrder = Math.floor(Math.random() * 5) + 1; // 1-5 items
+        const itemsInOrder = Math.floor(Math.random() * 6) + 2; // 2-7 items (increased)
         let orderTotal = 0;
 
         const order = await prisma.orders.create({
@@ -1214,7 +1232,7 @@ async function main() {
         for (let j = 0; j < itemsInOrder; j++) {
           const randomProduct =
             createdProducts[Math.floor(Math.random() * createdProducts.length)];
-          const quantity = Math.floor(Math.random() * 10) + 1;
+          const quantity = Math.floor(Math.random() * 200) + 30; // 30-230 bulk quantity (increased from 1-10)
           const basePrice = randomProduct.price;
           const priceVariation =
             basePrice * seasonalFactor * growthFactor2 * randomFactor;

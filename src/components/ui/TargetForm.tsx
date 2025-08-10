@@ -58,12 +58,14 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
     setIsSubmitting(true);
 
     try {
-      console.log("Submitting company target:", {
+      const requestData = {
         targetType: formData.targetType,
         targetPeriod: formData.targetPeriod,
         targetAmount: parseFloat(formData.targetAmount),
         isActive: true,
-      });
+      };
+
+      console.log("📤 Submitting company target:", requestData);
 
       // Use API endpoint for company targets
       const response = await fetch("/api/company-targets", {
@@ -71,20 +73,21 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          targetType: formData.targetType,
-          targetPeriod: formData.targetPeriod,
-          targetAmount: parseFloat(formData.targetAmount),
-          isActive: true,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       const result = await response.json();
-      console.log("Create result:", result);
+      console.log("📥 Create result:", result);
 
       if (result.success) {
-        toast.success("Company target created successfully!");
-        console.log("✅ Company target created successfully:", result);
+        const actionMessage =
+          result.action === "updated"
+            ? "Target updated successfully!"
+            : "Target created successfully!";
+
+        toast.success(result.message || actionMessage);
+        console.log(`✅ Company target ${result.action}:`, result);
+
         setFormData({
           targetType: "MONTHLY",
           targetPeriod: "",
@@ -95,6 +98,7 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
         // Call onSuccess callback to refresh parent component
         onSuccess?.();
       } else {
+        console.error("❌ Failed to create target:", result.error);
         toast.error(result.error || "Failed to create company target");
       }
     } catch (error) {
@@ -125,7 +129,7 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200 text-sm font-medium"
       >
         <Plus className="h-4 w-4" />
-        Add Company Target
+        Add/Update Target
       </button>
     );
   }
@@ -133,9 +137,14 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Add New Company Target
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Create or Update Company Target
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            If a target exists for this period, it will be updated
+          </p>
+        </div>
         <button
           onClick={() => setIsOpen(false)}
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -218,7 +227,7 @@ export function TargetForm({ onSuccess }: TargetFormProps) {
             disabled={isSubmitting}
             className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
           >
-            {isSubmitting ? "Creating..." : "Create Company Target"}
+            {isSubmitting ? "Saving..." : "Create or Update Target"}
           </button>
           <button
             type="button"

@@ -131,9 +131,37 @@ export default function RevenueAnalytics() {
   };
 
   const handleSaveEdit = async (targetId: string, period: string) => {
-    // TODO: Implement company target update via API
-    toast.error("Edit functionality not yet implemented for company targets");
-    return;
+    try {
+      if (!editForm.targetAmount || parseFloat(editForm.targetAmount) <= 0) {
+        toast.error("Please enter a valid target amount");
+        return;
+      }
+
+      const response = await fetch("/api/company-targets", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: targetId,
+          targetAmount: parseFloat(editForm.targetAmount),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success("Target updated successfully!");
+        fetchTargets(); // Refresh targets
+        setEditingTarget(null);
+        setEditForm({ targetAmount: "" });
+      } else {
+        toast.error(result.error || "Failed to update target");
+      }
+    } catch (error) {
+      console.error("Error updating target:", error);
+      toast.error("Failed to update target");
+    }
   };
 
   useEffect(() => {
