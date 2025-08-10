@@ -1,32 +1,24 @@
-// app/sales/daftar-po/page.tsx
 "use client"; // This component MUST be a Client Component
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
 import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
-import { formatRupiah } from "@/utils/formatRupiah";
 
 const columns = [
-  { header: "Kode", accessor: "code" },
+  { header: "No. Surat Jalan", accessor: "code" },
   {
-    header: "Tanggal PO",
-    accessor: "poDate",
-    render: (value: Date) => formatDate(value),
+    header: "No. Invoice",
+    accessor: "invoices.code",
   },
   {
-    header: "Pembayaran",
-    accessor: "paymentDeadline",
+    header: "Tanggal Kirim",
+    accessor: "deliveryDate",
     render: (value: Date) => formatDate(value),
   },
   {
     header: "Customer",
-    accessor: "order.customer.name",
-  },
-  {
-    header: "Total",
-    accessor: "totalPayment",
-    render: (value: number) => formatRupiah(value),
+    accessor: "customers.name",
   },
   {
     header: "Status",
@@ -35,10 +27,8 @@ const columns = [
       const value = info.getValue();
       const statusColors = {
         PENDING: "text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20",
-        PROCESSING: "text-blue-500 bg-blue-50 dark:bg-blue-900/20",
-        READY_FOR_DELIVERY:
-          "text-purple-500 bg-purple-50 dark:bg-purple-900/20",
-        COMPLETED: "text-green-500 bg-green-50 dark:bg-green-900/20",
+        IN_TRANSIT: "text-blue-500 bg-blue-50 dark:bg-blue-900/20",
+        DELIVERED: "text-green-500 bg-green-50 dark:bg-green-900/20",
         CANCELLED: "text-red-500 bg-red-50 dark:bg-red-900/20",
       };
       return (
@@ -50,12 +40,10 @@ const columns = [
         >
           {value === "PENDING"
             ? "Menunggu"
-            : value === "PROCESSING"
-            ? "Diproses"
-            : value === "READY_FOR_DELIVERY"
-            ? "Siap Kirim"
-            : value === "COMPLETED"
-            ? "Selesai"
+            : value === "IN_TRANSIT"
+            ? "Dalam Perjalanan"
+            : value === "DELIVERED"
+            ? "Terkirim"
             : value === "CANCELLED"
             ? "Dibatalkan"
             : value}
@@ -63,17 +51,46 @@ const columns = [
       );
     },
   },
+  //   {
+  //     header: "Driver",
+  //     accessor: "driverName",
+  //   },
+  //   {
+  //     header: "Kendaraan",
+  //     accessor: "vehicleNumber",
+  //   },
+  //   {
+  //     header: "Dibuat Oleh",
+  //     accessor: "users.name",
+  //   },
+  //   {
+  //     header: "Catatan",
+  //     accessor: "notes",
+  //     cell: (info: { getValue: () => string }) => {
+  //       const value = info.getValue();
+  //       return value ? (
+  //         <span
+  //           className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs"
+  //           title={value}
+  //         >
+  //           {value.length > 50 ? `${value.substring(0, 50)}...` : value}
+  //         </span>
+  //       ) : (
+  //         <span className="text-gray-400 italic">-</span>
+  //       );
+  //     },
+  //   },
 ];
 
-const excludedAccessors = ["poDate", "dateline", "notes"];
+const excludedAccessors = ["deliveryDate", "status", "notes"];
 
-export default function DaftarPOPage() {
+export default function SuratJalanPage() {
   const data = useSharedData();
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
-        headerTittle={`Daftar PO`}
+        headerTittle={`Daftar Surat Jalan`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
       />
@@ -81,8 +98,8 @@ export default function DaftarPOPage() {
         sampleData={data.data || []}
         columns={columns}
         excludedAccessors={excludedAccessors}
-        dateAccessor="poDate"
-        emptyMessage="Belum ada data purchase orders"
+        dateAccessor="deliveryDate"
+        emptyMessage="Belum ada data surat jalan"
         linkPath={`/${data.module}/${data.subModule}`}
       />
     </div>

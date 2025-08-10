@@ -4,80 +4,32 @@ I want to create a CRUD page from this database:
 
 ```
 
-model Invoices {
-  id              String         @id @default(cuid())
-  code            String         @unique
-  invoiceDate     DateTime       @default(now())
-  dueDate         DateTime
-  status          InvoiceStatus  @default(DRAFT)
-  paymentStatus   PaymentStatus  @default(UNPAID)
-  type            InvoiceType    @default(PRODUCT) // <--- Tambahan: Tipe invoice (PRODUCT/MANUAL)
-  // isProforma      Boolean        @default(false)
-  subtotal        Float          @default(0)
-  tax             Float          @default(0)
-  taxPercentage   Float          @default(0) // Tax percentage used to calculate tax amount
-  discount        Float          @default(0)
-  shippingCost    Float          @default(0) // <--- Tambahan: Biaya pengiriman
-  totalAmount     Float          @default(0)
-  paidAmount      Float          @default(0)
-  remainingAmount Float          @default(0)
-  deliveryAddress String?        // <--- Tambahan: Alamat pengiriman
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  customerId      String
-  purchaseOrderId String?        @unique // <--- purchaseOrderId sudah cukup
-  invoiceItems    InvoiceItems[]
-  customer        Customers      @relation(fields: [customerId], references: [id])
-  purchaseOrder   PurchaseOrders? @relation(fields: [purchaseOrderId], references: [id])
-  payments        Payments[]
-  salesReturns    SalesReturns[]
+model DeliveryNotes {
+  id                 String            @id @default(cuid())
+  deliveryNumber     String            @unique
+  deliveryDate       DateTime          @default(now())
+  status             DeliveryStatus    @default(PENDING)
+  driverName         String
+  vehicleNumber      String
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  customerId         String
+  orderId            String            @unique
+  warehouseUserId    String
 
-  creator         Users?         @relation("InvoiceCreator", fields: [createdBy], references: [id])
-  updater         Users?         @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
+  datePreparation    DateTime?
+  userPreparationId  String?                                          // <--- ID User Gudang yang mengkonfirmasi kesiapan
+  notesPreparation   String?                                          // <--- Catatan dari gudang saat persiapan
 
-  @@map("invoices")
+  customers          Customers         @relation(fields: [customerId], references: [id])
+  orders             Orders            @relation(fields: [orderId], references: [id])
+  users              Users             @relation(fields: [warehouseUserId], references: [id]) // Pengguna yang membuat DN
+  userPreparation    Users?            @relation("WarehouseConfirmDelivery", fields: [userPreparationId], references: [id]) // <--- Relasi baru
+
+  @@map("delivery_notes")
 }
 
-model InvoiceItems {
-  id          String   @id @default(cuid())
-  description String?  // <--- Tambahan: Untuk deskripsi item non-produk
-  quantity    Float
-  price       Float
-  discount    Float    @default(0)
-  totalPrice  Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  invoiceId   String
-  productId   String?  // <--- Revisi: Dijadikan opsional untuk non-produk
-  invoices    Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products    Products? @relation(fields: [productId], references: [id])
-
-  @@map("invoice_items")
-}
-
-
-model Payments {
-  id              String         @id @default(cuid())
-  paymentCode     String         @unique
-  paymentDate     DateTime       @default(now())
-  amount          Float
-  method          String
-  reference       String?
-  notes           String?
-  proofUrl        String?        // <--- Tambahan: URL ke file bukti pembayaran
-  status          PaidStatus  @default(PENDING)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  invoiceId       String
-  userId          String
-  invoice         Invoices       @relation(fields: [invoiceId], references: [id])
-  user            Users          @relation(fields: [userId], references: [id])
-
-  @@map("payments")
-}
 ```
 
 ## Reference
@@ -95,26 +47,24 @@ Use custom UI from component
 6.Warehouse Confirms Readiness of Goods (After Invoice): Goods are prepared physically and the warehouse marks them as "Ready to Ship." Stock has not decreased yet.
 7.Delivery Note Created: At this stage, the actual stock of Products will decrease. You will create a StockMovement entry of type SALES_OUT that references this Delivery Note.
 
-## I want to make flow number 5
+## I want to make flow number 7
 
-In the Sidebar Page, it will be named the "Konfirmasi Kesiapan" module. The page created will be placed at the path "inventory/konfirmasi-kesiapan" and read on layout.tsx will contain this data:
+In the Sidebar Page, it will be named the "Surat Jalan" module. The page created will be placed at the path "sales/surat-jalan" and read on layout.tsx will contain this data:
 const myStaticData = {
 module: "sales",
-subModule: "pembayaran",
-allowedRole: ["OWNER", "ADMIN","WAREHOUSE],
+subModule: "surat-jalan",
+allowedRole: ["OWNER", "ADMIN"],
 data: await getCategories(), // adjust according to the data retrieval
 };
 
 ### Main Features:
 
-Admin can confirm preparation from invoice
+Admin make delivery note from invoice with type PRODUCT, paymentStatus is PAID and statusPreparation is READY_FOR_DELIVERY
 
 ### Data Storage:
 
-Update Invoice statusPreparation
+Save into DeliveryNotes table 
 
 ### Example Scenarios:
 
-Admin can add
-
-Make everything complete so that it can CRUD the data.
+Admin can choose invoice want to make deliverynotes and save

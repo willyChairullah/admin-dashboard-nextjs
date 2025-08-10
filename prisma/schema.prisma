@@ -9,12 +9,12 @@ datasource db {
 
 model Categories {
   id          String     @id @default(cuid())
-  code        String     @unique
   name        String
   description String?
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  code        String     @unique
   products    Products[]
 
   @@map("categories")
@@ -36,7 +36,6 @@ model Store {
 
 model Customers {
   id             String           @id @default(cuid())
-  code           String           @unique
   name           String
   email          String?
   phone          String?
@@ -48,6 +47,7 @@ model Customers {
   isActive       Boolean          @default(true)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  code           String           @unique
   customerVisits CustomerVisits[]
   deliveryNotes  DeliveryNotes[]
   invoices       Invoices[]
@@ -58,7 +58,6 @@ model Customers {
 
 model Products {
   id                   String                 @id @default(cuid())
-  code                 String                 @unique
   name                 String
   description          String?
   unit                 String
@@ -70,6 +69,8 @@ model Products {
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   categoryId           String
+  code                 String                 @unique
+  delivery_note_items  delivery_note_items[]
   invoiceItems         InvoiceItems[]
   ManagementStockItems ManagementStockItems[]
   orderItems           OrderItems[]
@@ -102,6 +103,7 @@ model Users {
   InvoicesUpdated       Invoices[]          @relation("InvoiceUpdater")
   ManagementStocks      ManagementStocks[]
   orders                Orders[]
+  Payments              Payments[]
   Productions           Productions[]
   PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
   ConfirmedStocks       PurchaseOrders[]    @relation("StockConfirmationUser")
@@ -132,42 +134,29 @@ model SalesTargets {
   @@map("sales_targets")
 }
 
-model CompanyTargets {
-  id             String     @id @default(cuid())
-  targetType     TargetType @default(MONTHLY)
-  targetPeriod   String     @unique
-  targetAmount   Float
-  achievedAmount Float      @default(0)
-  isActive       Boolean    @default(true)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  @@map("company_targets")
-}
-
 model PurchaseOrders {
   id                      String                  @id @default(cuid())
-  code                    String                  @unique
   poDate                  DateTime                @default(now())
-  dateline                DateTime                @default(now())
   status                  PurchaseOrderStatus     @default(PENDING)
   notes                   String?
-  totalAmount             Float                   @default(0)
-  orderLevelDiscount      Float                   @default(0) // Potongan keseluruhan
-  totalDiscount           Float                   @default(0) // Total semua potongan
-  totalTax                Float                   @default(0) // Total pajak
-  taxPercentage           Float                   @default(0) // Persentase pajak
-  shippingCost            Float                   @default(0) // Biaya pengiriman
-  totalPayment            Float                   @default(0) // Total pembayaran akhir
-  paymentDeadline         DateTime? // Tenggat pembayaran
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
-  statusStockConfirmation StockConfirmationStatus @default(WAITING_CONFIRMATION)
-  dateStockConfirmation   DateTime?
-  userStockConfirmationId String?
-  notesStockConfirmation  String?
-  orderId                 String
   creatorId               String
+  dateline                DateTime                @default(now())
+  code                    String                  @unique
+  totalAmount             Float                   @default(0)
+  dateStockConfirmation   DateTime?
+  notesStockConfirmation  String?
+  statusStockConfirmation StockConfirmationStatus @default(WAITING_CONFIRMATION)
+  userStockConfirmationId String?
+  orderId                 String
+  orderLevelDiscount      Float                   @default(0)
+  paymentDeadline         DateTime?
+  shippingCost            Float                   @default(0)
+  taxPercentage           Float                   @default(0)
+  totalDiscount           Float                   @default(0)
+  totalPayment            Float                   @default(0)
+  totalTax                Float                   @default(0)
   invoices                Invoices?
   items                   PurchaseOrderItems[]
   creator                 Users                   @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
@@ -178,34 +167,30 @@ model PurchaseOrders {
 }
 
 model PurchaseOrderItems {
-  id                     String  @id @default(cuid())
+  id                     String         @id @default(cuid())
   quantity               Float
-  price                  Float   @default(0) // Harga per unit saat PO dibuat (price snapshot)
-  discount               Float   @default(0) // Potongan per item
-  totalPrice             Float   @default(0) // Total harga untuk item ini (quantity * (price - discount))
-  notesStockConfirmation String? // Notes from warehouse regarding stock confirmation
-
-  // Relasi penting
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-
-  productId String
-  product   Products @relation(fields: [productId], references: [id])
+  purchaseOrderId        String
+  productId              String
+  price                  Float          @default(0)
+  totalPrice             Float          @default(0)
+  notesStockConfirmation String?
+  discount               Float          @default(0)
+  product                Products       @relation(fields: [productId], references: [id])
+  purchaseOrder          PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@map("purchase_order_items")
 }
 
 model Orders {
-  id                   String      @id @default(cuid())
-  orderNumber          String      @unique
-  orderDate            DateTime    @default(now())
-  dueDate              DateTime
+  id                   String           @id @default(cuid())
+  orderNumber          String           @unique
+  orderDate            DateTime         @default(now())
   deliveryDate         DateTime?
-  status               OrderStatus @default(NEW)
-  totalAmount          Float       @default(0)
+  status               OrderStatus      @default(NEW)
+  totalAmount          Float            @default(0)
   notes                String?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
   customerId           String
   salesId              String
   adminNotes           String?
@@ -213,25 +198,22 @@ model Orders {
   completedAt          DateTime?
   confirmedAt          DateTime?
   confirmedBy          String?
-  requiresConfirmation Boolean     @default(false)
-
-  // Tambahan berdasarkan diskusi
-  discount           Float         @default(0) // Diskon di level order
-  discountType       DiscountType? @default(TOTAL) // Jenis diskon: PER_ITEM atau TOTAL  
-  shippingCost       Float         @default(0) // Biaya pengiriman di level order
-  paymentDeadline    DateTime? // Tenggat pembayaran
-  deliveryAddress    String // Alamat pengiriman spesifik untuk order ini
-  deliveryCity       String? // Kota pengiriman (opsional)
-  deliveryPostalCode String? // Kode pos pengiriman (opsional)
-  deliveryNotesOrder String? // Catatan khusus untuk pengiriman dari sisi order
-
-  deliveryNotes  DeliveryNotes?
-  orderItems     OrderItems[]
-  customer       Customers        @relation(fields: [customerId], references: [id])
-  sales          Users            @relation(fields: [salesId], references: [id])
-  salesReturns   SalesReturns[]
-  StockMovements StockMovements[]
-  purchaseOrders PurchaseOrders[]
+  requiresConfirmation Boolean          @default(false)
+  deliveryAddress      String
+  deliveryCity         String?
+  deliveryNotesOrder   String?
+  deliveryPostalCode   String?
+  discount             Float            @default(0)
+  shippingCost         Float            @default(0)
+  dueDate              DateTime
+  discountType         DiscountType?    @default(TOTAL)
+  paymentDeadline      DateTime?
+  orderItems           OrderItems[]
+  customer             Customers        @relation(fields: [customerId], references: [id])
+  sales                Users            @relation(fields: [salesId], references: [id])
+  purchaseOrders       PurchaseOrders[]
+  salesReturns         SalesReturns[]
+  StockMovements       StockMovements[]
 
   @@map("orders")
 }
@@ -240,12 +222,12 @@ model OrderItems {
   id         String   @id @default(cuid())
   quantity   Float
   price      Float
-  discount   Float    @default(0) // Diskon per item
   totalPrice Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   orderId    String
   productId  String
+  discount   Float    @default(0)
   orders     Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   products   Products @relation(fields: [productId], references: [id])
 
@@ -253,89 +235,104 @@ model OrderItems {
 }
 
 model DeliveryNotes {
-  id                String            @id @default(cuid())
-  deliveryNumber    String            @unique
-  deliveryDate      DateTime          @default(now())
-  status            DeliveryStatus    @default(PENDING)
-  driverName        String
-  vehicleNumber     String
-  notes             String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  customerId        String
-  orderId           String            @unique
-  warehouseUserId   String
-  statusPreparation PreparationStatus @default(WAITING_PREPARATION)
-  datePreparation   DateTime?
-  userPreparationId String?
-  notesPreparation  String?
-  customers         Customers         @relation(fields: [customerId], references: [id])
-  orders            Orders            @relation(fields: [orderId], references: [id])
-  userPreparation   Users?            @relation("WarehouseConfirmDelivery", fields: [userPreparationId], references: [id])
-  users             Users             @relation(fields: [warehouseUserId], references: [id])
+  id                  String                @id @default(cuid())
+  code                String                @unique
+  deliveryDate        DateTime              @default(now())
+  status              DeliveryStatus        @default(PENDING)
+  driverName          String
+  vehicleNumber       String
+  notes               String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  customerId          String
+  warehouseUserId     String
+  datePreparation     DateTime?
+  notesPreparation    String?
+  userPreparationId   String?
+  deliveryAddress     String?
+  deliveryCity        String?
+  deliveryPostalCode  String?
+  invoiceId           String                @unique
+  delivery_note_items delivery_note_items[]
+  customers           Customers             @relation(fields: [customerId], references: [id])
+  invoices            Invoices              @relation(fields: [invoiceId], references: [id])
+  userPreparation     Users?                @relation("WarehouseConfirmDelivery", fields: [userPreparationId], references: [id])
+  users               Users                 @relation(fields: [warehouseUserId], references: [id])
+  stock_movements     StockMovements[]
 
   @@map("delivery_notes")
 }
 
 model Invoices {
-  id              String          @id @default(cuid())
-  code            String          @unique
-  invoiceDate     DateTime        @default(now())
-  dueDate         DateTime
-  status          InvoiceStatus   @default(DRAFT)
-  paymentStatus   PaymentStatus   @default(UNPAID)
-  isProforma      Boolean         @default(false)
-  subtotal        Float           @default(0)
-  tax             Float           @default(0)
-  discount        Float           @default(0)
-  totalAmount     Float           @default(0)
-  paidAmount      Float           @default(0)
-  remainingAmount Float           @default(0)
-  notes           String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  createdBy       String?
-  updatedBy       String?
-  customerId      String
-  purchaseOrderId String?         @unique
-  invoiceItems    InvoiceItems[]
-  creator         Users?          @relation("InvoiceCreator", fields: [createdBy], references: [id])
-  customer        Customers       @relation(fields: [customerId], references: [id])
-  purchaseOrder   PurchaseOrders? @relation(fields: [purchaseOrderId], references: [id])
-  updater         Users?          @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
-  payments        Payments[]
-  salesReturns    SalesReturns[]
+  id                String            @id @default(cuid())
+  invoiceDate       DateTime          @default(now())
+  dueDate           DateTime?
+  status            InvoiceStatus     @default(DRAFT)
+  subtotal          Float             @default(0)
+  tax               Float             @default(0)
+  totalAmount       Float             @default(0)
+  paidAmount        Float             @default(0)
+  remainingAmount   Float             @default(0)
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  customerId        String?
+  code              String            @unique
+  createdBy         String?
+  discount          Float             @default(0)
+  paymentStatus     PaymentStatus     @default(UNPAID)
+  updatedBy         String?
+  purchaseOrderId   String?           @unique
+  deliveryAddress   String?
+  shippingCost      Float             @default(0)
+  taxPercentage     Float             @default(0)
+  type              InvoiceType       @default(PRODUCT)
+  statusPreparation PreparationStatus @default(WAITING_PREPARATION)
+  delivery_notes    DeliveryNotes?
+  invoiceItems      InvoiceItems[]
+  creator           Users?            @relation("InvoiceCreator", fields: [createdBy], references: [id])
+  customer          Customers?        @relation(fields: [customerId], references: [id])
+  purchaseOrder     PurchaseOrders?   @relation(fields: [purchaseOrderId], references: [id])
+  updater           Users?            @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
+  payments          Payments[]
+  salesReturns      SalesReturns[]
 
   @@map("invoices")
 }
 
 model InvoiceItems {
-  id         String   @id @default(cuid())
-  quantity   Float
-  price      Float
-  discount   Float    @default(0)
-  totalPrice Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  invoiceId  String
-  productId  String
-  invoices   Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products   Products @relation(fields: [productId], references: [id])
+  id          String    @id @default(cuid())
+  quantity    Float
+  price       Float
+  totalPrice  Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoiceId   String
+  productId   String?
+  discount    Float     @default(0)
+  description String?
+  invoices    Invoices  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products    Products? @relation(fields: [productId], references: [id])
 
   @@map("invoice_items")
 }
 
 model Payments {
-  id          String   @id @default(cuid())
-  paymentDate DateTime @default(now())
+  paymentDate DateTime   @default(now())
   amount      Float
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  invoiceId   String
+  id          String     @id @default(cuid())
   method      String
   reference   String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  invoiceId   String
-  invoice     Invoices @relation(fields: [invoiceId], references: [id])
+  paymentCode String     @unique
+  proofUrl    String?
+  status      PaidStatus @default(PENDING)
+  userId      String
+  invoice     Invoices   @relation(fields: [invoiceId], references: [id])
+  user        Users      @relation(fields: [userId], references: [id])
 
   @@map("payments")
 }
@@ -377,16 +374,20 @@ model StockMovements {
   previousStock          Int
   newStock               Int
   reference              String?
-  productionItemsId      String?
-  ManagementStockItemsId String?
-  stockOpnameItemId      String?
-  ordersId               String?
   notes                  String?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   productId              String
   userId                 String
+  ordersId               String?
+  ManagementStockItemsId String?
+  stockOpnameItemId      String?
+  productionItemsId      String?
+  deliveryNoteId         String?
+  deliveryNoteItemId     String?
   managementStockItemId  ManagementStockItems? @relation(fields: [ManagementStockItemsId], references: [id])
+  delivery_notes         DeliveryNotes?        @relation(fields: [deliveryNoteId], references: [id])
+  delivery_note_items    delivery_note_items?  @relation(fields: [deliveryNoteItemId], references: [id])
   orderId                Orders?               @relation(fields: [ordersId], references: [id])
   products               Products              @relation(fields: [productId], references: [id])
   productionLogItemId    ProductionItems?      @relation(fields: [productionItemsId], references: [id])
@@ -398,11 +399,11 @@ model StockMovements {
 
 model StockOpnames {
   id               String             @id @default(cuid())
-  code             String             @unique
   opnameDate       DateTime           @default(now())
   status           OpnameStatus       @default(RECONCILED)
   notes            String?
   conductedById    String
+  code             String             @unique
   ManagementStocks ManagementStocks[]
   stockOpnameItems StockOpnameItems[]
   conductedBy      Users              @relation(fields: [conductedById], references: [id])
@@ -415,9 +416,9 @@ model StockOpnameItems {
   systemStock    Int
   physicalStock  Int
   difference     Int
-  notes          String?
   opnameId       String
   productId      String
+  notes          String?
   StockMovements StockMovements[]
   stockOpname    StockOpnames     @relation(fields: [opnameId], references: [id], onDelete: Cascade)
   product        Products         @relation(fields: [productId], references: [id])
@@ -457,11 +458,11 @@ model SalesReturnItems {
 
 model Productions {
   id             String            @id @default(cuid())
-  code           String            @unique
   productionDate DateTime          @default(now())
   status         ProductionStatus  @default(COMPLETED)
   notes          String?
   producedById   String
+  code           String            @unique
   items          ProductionItems[]
   producedBy     Users             @relation(fields: [producedById], references: [id])
 
@@ -483,12 +484,12 @@ model ProductionItems {
 
 model ManagementStocks {
   id             String                 @id @default(cuid())
-  code           String                 @unique
   managementDate DateTime               @default(now())
-  status         ManagementStockStatus  @default(IN)
   notes          String?
   producedById   String
+  status         ManagementStockStatus  @default(IN)
   stockOpnameId  String?
+  code           String                 @unique
   items          ManagementStockItems[]
   producedBy     Users                  @relation(fields: [producedById], references: [id])
   stockOpname    StockOpnames?          @relation(fields: [stockOpnameId], references: [id], onDelete: Cascade)
@@ -501,6 +502,7 @@ model ManagementStockItems {
   quantity          Float
   managementStockId String
   productId         String
+  stockOpnamesId    String?
   notes             String?
   stockOpnamesId    String?
   managementStock   ManagementStocks @relation(fields: [managementStockId], references: [id], onDelete: Cascade)
@@ -512,7 +514,6 @@ model ManagementStockItems {
 
 model FieldVisit {
   id           String    @id @default(cuid())
-  salesId      String
   storeId      String?
   storeName    String?
   storeAddress String?
@@ -527,6 +528,7 @@ model FieldVisit {
   result       String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  salesId      String
   sales        Users     @relation(fields: [salesId], references: [id], onDelete: Cascade)
   store        Store?    @relation(fields: [storeId], references: [id])
 
@@ -589,6 +591,20 @@ model UserNotifications {
   @@map("user_notifications")
 }
 
+model delivery_note_items {
+  id              String           @id
+  quantity        Float
+  deliveredQty    Float            @default(0)
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  deliveryNoteId  String
+  productId       String
+  delivery_notes  DeliveryNotes    @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  products        Products         @relation(fields: [productId], references: [id])
+  stock_movements StockMovements[]
+}
+
 enum DeliveryStatus {
   PENDING
   IN_TRANSIT
@@ -602,6 +618,11 @@ enum InvoiceStatus {
   PAID
   OVERDUE
   CANCELLED
+}
+
+enum InvoiceType {
+  PRODUCT
+  MANUAL
 }
 
 enum PaymentStatus {
@@ -694,13 +715,13 @@ enum StockConfirmationStatus {
 }
 
 enum PreparationStatus {
-  WAITING_PREPARATION // Menunggu barang disiapkan gudang
-  PREPARING // Sedang disiapkan
-  READY_FOR_DELIVERY // Barang sudah disiapkan & siap kirim
-  CANCELLED_PREPARATION // Pembatalan persiapan
+  WAITING_PREPARATION
+  PREPARING
+  READY_FOR_DELIVERY
+  CANCELLED_PREPARATION
 }
 
 enum DiscountType {
-  PER_ITEM // Diskon per item
-  TOTAL // Diskon total order
+  PER_ITEM
+  TOTAL
 }

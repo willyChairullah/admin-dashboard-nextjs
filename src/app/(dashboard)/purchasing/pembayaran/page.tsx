@@ -1,4 +1,4 @@
-// app/sales/pembayaran/page.tsx
+// app/purchasing/pembayaran/page.tsx
 "use client"; // This component MUST be a Client Component
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
@@ -15,7 +15,8 @@ const columns = [
   },
   {
     header: "Customer",
-    accessor: "invoice.customer.name",
+    accessor: "invoice.customer",
+    render: (value: any) => value?.name || "No Customer",
   },
   {
     header: "Tanggal Pembayaran",
@@ -60,34 +61,34 @@ const columns = [
       );
     },
   },
-//   {
-//     header: "Referensi",
-//     accessor: "reference",
-//     cell: (info: { getValue: () => string | null }) => {
-//       const value = info.getValue();
-//       return value ? (
-//         <span className="text-sm text-gray-600 dark:text-gray-400">
-//           {value.length > 30 ? `${value.substring(0, 30)}...` : value}
-//         </span>
-//       ) : (
-//         <span className="text-gray-400 italic">-</span>
-//       );
-//     },
-//   },
-//   {
-//     header: "Catatan",
-//     accessor: "notes",
-//     cell: (info: { getValue: () => string | null }) => {
-//       const value = info.getValue();
-//       return value ? (
-//         <span className="text-sm text-gray-600 dark:text-gray-400">
-//           {value.length > 50 ? `${value.substring(0, 50)}...` : value}
-//         </span>
-//       ) : (
-//         <span className="text-gray-400 italic">-</span>
-//       );
-//     },
-//   },
+  //   {
+  //     header: "Referensi",
+  //     accessor: "reference",
+  //     cell: (info: { getValue: () => string | null }) => {
+  //       const value = info.getValue();
+  //       return value ? (
+  //         <span className="text-sm text-gray-600 dark:text-gray-400">
+  //           {value.length > 30 ? `${value.substring(0, 30)}...` : value}
+  //         </span>
+  //       ) : (
+  //         <span className="text-gray-400 italic">-</span>
+  //       );
+  //     },
+  //   },
+  //   {
+  //     header: "Catatan",
+  //     accessor: "notes",
+  //     cell: (info: { getValue: () => string | null }) => {
+  //       const value = info.getValue();
+  //       return value ? (
+  //         <span className="text-sm text-gray-600 dark:text-gray-400">
+  //           {value.length > 50 ? `${value.substring(0, 50)}...` : value}
+  //         </span>
+  //       ) : (
+  //         <span className="text-gray-400 italic">-</span>
+  //       );
+  //     },
+  //   },
 ];
 
 const excludedAccessors = ["paymentDate", "status", "notes", "reference"];

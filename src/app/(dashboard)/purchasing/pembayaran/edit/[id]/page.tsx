@@ -1,4 +1,4 @@
-// app/sales/pembayaran/edit/[id]/page.tsx
+// app/purchasing/pembayaran/edit/[id]/page.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -395,7 +395,11 @@ export default function EditPaymentPage() {
               options={availableInvoices.map(invoice => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
+<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/edit/[id]/page.tsx
                   invoice.customer?.name || "Unknown Customer"
+=======
+                  invoice.customer?.name || "No Customer"
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/edit/[id]/page.tsx
                 } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
@@ -441,7 +445,13 @@ export default function EditPaymentPage() {
                 <span className="text-gray-600 dark:text-gray-400">
                   Customer:
                 </span>
+<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/edit/[id]/page.tsx
                 <p className="font-medium">{selectedInvoice.customer?.name || "Unknown Customer"}</p>
+=======
+                <p className="font-medium">
+                  {selectedInvoice.customer?.name || "No Customer"}
+                </p>
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/edit/[id]/page.tsx
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">

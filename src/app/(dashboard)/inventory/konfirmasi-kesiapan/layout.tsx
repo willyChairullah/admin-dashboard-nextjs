@@ -1,22 +1,22 @@
-// app/sales/pembayaran/layout.tsx
+// app/inventory/konfirmasi-kesiapan/layout.tsx
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getPayments } from "@/lib/actions/payments";
+import { getInvoicesForPreparation } from "@/lib/actions/preparationConfirmation";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
-export default async function PembayaranLayout({
+export default async function KonfirmasiKesiapanLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   // Data defined or fetched on the server side
   const myStaticData = {
-    module: "sales",
-    subModule: "pembayaran",
-    allowedRole: ["OWNER", "ADMIN"],
-    data: await getPayments(), // Await the async function
+    module: "inventory",
+    subModule: "konfirmasi-kesiapan",
+    allowedRole: ["OWNER", "ADMIN", "WAREHOUSE"],
+    data: await getInvoicesForPreparation(),
   };
 
   return (

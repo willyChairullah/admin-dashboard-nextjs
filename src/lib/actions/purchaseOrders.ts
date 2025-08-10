@@ -333,7 +333,7 @@ export async function createPurchaseOrder(
       return { purchaseOrder, items };
     });
 
-    revalidatePath("/sales/daftar-po");
+    revalidatePath("/purchasing/daftar-po");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating purchase order:", error);
@@ -408,7 +408,7 @@ export async function updatePurchaseOrder(
       return { purchaseOrder, items };
     });
 
-    revalidatePath("/sales/daftar-po");
+    revalidatePath("/purchasing/daftar-po");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error updating purchase order:", error);
@@ -436,7 +436,7 @@ export async function deletePurchaseOrder(
       });
     });
 
-    revalidatePath("/sales/daftar-po");
+    revalidatePath("/purchasing/daftar-po");
     return { success: true };
   } catch (error) {
     console.error("Error deleting purchase order:", error);
@@ -458,7 +458,7 @@ export async function updatePurchaseOrderStatus(
       data: { status },
     });
 
-    revalidatePath("/sales/daftar-po");
+    revalidatePath("/purchasing/daftar-po");
     return { success: true };
   } catch (error) {
     console.error("Error updating purchase order status:", error);

@@ -1,4 +1,4 @@
-// app/sales/pembayaran/create/page.tsx
+// app/purchasing/pembayaran/create/page.tsx
 "use client";
 import { ManagementHeader } from "@/components/ui";
 import React, { useState, useEffect } from "react";
@@ -336,7 +336,11 @@ export default function CreatePaymentPage() {
               options={availableInvoices.map(invoice => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
+<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/create/page.tsx
                   invoice.customer?.name || "Unknown Customer"
+=======
+                  invoice.customer?.name || "No Customer"
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/create/page.tsx
                 } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
@@ -358,7 +362,13 @@ export default function CreatePaymentPage() {
                 <span className="text-gray-600 dark:text-gray-400">
                   Customer:
                 </span>
+<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/create/page.tsx
                 <p className="font-medium">{selectedInvoice.customer?.name || "Unknown Customer"}</p>
+=======
+                <p className="font-medium">
+                  {selectedInvoice.customer?.name || "No Customer"}
+                </p>
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/create/page.tsx
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">

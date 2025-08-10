@@ -1,7 +1,8 @@
-// app/sales/daftar-po/create/page.tsx
+// app/purchasing/daftar-po/edit/[id]/page.tsx
 "use client";
+
 import { ManagementHeader } from "@/components/ui";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Input,
   FormField,
@@ -12,15 +13,18 @@ import {
   CustomerInfo,
 } from "@/components/ui";
 import {
-  createPurchaseOrder,
+  getPurchaseOrderById,
+  updatePurchaseOrder,
   getAvailableOrders,
+  getAvailableUsers,
   getProductsWithStock,
+  deletePurchaseOrder,
 } from "@/lib/actions/purchaseOrders";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
-import { generateCodeByTable } from "@/utils/getCode";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface PurchaseOrderItemFormData {
@@ -78,7 +82,7 @@ interface PurchaseOrderFormErrors {
 interface Order {
   id: string;
   orderNumber: string;
-  paymentDeadline?: Date | string | null;
+  paymentDeadline: Date | string | null;
   discount: number;
   shippingCost: number;
   customer: {
@@ -91,13 +95,7 @@ interface Order {
   orderItems: {
     id: string;
     quantity: number;
-    price: number;
     discount: number;
-    totalPrice: number;
-    orderId: string;
-    productId: string;
-    createdAt: Date;
-    updatedAt: Date;
     products: {
       id: string;
       name: string;
@@ -105,6 +103,12 @@ interface Order {
       price: number;
     };
   }[];
+}
+
+interface User {
+  id: string;
+  name: string;
+  role: string;
 }
 
 interface Product {
@@ -115,17 +119,19 @@ interface Product {
   currentStock: number;
 }
 
-export default function CreatePurchaseOrderPage() {
-  const data = useSharedData();
+export default function EditPurchaseOrderPage() {
+  const params = useParams();
   const router = useRouter();
-  const { user } = useCurrentUser();
+  const id = params.id as string;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-  console.log(user);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { user } = useCurrentUser();
 
   const [formData, setFormData] = useState<PurchaseOrderFormData>({
     code: "",
@@ -138,7 +144,7 @@ export default function CreatePurchaseOrderPage() {
     totalAmount: 0,
     totalDiscount: 0,
     totalTax: 0,
-    taxPercentage: null, // Dimulai dengan null agar wajib dipilih
+    taxPercentage: null,
     shippingCost: 0,
     totalPayment: 0,
     paymentDeadline: null,
@@ -150,30 +156,73 @@ export default function CreatePurchaseOrderPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [orders, products, newCode] = await Promise.all([
-          getAvailableOrders("te"),
+        const [purchaseOrder, orders, users, products] = await Promise.all([
+          getPurchaseOrderById(id),
+          getAvailableOrders(id), // Pass current PO ID to get available orders
+          getAvailableUsers(),
           getProductsWithStock(),
-          generateCodeByTable("PurchaseOrders"),
         ]);
+
+        if (!purchaseOrder) {
+          toast.error("Purchase Order tidak ditemukan");
+          router.push("/purchasing/daftar-po");
+          return;
+        }
+
         setAvailableOrders(orders);
         setAvailableProducts(products);
 
-        setFormData(prevData => ({
-          ...prevData,
-          code: newCode,
-          creatorId: user?.id || "",
-        }));
+        console.log(purchaseOrder);
+
+        // Set form data from existing PO
+        setFormData({
+          code: purchaseOrder.code,
+          poDate: new Date(purchaseOrder.poDate).toISOString().split("T")[0],
+          dateline: new Date(purchaseOrder.dateline)
+            .toISOString()
+            .split("T")[0],
+          notes: purchaseOrder.notes || "",
+          creatorId: purchaseOrder.creatorId,
+          orderId: purchaseOrder.orderId,
+          orderLevelDiscount: purchaseOrder.orderLevelDiscount || 0,
+          totalAmount: purchaseOrder.totalAmount,
+          totalDiscount: purchaseOrder.totalDiscount || 0,
+          totalTax: purchaseOrder.totalTax || 0,
+          taxPercentage: purchaseOrder.taxPercentage || null,
+          shippingCost: purchaseOrder.shippingCost || 0,
+          totalPayment: purchaseOrder.totalPayment || 0,
+          paymentDeadline: purchaseOrder.paymentDeadline
+            ? new Date(purchaseOrder.paymentDeadline)
+                .toISOString()
+                .split("T")[0]
+            : null,
+          items: purchaseOrder.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount || 0,
+            totalPrice: item.totalPrice,
+          })),
+        });
+
+        // Find selected order if exists
+        if (purchaseOrder.orderId) {
+          const order = orders.find(o => o.id === purchaseOrder.orderId);
+          setSelectedOrder(order || null);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
+        router.push("/purchasing/daftar-po");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [user]);
+  }, [id, router]);
 
+  // Recalculate total amount whenever items change
   useEffect(() => {
     // Subtotal sudah termasuk pengurangan diskon per item (harga - diskon per item) × jumlah
     const subtotal = formData.items.reduce(
@@ -215,14 +264,17 @@ export default function CreatePurchaseOrderPage() {
     if (!formData.code) {
       errors.code = "Kode PO wajib diisi";
     }
+
     if (!formData.poDate) {
       errors.poDate = "Tanggal PO wajib diisi";
     }
+
     if (!formData.dateline) {
       errors.dateline = "Deadline wajib diisi";
     } else if (new Date(formData.dateline) < new Date(formData.poDate)) {
       errors.dateline = "Deadline tidak boleh lebih awal dari tanggal PO";
     }
+
     // Removed creatorId validation - automatically filled from session
     if (!formData.orderId) {
       errors.orderId = "Order wajib dipilih";
@@ -233,40 +285,69 @@ export default function CreatePurchaseOrderPage() {
     ) {
       errors.taxPercentage = "Pajak wajib dipilih";
     }
+
     if (formData.items.length === 0) {
       errors.items = { 0: { productId: "Minimal harus ada satu item" } };
     } else {
-      const itemErrors: { [key: number]: { [key: string]: string } } = {};
+      const itemErrors: {
+        [key: number]: {
+          productId?: string;
+          quantity?: string;
+          price?: string;
+          totalPrice?: string;
+        };
+      } = {};
+
       formData.items.forEach((item, index) => {
-        const itemError: { [key: string]: string } = {};
-        if (!item.productId) itemError.productId = "Produk wajib dipilih";
-        if (!item.quantity || item.quantity <= 0)
+        const itemError: {
+          productId?: string;
+          quantity?: string;
+          price?: string;
+          totalPrice?: string;
+        } = {};
+
+        if (!item.productId) {
+          itemError.productId = "Produk wajib dipilih";
+        }
+
+        if (!item.quantity || item.quantity <= 0) {
           itemError.quantity = "Quantity harus lebih dari 0";
-        if (!item.price || item.price < 0)
-          itemError.price = "Harga tidak boleh negatif";
-        if (Object.keys(itemError).length > 0) itemErrors[index] = itemError;
+        }
+
+        if (!item.price || item.price <= 0) {
+          itemError.price = "Harga harus lebih dari 0";
+        }
+
+        if (Object.keys(itemError).length > 0) {
+          itemErrors[index] = itemError;
+        }
       });
-      if (Object.keys(itemErrors).length > 0) errors.items = itemErrors;
+
+      if (Object.keys(itemErrors).length > 0) {
+        errors.items = itemErrors;
+      }
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleInputChange = useCallback(
-    (field: keyof PurchaseOrderFormData, value: any) => {
-      setFormData(prev => ({ ...prev, [field]: value }));
-      if (formErrors[field as keyof PurchaseOrderFormErrors]) {
-        setFormErrors(prev => ({ ...prev, [field]: undefined }));
-      }
-    },
-    [formErrors]
-  );
+  const handleInputChange = (
+    field: keyof PurchaseOrderFormData,
+    value: any
+  ) => {
+    setFormData({ ...formData, [field]: value });
+
+    if (field in formErrors) {
+      setFormErrors({ ...formErrors, [field]: undefined });
+    }
+  };
 
   const handleOrderChange = (orderId: string) => {
     const order = availableOrders.find(o => o.id === orderId);
     setSelectedOrder(order || null);
 
+    // Auto-populate items from order
     if (order) {
       const items: PurchaseOrderItemFormData[] = order.orderItems.map(item => {
         const price = item.products.price;
@@ -274,19 +355,18 @@ export default function CreatePurchaseOrderPage() {
         const discount = item.discount || 0;
         const priceAfterDiscount = price - discount;
         const totalPrice = priceAfterDiscount * quantity;
+
         return {
           productId: item.products.id,
-          quantity,
-          price,
-          discount,
-          totalPrice,
+          quantity: quantity,
+          price: price,
+          discount: discount,
+          totalPrice: totalPrice,
         };
       });
 
-      console.log(order);
-
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        ...formData,
         orderId,
         items,
         orderLevelDiscount: order.discount || 0,
@@ -294,16 +374,13 @@ export default function CreatePurchaseOrderPage() {
         paymentDeadline: order.paymentDeadline
           ? new Date(order.paymentDeadline).toISOString().split("T")[0]
           : null,
-      }));
+      });
     } else {
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
+        ...formData,
         orderId: "",
         items: [],
-        orderLevelDiscount: 0,
-        shippingCost: 0,
-        paymentDeadline: null,
-      }));
+      });
     }
 
     if (formErrors.orderId) {
@@ -377,27 +454,51 @@ export default function CreatePurchaseOrderPage() {
     }
 
     setIsSubmitting(true);
+
     try {
-      const result = await createPurchaseOrder({
+      const dataToSubmit = {
         ...formData,
         poDate: new Date(formData.poDate),
         dateline: new Date(formData.dateline),
         paymentDeadline: formData.paymentDeadline
           ? new Date(formData.paymentDeadline)
           : null,
-      });
+      };
+
+      const result = await updatePurchaseOrder(id, dataToSubmit);
 
       if (result.success) {
-        toast.success("Purchase Order berhasil dibuat!");
-        router.push("/sales/daftar-po");
+        toast.success("Purchase Order berhasil diperbarui!");
+        router.push("/purchasing/daftar-po");
       } else {
-        toast.error(result.error || "Gagal membuat Purchase Order");
+        toast.error(result.error || "Gagal memperbarui Purchase Order");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("Terjadi kesalahan saat menyimpan data");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const result = await deletePurchaseOrder(id);
+
+      if (result.success) {
+        toast.success("Purchase Order berhasil dihapus!");
+        router.push("/purchasing/daftar-po");
+      } else {
+        toast.error(result.error || "Gagal menghapus Purchase Order");
+      }
+    } catch (error) {
+      console.error("Error deleting PO:", error);
+      toast.error("Terjadi kesalahan saat menghapus data");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -421,38 +522,48 @@ export default function CreatePurchaseOrderPage() {
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         allowedRoles={["ADMIN", "OWNER", "WAREHOUSE"]}
-        mainPageName="/sales/daftar-po"
+        mainPageName="/purchasing/daftar-po"
         headerTittle="Purchase Order"
       />
       <ManagementForm
         subModuleName="daftar-po"
-        moduleName="sales"
+        moduleName="purchasing"
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        handleDelete={() => setShowDeleteModal(true)}
+        hideDeleteButton={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField label="Kode PO" errorMessage={formErrors.code}>
             <Input
-              name="code"
               type="text"
+              name="code"
               value={formData.code}
               readOnly
-              className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"
+              onChange={e => handleInputChange("code", e.target.value)}
+              placeholder="Masukkan kode PO"
             />
           </FormField>
+
+          {/* Hidden field untuk Pembuat PO - diambil langsung dari session */}
+          <input type="hidden" name="creatorId" value={formData.creatorId} />
+
           <FormField label="Tanggal PO" errorMessage={formErrors.poDate}>
             <InputDate
               value={new Date(formData.poDate)}
-              onChange={value =>
-                value &&
-                handleInputChange("poDate", value.toISOString().split("T")[0])
-              }
+              onChange={value => {
+                if (value) {
+                  handleInputChange(
+                    "poDate",
+                    value.toISOString().split("T")[0]
+                  );
+                }
+              }}
+              errorMessage={formErrors.poDate}
             />
           </FormField>
         </div>
-
-        {/* Hidden field untuk Pembuat PO - diambil langsung dari session */}
-        <input type="hidden" name="creatorId" value={formData.creatorId} />
 
         <FormField label="Pilih Order" errorMessage={formErrors.orderId}>
           <Select
@@ -854,6 +965,20 @@ export default function CreatePurchaseOrderPage() {
           </div>
         </div>
       </ManagementForm>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Hapus Purchase Order"
+        isLoading={isDeleting}
+      >
+        <p>
+          Apakah Anda yakin ingin menghapus Purchase Order ini? Tindakan ini
+          tidak dapat dibatalkan.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 }
