@@ -4,6 +4,7 @@ import { seedStores } from "./seeds/seedStores";
 import { seedCategoriesAndProducts } from "./seeds/seedCategoriesAndProducts";
 import { seedCustomers } from "./seeds/seedCustomers";
 import { seedOrders } from "./seeds/seedOrders";
+// import { seedPurchaseOrdersInvoicesDeliveryNotes } from "./seeds/seedPurchaseOrdersInvoicesDeliveryNotes";
 
 const prisma = new PrismaClient();
 
@@ -17,17 +18,18 @@ async function clearDatabase() {
   // Hapus dari model yang memiliki relasi 'child' terlebih dahulu,
   // bergerak ke atas menuju model 'parent'.
   await prisma.userNotifications.deleteMany({});
+  await prisma.stockMovements.deleteMany({});
+  await prisma.delivery_note_items.deleteMany({});
+  await prisma.deliveryNotes.deleteMany({});
   await prisma.payments.deleteMany({});
   await prisma.invoiceItems.deleteMany({});
   await prisma.invoices.deleteMany({});
-  await prisma.orderItems.deleteMany({});
-  await prisma.deliveryNotes.deleteMany({});
-  await prisma.customerVisits.deleteMany({});
-  await prisma.fieldVisit.deleteMany({});
   await prisma.purchaseOrderItems.deleteMany({});
   await prisma.purchaseOrders.deleteMany({});
+  await prisma.orderItems.deleteMany({});
   await prisma.orders.deleteMany({});
-  await prisma.stockMovements.deleteMany({});
+  await prisma.customerVisits.deleteMany({});
+  await prisma.fieldVisit.deleteMany({});
   await prisma.transactions.deleteMany({});
   await prisma.store.deleteMany({});
   await prisma.salesReturnItems.deleteMany({}); // Tambahan jika ada
@@ -65,7 +67,12 @@ async function main() {
     }
 
     // Kirim data master yang relevan ke seeder order
-    await seedOrders(prisma, createdCustomers, createdProducts, salesUser);
+    const createdOrders = await seedOrders(
+      prisma,
+      createdCustomers,
+      createdProducts,
+      salesUser
+    );
 
     console.log("🎉 Seed process completed successfully!");
   } catch (error) {
