@@ -43,6 +43,19 @@ export async function seedCustomers(prisma: PrismaClient) {
       creditLimit: 2000000,
       updatedAt: new Date(),
     },
+    {
+      id: uuid(),
+      code: "CUST004",
+      name: "Toko Modern Sejati",
+      email: "customer4@example.com",
+      phone: "+6281277778888",
+      address: "Jl. Asia Afrika No. 75, Jakarta",
+      city: "Jakarta",
+      latitude: -6.2088,
+      longitude: 106.8456,
+      creditLimit: 7500000,
+      updatedAt: new Date(),
+    },
   ];
 
   for (const customerData of customersToCreate) {
