@@ -62,8 +62,9 @@ export async function createFieldVisit({
           data: {
             name: storeName,
             address:
-              storeAddress ||
-              `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
+              storeAddress && storeAddress.trim()
+                ? storeAddress.trim()
+                : `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
             latitude: latitude,
             longitude: longitude,
           },

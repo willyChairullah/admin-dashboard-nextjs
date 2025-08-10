@@ -12,7 +12,7 @@ export type StockMovementFormData = {
   productId: string;
   userId: string;
   ordersId?: string;
-  productionLogsItemsId?: string;
+  productionItemsId?: string;
 };
 
 export type StockMovementWithRelations = StockMovements & {
@@ -266,7 +266,7 @@ export async function createStockMovement(data: StockMovementFormData) {
     }
 
     // Create stock movement and update product stock in a transaction
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       const stockMovement = await tx.stockMovements.create({
         data: {
           type: data.type,
@@ -278,7 +278,7 @@ export async function createStockMovement(data: StockMovementFormData) {
           productId: data.productId,
           userId: data.userId,
           ordersId: data.ordersId,
-          productionLogsItemsId: data.productionLogsItemsId,
+          productionItemsId: data.productionItemsId,
         },
       });
 
@@ -323,7 +323,7 @@ export async function updateStockMovement(
       };
     }
 
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Revert the previous stock change
       const revertedStock = currentMovement.previousStock;
 
@@ -404,7 +404,7 @@ export async function deleteStockMovement(id: string) {
       };
     }
 
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Revert the stock change
       await tx.products.update({
         where: { id: stockMovement.productId },
