@@ -54,7 +54,7 @@ interface InvoiceOption {
     id: string;
     name: string;
     code: string;
-  };
+  } | null;
 }
 
 interface User {
@@ -336,7 +336,7 @@ export default function CreatePaymentPage() {
               options={availableInvoices.map(invoice => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
-                  invoice.customer.name
+                  invoice.customer?.name || "Unknown Customer"
                 } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
@@ -358,7 +358,7 @@ export default function CreatePaymentPage() {
                 <span className="text-gray-600 dark:text-gray-400">
                   Customer:
                 </span>
-                <p className="font-medium">{selectedInvoice.customer.name}</p>
+                <p className="font-medium">{selectedInvoice.customer?.name || "Unknown Customer"}</p>
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">
