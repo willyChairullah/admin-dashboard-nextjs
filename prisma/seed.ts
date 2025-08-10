@@ -41,7 +41,6 @@ async function main() {
   await prisma.users.deleteMany({});
 
   console.log("✅ Database cleared.");
-}
 
   try {
     console.log("👥 Creating 4 users with proper roles...");
@@ -1038,8 +1037,49 @@ async function main() {
         );
       }
 
+      await prisma.companyTargets.create({
+        data: {
+          id: uuid(),
+          targetType: "QUARTERLY",
+          targetPeriod: targetPeriod,
+          targetAmount: targetAmount,
+          achievedAmount: achievedAmount,
+          isActive: true,
+          createdAt: targetDate,
+          updatedAt: now,
+        },
+      });
+      companyTargets++;
+    }
+
+    // Create yearly company target
+    const yearlyTargetPeriod = now.getFullYear().toString();
+    const yearlyTargetAmount = 600000000; // 600M per year
+    
+    // Calculate achieved amount based on year progress
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+    const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
+    const yearProgressRate = dayOfYear / daysInYear;
+    const yearlyAchievedAmount = Math.floor(yearlyTargetAmount * yearProgressRate * (0.92 + Math.random() * 0.16)); // 92-108% range
+
+    await prisma.companyTargets.create({
+      data: {
+        id: uuid(),
+        targetType: "YEARLY",
+        targetPeriod: yearlyTargetPeriod,
+        targetAmount: yearlyTargetAmount,
+        achievedAmount: yearlyAchievedAmount,
+        isActive: true,
+        createdAt: new Date(now.getFullYear(), 0, 1),
+        updatedAt: now,
+      },
+    });
+    companyTargets++;
+
+    console.log(`✅ Created ${companyTargets} company targets`);
+
     // Kirim data master yang relevan ke seeder order
-    const createdOrders = await seedOrders(
+    const seededOrders = await seedOrders(
       prisma,
       createdCustomers,
       createdProducts,
@@ -1063,7 +1103,7 @@ async function main() {
       `\n🎯 Created ${totalTargets} sales targets (monthly, quarterly, yearly) for analytics.`
     );
     console.log(
-      `\n📈 Generated ${additionalOrders} additional orders with growth trends for comprehensive analytics.`
+      `\n📈 Generated ${seededOrders.length} orders with comprehensive analytics data.`
     );
   } catch (error) {
     console.error("❌ An error occurred during the seed process:", error);
