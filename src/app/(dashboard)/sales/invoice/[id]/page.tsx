@@ -117,11 +117,8 @@ export default function InvoiceDetailPage() {
       if (result.success) {
         toast.success("Invoice berhasil dihapus");
         router.push(`/${data.module}/${data.subModule}`);
-<<<<<<< HEAD
       } else {
         toast.error("Gagal menghapus invoice");
-=======
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9
       }
     } catch (err: any) {
       toast.error(err.message || "Terjadi kesalahan saat menghapus invoice");
@@ -305,9 +302,6 @@ export default function InvoiceDetailPage() {
                     Tanggal Jatuh Tempo:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-<<<<<<< HEAD
-                    {invoice.dueDate ? formatDate(invoice.dueDate) : "N/A"}
-=======
                     {invoice.dueDate ? formatDate(invoice.dueDate) : 'Tidak ada'}
                   </span>
                 </div>
@@ -317,7 +311,6 @@ export default function InvoiceDetailPage() {
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {invoice.type}
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9
                   </span>
                 </div>
               </div>
@@ -335,11 +328,7 @@ export default function InvoiceDetailPage() {
                     Nama:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-<<<<<<< HEAD
-                    {invoice.customer?.name || "N/A"}
-=======
                     {invoice.customer?.name || 'N/A'}
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9
                   </span>
                 </div>
                 {invoice.customer?.email && (
@@ -367,11 +356,7 @@ export default function InvoiceDetailPage() {
                     Alamat:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white text-right max-w-64">
-<<<<<<< HEAD
-                    {invoice.customer?.address || "N/A"}
-=======
                     {invoice.customer?.address || 'N/A'}
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9
                   </span>
                 </div>
               </div>
@@ -536,15 +521,9 @@ export default function InvoiceDetailPage() {
                     className="border-b border-gray-200 dark:border-gray-600"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-<<<<<<< HEAD
-                      {item.products?.name || "N/A"}
-                    </td>
-                    <td className="px-4 py-3">{item.products?.unit || "N/A"}</td>
-=======
                       {item.products?.name || 'N/A'}
                     </td>
                     <td className="px-4 py-3">{item.products?.unit || 'N/A'}</td>
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9
                     <td className="px-4 py-3">{item.quantity}</td>
                     <td className="px-4 py-3">
                       Rp {item.price.toLocaleString("id-ID")}

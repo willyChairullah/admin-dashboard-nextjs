@@ -230,6 +230,16 @@ export async function getTopProducts(limit: number = 10) {
     // Get product details
     const productDetails = await Promise.all(
       products.map(async (item) => {
+        if (!item.productId) {
+          return {
+            id: 'unknown',
+            name: 'Unknown Product',
+            unit: 'N/A',
+            quantity: item._count.id || 0,
+            totalSales: item._sum.totalPrice || 0,
+          };
+        }
+        
         const product = await db.products.findUnique({
           where: { id: item.productId },
           select: {

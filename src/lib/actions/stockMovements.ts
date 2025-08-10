@@ -278,7 +278,7 @@ export async function createStockMovement(data: StockMovementFormData) {
           productId: data.productId,
           userId: data.userId,
           ordersId: data.ordersId,
-          productionItemsId: data.productionLogsItemsId,
+          productionItemsId: data.productionItemsId,
         },
       });
 
