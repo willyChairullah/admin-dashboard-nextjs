@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getPurchaseOrdersForConfirmation } from "@/lib/actions/stockConfirmation";
+import { getPurchaseOrdersForConfirmation, PurchaseOrderForConfirmation } from "@/lib/actions/stockConfirmation";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
@@ -11,12 +11,22 @@ export default async function KonfirmasiStokLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Data defined or fetched on the server side
+  // Data defined or fetched on the server side with error handling
+  let purchaseOrdersData: PurchaseOrderForConfirmation[] = [];
+  
+  try {
+    purchaseOrdersData = await getPurchaseOrdersForConfirmation();
+  } catch (error) {
+    console.error("Failed to fetch purchase orders for confirmation:", error);
+    // Use empty array as fallback during build time
+    purchaseOrdersData = [];
+  }
+
   const myStaticData = {
     module: "inventory",
     subModule: "konfirmasi-stok",
     allowedRole: ["OWNER", "ADMIN", "WAREHOUSE"],
-    data: await getPurchaseOrdersForConfirmation(),
+    data: purchaseOrdersData,
   };
 
   return (

@@ -78,6 +78,15 @@ const excludedAccessors = [
 export default function KonfirmasiStokPage() {
   const data = useSharedData();
 
+  // Add safety checks for data
+  if (!data) {
+    return (
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="text-center text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
