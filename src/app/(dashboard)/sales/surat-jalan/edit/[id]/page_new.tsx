@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { DeliveryStatus } from "@prisma/client";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
-import { DeliveryStatus } from "@prisma/client";
 
 interface DeliveryNoteFormData {
   deliveryDate: string;

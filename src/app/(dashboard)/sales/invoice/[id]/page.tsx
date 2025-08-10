@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ManagementHeader } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
-import { getInvoiceById, deleteInvoice } from "@/lib/actions/invoices";
+import { getInvoiceById, deleteInvoice, InvoiceWithDetails } from "@/lib/actions/invoices";
 import { formatDate } from "@/utils/formatDate";
 import { toast } from "sonner";
 import {
@@ -77,7 +77,7 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const invoiceId = params.id as string;
 
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -89,10 +89,10 @@ export default function InvoiceDetailPage() {
         setIsLoading(true);
         setError(null);
         const result = await getInvoiceById(invoiceId);
-        if (result.success && result.data) {
-          setInvoice(result.data);
+        if (result) {
+          setInvoice(result);
         } else {
-          setError(result.error || "Failed to fetch invoice");
+          setError("Invoice not found");
         }
       } catch (err) {
         setError("An unexpected error occurred");
@@ -117,11 +117,9 @@ export default function InvoiceDetailPage() {
       if (result.success) {
         toast.success("Invoice berhasil dihapus");
         router.push(`/${data.module}/${data.subModule}`);
-      } else {
-        toast.error(result.error || "Gagal menghapus invoice");
       }
-    } catch (err) {
-      toast.error("Terjadi kesalahan saat menghapus invoice");
+    } catch (err: any) {
+      toast.error(err.message || "Terjadi kesalahan saat menghapus invoice");
       console.error("Error deleting invoice:", err);
     } finally {
       setIsDeleting(false);
@@ -302,15 +300,15 @@ export default function InvoiceDetailPage() {
                     Tanggal Jatuh Tempo:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(invoice.dueDate)}
+                    {invoice.dueDate ? formatDate(invoice.dueDate) : 'Tidak ada'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">
-                    Proforma:
+                    Tipe Invoice:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {invoice.isProforma ? "Ya" : "Tidak"}
+                    {invoice.type}
                   </span>
                 </div>
               </div>
@@ -328,10 +326,10 @@ export default function InvoiceDetailPage() {
                     Nama:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {invoice.customer.name}
+                    {invoice.customer?.name || 'N/A'}
                   </span>
                 </div>
-                {invoice.customer.email && (
+                {invoice.customer?.email && (
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">
                       Email:
@@ -341,7 +339,7 @@ export default function InvoiceDetailPage() {
                     </span>
                   </div>
                 )}
-                {invoice.customer.phone && (
+                {invoice.customer?.phone && (
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">
                       Telepon:
@@ -356,7 +354,7 @@ export default function InvoiceDetailPage() {
                     Alamat:
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white text-right max-w-64">
-                    {invoice.customer.address}
+                    {invoice.customer?.address || 'N/A'}
                   </span>
                 </div>
               </div>
@@ -521,9 +519,9 @@ export default function InvoiceDetailPage() {
                     className="border-b border-gray-200 dark:border-gray-600"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                      {item.products.name}
+                      {item.products?.name || 'N/A'}
                     </td>
-                    <td className="px-4 py-3">{item.products.unit}</td>
+                    <td className="px-4 py-3">{item.products?.unit || 'N/A'}</td>
                     <td className="px-4 py-3">{item.quantity}</td>
                     <td className="px-4 py-3">
                       Rp {item.price.toLocaleString("id-ID")}

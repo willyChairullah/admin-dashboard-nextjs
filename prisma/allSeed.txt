@@ -373,10 +373,12 @@ async function main() {
     await prisma.payments.create({
       data: {
         id: uuid(),
+        paymentCode: "PAY/08/2025/0001",
         paymentDate: new Date("2025-07-23T10:00:00Z"),
         amount: paidOrder.totalAmount,
         method: "TRANSFER",
         invoiceId: invoiceForPaidOrder.id,
+        userId: adminUser.id,
       },
     });
     console.log(`✅ Created Invoice and Payment for ${paidOrder.orderNumber}`);
