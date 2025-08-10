@@ -5,6 +5,7 @@ import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
 import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
+import { formatRupiah } from "@/utils/formatRupiah";
 
 const columns = [
   { header: "Kode", accessor: "code" },
@@ -14,8 +15,8 @@ const columns = [
     render: (value: Date) => formatDate(value),
   },
   {
-    header: "Deadline",
-    accessor: "dateline",
+    header: "Pembayaran",
+    accessor: "paymentDeadline",
     render: (value: Date) => formatDate(value),
   },
   {
@@ -23,21 +24,9 @@ const columns = [
     accessor: "order.customer.name",
   },
   {
-    header: "Catatan",
-    accessor: "notes",
-    cell: (info: { getValue: () => string }) => {
-      const value = info.getValue();
-      return value ? (
-        <span
-          className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs"
-          title={value}
-        >
-          {value.length > 50 ? `${value.substring(0, 50)}...` : value}
-        </span>
-      ) : (
-        <span className="text-gray-400 italic">-</span>
-      );
-    },
+    header: "Total",
+    accessor: "totalPayment",
+    render: (value: number) => formatRupiah(value),
   },
   {
     header: "Status",

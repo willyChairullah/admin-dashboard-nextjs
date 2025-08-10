@@ -166,6 +166,7 @@ export async function confirmPurchaseOrderStock(
   data: StockConfirmationFormData
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
+    
     const result = await db.$transaction(async tx => {
       // Update the main purchase order
       const purchaseOrder = await tx.purchaseOrders.update({

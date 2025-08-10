@@ -5,6 +5,7 @@ import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
 import React from "react";
 import { formatDate } from "@/utils/formatDate";
+import { formatRupiah } from "@/utils/formatRupiah";
 
 const columns = [
   { header: "Kode PO", accessor: "code" },
@@ -24,9 +25,9 @@ const columns = [
     render: (value: Date | null) => (value ? formatDate(value) : "-"),
   },
   {
-    header: "User Konfirmasi",
-    accessor: "stockConfirmationUser",
-    render: (value: any) => value?.name || "-",
+    header: "Total Bayar",
+    accessor: "totalPayment",
+    render: (value: number) => (value ? formatRupiah(value) : "-"),
   },
   {
     header: "Status Konfirmasi",

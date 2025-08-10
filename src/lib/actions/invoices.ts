@@ -6,13 +6,15 @@ import {
   Invoices,
   InvoiceItems,
   InvoiceStatus,
+  InvoiceType,
   PurchaseOrderStatus,
   StockConfirmationStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export type InvoiceItemFormData = {
-  productId: string;
+  productId?: string; // Made optional to support non-product items
+  description?: string; // Added for non-product items
   quantity: number;
   price: number;
   discount: number;
@@ -22,15 +24,17 @@ export type InvoiceItemFormData = {
 export type InvoiceFormData = {
   code: string;
   invoiceDate: Date;
-  dueDate: Date;
+  dueDate: Date | null;
   status: InvoiceStatus;
-  isProforma: boolean;
+  type: InvoiceType;
   subtotal: number;
   tax: number;
+  taxPercentage: number;
   discount: number;
+  shippingCost: number;
   totalAmount: number;
   notes?: string;
-  customerId: string;
+  customerId?: string | null;
   purchaseOrderId?: string;
   createdBy: string;
   items: InvoiceItemFormData[];
@@ -43,7 +47,7 @@ export type InvoiceWithDetails = Invoices & {
     email: string | null;
     phone: string | null;
     address: string;
-  };
+  } | null;
   purchaseOrder?: {
     id: string;
     code: string;
@@ -63,7 +67,7 @@ export type InvoiceWithDetails = Invoices & {
       name: string;
       unit: string;
       price: number;
-    };
+    } | null; // Made nullable to match the database schema
   })[];
 };
 
@@ -226,12 +230,12 @@ export async function getAvailablePurchaseOrders() {
         },
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        // creator: {
+        //   select: {
+        //     id: true,
+        //     name: true,
+        //   },
+        // },
         items: {
           include: {
             product: {
@@ -240,6 +244,15 @@ export async function getAvailablePurchaseOrders() {
                 name: true,
                 unit: true,
                 price: true,
+              },
+            },
+          },
+        },
+        order: {
+          include: {
+            customer: {
+              select: {
+                name: true,
               },
             },
           },
@@ -313,9 +326,11 @@ export async function getAvailableUsers() {
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
+    console.log(data);
+
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount;
+    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
     const remainingAmount = totalAmount - 0; // paidAmount starts at 0
 
     const result = await db.$transaction(async tx => {
@@ -324,17 +339,19 @@ export async function createInvoice(data: InvoiceFormData) {
         data: {
           code: data.code,
           invoiceDate: data.invoiceDate,
-          dueDate: data.dueDate,
+          dueDate: data.dueDate || new Date(), // If null, set to today's date
           status: data.status,
-          isProforma: data.isProforma,
+          type: data.type,
           subtotal: subtotal,
           tax: data.tax,
+          taxPercentage: data.taxPercentage,
           discount: data.discount,
+          shippingCost: data.shippingCost,
           totalAmount: totalAmount,
           paidAmount: 0,
           remainingAmount: remainingAmount,
           notes: data.notes,
-          customerId: data.customerId,
+          customerId: data.customerId || null,
           purchaseOrderId: data.purchaseOrderId,
           createdBy: data.createdBy,
         },
@@ -345,12 +362,13 @@ export async function createInvoice(data: InvoiceFormData) {
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
+              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId,
+              productId: item.productId || null,
             },
           })
         )
@@ -359,7 +377,9 @@ export async function createInvoice(data: InvoiceFormData) {
       return { invoice, invoiceItems };
     });
 
-    revalidatePath("/sales/invoice");
+    // revalidatePath("/sales/invoice");
+    console.log("backend");
+
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating invoice:", error);
@@ -376,7 +396,7 @@ export async function updateInvoice(
   try {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount;
+    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
 
     const result = await db.$transaction(async tx => {
       // Get current invoice to preserve paidAmount
@@ -397,16 +417,18 @@ export async function updateInvoice(
         data: {
           code: data.code,
           invoiceDate: data.invoiceDate,
-          dueDate: data.dueDate,
+          dueDate: data.dueDate || new Date(), // If null, set to today's date
           status: data.status,
-          isProforma: data.isProforma,
+          type: data.type,
           subtotal: subtotal,
           tax: data.tax,
+          taxPercentage: data.taxPercentage,
           discount: data.discount,
+          shippingCost: data.shippingCost,
           totalAmount: totalAmount,
           remainingAmount: remainingAmount,
           notes: data.notes,
-          customerId: data.customerId,
+          customerId: data.customerId || null,
           purchaseOrderId: data.purchaseOrderId,
           updatedBy: updatedBy,
         },
@@ -422,12 +444,13 @@ export async function updateInvoice(
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
+              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId,
+              productId: item.productId || null,
             },
           })
         )
@@ -449,6 +472,17 @@ export async function updateInvoice(
 export async function deleteInvoice(id: string) {
   try {
     await db.$transaction(async tx => {
+      // Check if there are any payments for this invoice
+      const existingPayments = await tx.payments.findMany({
+        where: { invoiceId: id },
+      });
+
+      if (existingPayments.length > 0) {
+        throw new Error(
+          "Cannot delete invoice. Payment data already exists for this invoice."
+        );
+      }
+
       // Delete invoice items first (cascade should handle this, but explicit is better)
       await tx.invoiceItems.deleteMany({
         where: { invoiceId: id },
@@ -462,8 +496,14 @@ export async function deleteInvoice(id: string) {
 
     revalidatePath("/sales/invoice");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting invoice:", error);
+    if (
+      error.message &&
+      error.message.includes("Payment data already exists")
+    ) {
+      throw error; // Re-throw the custom error
+    }
     throw new Error("Failed to delete invoice");
   }
 }
@@ -480,6 +520,19 @@ export async function getPurchaseOrderForInvoice(purchaseOrderId: string) {
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        order: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+              },
+            },
           },
         },
         items: {

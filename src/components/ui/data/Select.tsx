@@ -13,35 +13,61 @@ interface SelectProps {
   placeholder?: string;
   errorMessage?: string;
   className?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 const Select: React.FC<SelectProps> = ({
   options,
   value,
   onChange,
-  placeholder = "— Select an Option —",
+  placeholder = "— Pilih Opsi —",
   errorMessage,
   className = "",
+  searchable = false,
+  searchPlaceholder = "Cari opsi...",
 }) => {
-  const hasError = errorMessage && errorMessage.length > 0;
+  const hasError = !!errorMessage;
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedOption, setSelectedOption] = useState<SelectOption | null>(
-    options.find(option => option.value === value) || null
+    null
   );
 
   const selectRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const newSelectedOption =
+      options.find(option => option.value === value) || null;
+    setSelectedOption(newSelectedOption);
+  }, [value, options]);
 
   const handleOptionClick = (option: SelectOption) => {
     setSelectedOption(option);
-    setIsOpen(false);
     if (onChange) {
       onChange(option.value);
     }
+    setIsOpen(false);
+    setSearchTerm("");
   };
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
+    if (!isOpen) {
+      setSearchTerm("");
+    }
   };
+
+  useEffect(() => {
+    if (isOpen && searchable && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen, searchable]);
 
   const handleClickOutside = (event: MouseEvent) => {
     if (
@@ -66,63 +92,77 @@ const Select: React.FC<SelectProps> = ({
           hasError ? "border-red-500" : "border-gray-300 dark:border-gray-600"
         }`}
       >
-        <button
+        <input
+          ref={inputRef}
+          type="text"
+          readOnly={!searchable || !isOpen}
+          value={
+            isOpen && searchable ? searchTerm : selectedOption?.label || ""
+          }
+          onChange={e => setSearchTerm(e.target.value)}
           onClick={toggleDropdown}
-          className={`w-full p-2 text-left flex justify-between items-center rounded-lg focus:outline-none dark:text-gray-300 ${
+          placeholder={selectedOption?.label || placeholder}
+          // 👇 PERUBAHAN 1: Kursor kondisional (hand vs text)
+          className={`w-full p-1.5 pr-10 text-left rounded-lg focus:outline-none dark:text-gray-300 ${
+            isOpen && searchable ? "cursor-text" : "cursor-pointer"
+          } ${
             hasError ? "bg-red-50 dark:bg-red-900" : "bg-white dark:bg-gray-900"
           }`}
-          type="button"
+        />
+
+        <svg
+          className={`w-4 h-4 absolute top-1/2 -translate-y-1/2 right-3 pointer-events-none transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          } ${hasError ? "text-red-500" : "text-gray-400 dark:text-gray-300"}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          {selectedOption ? selectedOption.label : placeholder}
-          <svg
-            className={`w-4 h-4 ${
-              hasError ? "text-red-500" : "text-gray-400"
-            } dark:text-gray-300`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
 
         {isOpen && (
           <div
             className={`absolute z-10 mt-1 w-full rounded-md shadow-lg ${
-              hasError ? "border-red-500" : ""
-            } ${
               hasError
-                ? "bg-red-50 dark:bg-red-900"
+                ? "bg-red-50 dark:bg-red-900 border-red-500"
                 : "bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-600"
             }`}
           >
-            <ul className="max-h-60 overflow-y-auto focus:outline-none">
-              {options.map(option => (
-                <li
-                  key={option.value}
-                  onClick={() => handleOptionClick(option)}
-                  className={`dark:text-gray-300 p-2 cursor-pointer transition duration-200 ease-in-out rounded-md 
-                  ${
-                    selectedOption && selectedOption.value === option.value
-                      ? "bg-blue-500 text-white font-semibold"
-                      : "hover:bg-blue-100 hover:text-black dark:hover:bg-blue-700 dark:hover:text-white"
-                  }`}
-                >
-                  {option.label}
+            <ul className="max-h-60 overflow-y-auto focus:outline-none p-1">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map(option => (
+                  <li
+                    key={option.value}
+                    onClick={() => handleOptionClick(option)}
+                    // 👇 PERUBAHAN 2: Menghapus `text-sm` agar style kembali seperti semula
+                    className={`dark:text-gray-300 p-2 cursor-pointer transition duration-200 ease-in-out rounded-md 
+                    ${
+                      selectedOption?.value === option.value
+                        ? "bg-blue-500 text-white font-semibold"
+                        : "hover:bg-blue-100 hover:text-black dark:hover:bg-blue-700 dark:hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </li>
+                ))
+              ) : (
+                <li className="p-2 text-gray-500 dark:text-gray-400 text-center text-sm">
+                  Tidak ada opsi ditemukan
                 </li>
-              ))}
+              )}
             </ul>
           </div>
         )}
       </div>
 
       {hasError && (
-        <span className="text-xs text-red-500 dark:text-red-400 mt-1">
+        <span className="text-xs text-red-500 dark:text-red-400">
           {errorMessage}
         </span>
       )}

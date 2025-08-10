@@ -8,6 +8,10 @@ interface InputDateProps {
   placeholder?: string;
   errorMessage?: string;
   disabled?: boolean;
+  showNullAsText?: string; // Text to show when value is null
+  allowClearToNull?: boolean; // Allow clearing to null
+  isOptional?: boolean; // Make the field optional (allows null values)
+  showClearButton?: boolean; // Show clear button in popup (default: false)
 }
 
 const InputDate: React.FC<InputDateProps> = ({
@@ -16,6 +20,10 @@ const InputDate: React.FC<InputDateProps> = ({
   placeholder = "Select a date",
   errorMessage,
   disabled,
+  showNullAsText,
+  allowClearToNull = false,
+  isOptional = false,
+  showClearButton = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(value || null);
@@ -23,6 +31,11 @@ const InputDate: React.FC<InputDateProps> = ({
   const datePickerRef = useRef<HTMLDivElement | null>(null);
 
   const hasError = errorMessage && errorMessage.length > 0;
+
+  // Sync selectedDate with value prop
+  useEffect(() => {
+    setSelectedDate(value || null);
+  }, [value]);
 
   // Toggle the calendar visibility
   const toggleCalendar = () => {
@@ -40,6 +53,24 @@ const InputDate: React.FC<InputDateProps> = ({
     setSelectedDate(newDate);
     if (onChange) onChange(newDate);
     setIsOpen(false);
+  };
+
+  // Handle clear to null (if allowed)
+  const handleClearToNull = () => {
+    setSelectedDate(null);
+    if (onChange) onChange(null);
+    setIsOpen(false);
+  };
+
+  // Get display value
+  const getDisplayValue = () => {
+    if (selectedDate) {
+      return formatDate(selectedDate);
+    }
+    if (showNullAsText) {
+      return showNullAsText;
+    }
+    return "";
   };
 
   // Navigate to the next month
@@ -125,7 +156,7 @@ const InputDate: React.FC<InputDateProps> = ({
       <div className="relative" ref={datePickerRef}>
         <input
           type="text"
-          value={selectedDate ? formatDate(selectedDate) : ""}
+          value={getDisplayValue()}
           onClick={toggleCalendar}
           placeholder={placeholder}
           readOnly
@@ -146,6 +177,11 @@ const InputDate: React.FC<InputDateProps> = ({
               disabled
                 ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
                 : "text-gray-900 dark:text-gray-100"
+            }
+            ${
+              !selectedDate && showNullAsText
+                ? "text-blue-600 dark:text-blue-400 font-medium"
+                : ""
             }
             hover:border-gray-400 dark:hover:border-gray-500
           `}
@@ -171,6 +207,16 @@ const InputDate: React.FC<InputDateProps> = ({
               </button>
             </div>
             <div className="grid grid-cols-7 gap-1">{renderCalendar()}</div>
+            {showClearButton && (
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <button
+                  onClick={handleClearToNull}
+                  className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md transition-colors"
+                >
+                  {showNullAsText || "Clear Date"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

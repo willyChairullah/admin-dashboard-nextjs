@@ -14,14 +14,16 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "DPO";
     case "Invoices":
       return "INV";
-    // case "Payments":
-    //   return "PMT";
+    case "Payments":
+      return "PAY";
     case "StockOpnames":
       return "SOP";
     case "ProductionLogs":
       return "PRI";
     case "ManagementStocks":
       return "SMN";
+    case "Productions":
+      return "PDK";
     // Tambahkan singkatan untuk tabel lain yang akan memiliki kode
     // case 'Users': return 'USR'; // Contoh jika Users juga punya kode format ini
     // case 'Orders': return 'ORD'; // Contoh jika Orders juga punya kode format ini
@@ -118,18 +120,18 @@ async function getLastCodeForCurrentMonth(
         lastCode = lastInvoice?.code || null;
         break;
 
-      // case "Payments":
-      //   const lastPayment = await db.payments.findFirst({
-      //     where: {
-      //       code: {
-      //         startsWith: codePrefix,
-      //       },
-      //     },
-      //     orderBy: { code: "desc" },
-      //     select: { code: true },
-      //   });
-      //   lastCode = lastPayment?.code || null;
-      //   break;
+      case "Payments":
+        const lastPayment = await db.payments.findFirst({
+          where: {
+            paymentCode: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { paymentCode: "desc" },
+          select: { paymentCode: true },
+        });
+        lastCode = lastPayment?.paymentCode || null;
+        break;
 
       case "StockOpnames":
         const lastStockOpname = await db.stockOpnames.findFirst({

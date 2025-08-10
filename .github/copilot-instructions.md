@@ -1,54 +1,82 @@
 I want to create a CRUD page from this database:
 
 ## Database
-```
-model Invoices {
-  id                  String          @id @default(cuid())
-  code                String          @unique
-  invoiceDate         DateTime        @default(now())
-  dueDate             DateTime
-  status              InvoiceStatus   @default(DRAFT)      // Status dokumen: DRAFT, SENT, PAID, OVERDUE, CANCELLED
-  paymentStatus       PaymentStatus   @default(UNPAID)     // <--- Tambahan: Enum Status Pembayaran
-  isProforma          Boolean         @default(false)      // <--- Tambahan: Untuk Proforma Invoice
-  subtotal            Float           @default(0)
-  tax                 Float           @default(0)
-  discount            Float           @default(0)          // <--- Tambahan: Diskon level Invoice
-  totalAmount         Float           @default(0)
-  paidAmount          Float           @default(0)
-  remainingAmount     Float           @default(0)
-  notes               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  createdBy           String?                               // <--- Tambahan: ID User Pembuat Invoice
-  updatedBy           String?                               // <--- Tambahan: ID User Update Terakhir Invoice
-  customerId          String
-  orderId             String?         @unique
-  invoiceItems        InvoiceItems[]
-  customer            Customers       @relation(fields: [customerId], references: [id])
-  order               Orders?         @relation(fields: [orderId], references: [id])
-  payments            Payments[]
-  salesReturns        SalesReturns[]
 
-  creator             Users?          @relation("InvoiceCreator", fields: [createdBy], references: [id])
-  updater             Users?          @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
+```
+
+model Invoices {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  invoiceDate     DateTime       @default(now())
+  dueDate         DateTime
+  status          InvoiceStatus  @default(DRAFT)
+  paymentStatus   PaymentStatus  @default(UNPAID)
+  type            InvoiceType    @default(PRODUCT) // <--- Tambahan: Tipe invoice (PRODUCT/MANUAL)
+  // isProforma      Boolean        @default(false)
+  subtotal        Float          @default(0)
+  tax             Float          @default(0)
+  taxPercentage   Float          @default(0) // Tax percentage used to calculate tax amount
+  discount        Float          @default(0)
+  shippingCost    Float          @default(0) // <--- Tambahan: Biaya pengiriman
+  totalAmount     Float          @default(0)
+  paidAmount      Float          @default(0)
+  remainingAmount Float          @default(0)
+  deliveryAddress String?        // <--- Tambahan: Alamat pengiriman
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdBy       String?
+  updatedBy       String?
+  customerId      String
+  purchaseOrderId String?        @unique // <--- purchaseOrderId sudah cukup
+  invoiceItems    InvoiceItems[]
+  customer        Customers      @relation(fields: [customerId], references: [id])
+  purchaseOrder   PurchaseOrders? @relation(fields: [purchaseOrderId], references: [id])
+  payments        Payments[]
+  salesReturns    SalesReturns[]
+
+  creator         Users?         @relation("InvoiceCreator", fields: [createdBy], references: [id])
+  updater         Users?         @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
 
   @@map("invoices")
 }
 
 model InvoiceItems {
-  id         String   @id @default(cuid())
-  quantity   Float
-  price      Float
-  discount   Float    @default(0) // <--- Tambahan: Diskon per item
-  totalPrice Float    // Ini akan dihitung sebagai (quantity * price) - discount
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  invoiceId  String
-  productId  String
-  invoices   Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products   Products @relation(fields: [productId], references: [id])
+  id          String   @id @default(cuid())
+  description String?  // <--- Tambahan: Untuk deskripsi item non-produk
+  quantity    Float
+  price       Float
+  discount    Float    @default(0)
+  totalPrice  Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoiceId   String
+  productId   String?  // <--- Revisi: Dijadikan opsional untuk non-produk
+  invoices    Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products    Products? @relation(fields: [productId], references: [id])
 
   @@map("invoice_items")
+}
+
+
+model Payments {
+  id              String         @id @default(cuid())
+  paymentCode     String         @unique
+  paymentDate     DateTime       @default(now())
+  amount          Float
+  method          String
+  reference       String?
+  notes           String?
+  proofUrl        String?        // <--- Tambahan: URL ke file bukti pembayaran
+  status          PaidStatus  @default(PENDING)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  invoiceId       String
+  userId          String
+  invoice         Invoices       @relation(fields: [invoiceId], references: [id])
+  user            Users          @relation(fields: [userId], references: [id])
+
+  @@map("payments")
 }
 ```
 
@@ -63,32 +91,30 @@ Use custom UI from component
 2.PO Created.
 3.Warehouse Confirms Stock (PO/Order): Check the availability of quantity in the system. Stock has not decreased yet.
 4.Invoice Created.
-5.Warehouse Confirms Readiness of Goods (After Invoice): Goods are prepared physically and the warehouse marks them as "Ready to Ship." Stock has not decreased yet.
-6.Delivery Note Created: At this stage, the actual stock of Products will decrease. You will create a StockMovement entry of type SALES_OUT that references this Delivery Note.
+5.Payment an invoice.
+6.Warehouse Confirms Readiness of Goods (After Invoice): Goods are prepared physically and the warehouse marks them as "Ready to Ship." Stock has not decreased yet.
+7.Delivery Note Created: At this stage, the actual stock of Products will decrease. You will create a StockMovement entry of type SALES_OUT that references this Delivery Note.
 
-## I want to make flow number 4
+## I want to make flow number 5
 
-In the Sidebar Page, it will be named the Invoice module. The page created will be placed at the path "sales/invoice" and read on layout.tsx will contain this data:
+In the Sidebar Page, it will be named the "Konfirmasi Kesiapan" module. The page created will be placed at the path "inventory/konfirmasi-kesiapan" and read on layout.tsx will contain this data:
 const myStaticData = {
 module: "sales",
-subModule: "invoice",
-allowedRole: ["OWNER", "ADMIN"],
+subModule: "pembayaran",
+allowedRole: ["OWNER", "ADMIN","WAREHOUSE],
 data: await getCategories(), // adjust according to the data retrieval
 };
 
 ### Main Features:
 
-Add Invoice into database
-
-Invoice Form with the following the database column:
+Admin can confirm preparation from invoice
 
 ### Data Storage:
 
-Save to Invoice
-Save details to InvoiceItems
+Update Invoice statusPreparation
 
 ### Example Scenarios:
 
-Admin can create Invoice if PurchaseOrdes status is PROCESSING and StockConfirmationStatus is not WAITING_CONFIRMATION
+Admin can add
 
 Make everything complete so that it can CRUD the data.

@@ -3,9 +3,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Smooth transitions for theme changes */
-*,
-*::before,
-*::after {
+
+/* Smooth transitions for theme changes - More specific selectors */
+:not([class*="transition"]):not([style*="transition"]),
+:not([class*="transition"]):not([style*="transition"])::before,
+:not([class*="transition"]):not([style*="transition"])::after {
   transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -13,6 +15,7 @@
     stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 /* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

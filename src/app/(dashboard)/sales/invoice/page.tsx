@@ -5,6 +5,7 @@ import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
 import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
+import { formatRupiah } from "@/utils/formatRupiah";
 
 const columns = [
   { header: "Kode", accessor: "code" },
@@ -17,6 +18,15 @@ const columns = [
     header: "Tanggal Jatuh Tempo",
     accessor: "dueDate",
     render: (value: Date) => formatDate(value),
+  },
+  {
+    header: "Customer",
+    accessor: "customer.name",
+  },
+  {
+    header: "Total Pembayaran",
+    accessor: "totalAmount",
+    render: (value: number) => formatRupiah(value),
   },
   {
     header: "Status",
@@ -49,67 +59,6 @@ const columns = [
             ? "Dibatalkan"
             : value}
         </span>
-      );
-    },
-  },
-  {
-    header: "Customer",
-    accessor: "customer.name",
-  },
-  {
-    header: "Purchase Order",
-    accessor: "purchaseOrder.code",
-    cell: (info: { getValue: () => string }) => {
-      const value = info.getValue();
-      return value ? (
-        <span className="text-sm">{value}</span>
-      ) : (
-        <span className="text-gray-400 italic">Manual</span>
-      );
-    },
-  },
-  {
-    header: "Total Amount",
-    accessor: "totalAmount",
-    cell: (info: { getValue: () => number }) => {
-      const value = info.getValue();
-      return `Rp ${value.toLocaleString("id-ID")}`;
-    },
-  },
-  {
-    header: "Dibuat Oleh",
-    accessor: "creator.name",
-    cell: (info: { getValue: () => string }) => {
-      const value = info.getValue();
-      return value ? (
-        <span className="text-sm">{value}</span>
-      ) : (
-        <span className="text-gray-400 italic">-</span>
-      );
-    },
-  },
-  {
-    header: "Jumlah Item",
-    accessor: "invoiceItems",
-    cell: (info: { getValue: () => any[] }) => {
-      const items = info.getValue();
-      return items?.length || 0;
-    },
-  },
-  {
-    header: "Catatan",
-    accessor: "notes",
-    cell: (info: { getValue: () => string }) => {
-      const value = info.getValue();
-      return value ? (
-        <span
-          className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs"
-          title={value}
-        >
-          {value.length > 50 ? `${value.substring(0, 50)}...` : value}
-        </span>
-      ) : (
-        <span className="text-gray-400 italic">-</span>
       );
     },
   },
