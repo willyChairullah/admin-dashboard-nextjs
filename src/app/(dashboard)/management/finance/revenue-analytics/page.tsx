@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/common/Card";
-import { RevenueTrendChart, OrderValueTrendChart } from "@/components/charts";
+import { RevenueTrendChart } from "@/components/charts";
 import { TargetForm } from "@/components/ui/TargetForm";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
@@ -875,14 +875,22 @@ export default function RevenueAnalytics() {
               </div>
             </div>
 
-            {/* Interactive Order Value Trend Chart */}
-            <OrderValueTrendChart
-              data={data.avgOrderValue.breakdown}
-              current={data.avgOrderValue.current}
-              previous={data.avgOrderValue.previous}
-              trend={data.avgOrderValue.trend}
-              timeRange={timeRange}
-            />
+            {/* Order Value Breakdown */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {data.avgOrderValue.breakdown.map((item: any, index: number) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-xl"
+                >
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {formatRupiah(item.value)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    {item.period}
+                  </p>
+                </div>
+              ))}
+            </div>
           </Card>
         )}
       </div>

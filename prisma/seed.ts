@@ -23,6 +23,16 @@ async function main() {
     console.log("⚠️ userNotifications table not found, skipping...");
   }
   try {
+    await prisma.companyTargets.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ companyTargets table not found, skipping...");
+  }
+  try {
+    await prisma.salesTargets.deleteMany({});
+  } catch (e) {
+    console.log("⚠️ salesTargets table not found, skipping...");
+  }
+  try {
     await prisma.payments.deleteMany({});
   } catch (e) {
     console.log("⚠️ payments table not found, skipping...");
@@ -516,12 +526,12 @@ async function main() {
           createdBy: order.salesId, // Add sales rep to track achievements
           invoiceDate: invoiceDate,
           dueDate: dueDate,
-          status: (Math.random() > 0.1 ? "PAID" : "DRAFT") as
+          status: (Math.random() > 0.2 ? "PAID" : Math.random() > 0.5 ? "SENT" : "DRAFT") as
             | "DRAFT"
             | "SENT"
             | "PAID"
             | "OVERDUE"
-            | "CANCELLED",
+            | "CANCELLED", // 80% PAID, 10% SENT, 10% DRAFT for better analytics
           totalAmount: order.totalAmount,
           notes: `Invoice for order ${order.orderNumber}`,
           createdAt: invoiceDate,
@@ -569,15 +579,16 @@ async function main() {
       await prisma.payments.create({
         data: {
           id: uuid(),
+          paymentCode: `PAY-${paymentDate.getFullYear()}${String(
+            paymentDate.getMonth() + 1
+          ).padStart(2, "0")}-${String(totalInvoices + Math.floor(Math.random() * 1000)).padStart(4, "0")}`,
           invoiceId: invoice.id,
+          userId: invoice.createdBy || salesUser.id, // Use the sales rep who created the invoice, fallback to default sales user
           amount: invoice.totalAmount,
           paymentDate: paymentDate,
           method: Math.random() > 0.5 ? "CASH" : "TRANSFER",
-          reference: `PAY-${paymentDate.getFullYear()}${String(
-            paymentDate.getMonth() + 1
-          ).padStart(2, "0")}-${Math.floor(Math.random() * 1000)
-            .toString()
-            .padStart(3, "0")}`,
+          reference: `REF-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`,
+          status: "CLEARED", // Set as cleared for analytics
           notes: `Payment for invoice ${invoice.code}`,
           createdAt: paymentDate,
           updatedAt: paymentDate,
@@ -1024,6 +1035,115 @@ async function main() {
       }
     }
     console.log(`✅ Created ${totalTargets} sales targets`);
+
+    // Create company targets for analytics
+    console.log("🎯 Creating company targets...");
+    let companyTargets = 0;
+
+    // Create monthly company targets for current year
+    for (let month = 0; month < 12; month++) {
+      const targetDate = new Date(now.getFullYear(), month, 1);
+      const targetPeriod = `${now.getFullYear()}-${String(month + 1).padStart(2, '0')}`;
+      
+      // Base monthly target with seasonal variation
+      const baseMonthlyTarget = 50000000; // 50M per month
+      const seasonalFactor = 1 + Math.sin((month / 12) * 2 * Math.PI) * 0.3; // ±30% seasonal variation
+      const targetAmount = Math.floor(baseMonthlyTarget * seasonalFactor);
+      
+      // Calculate achieved amount based on current date
+      let achievedAmount = 0;
+      if (month < now.getMonth()) {
+        // Past months: 80-120% achievement
+        achievedAmount = Math.floor(targetAmount * (0.8 + Math.random() * 0.4));
+      } else if (month === now.getMonth()) {
+        // Current month: progress based on days elapsed
+        const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
+        const dayOfMonth = now.getDate();
+        const progressRate = dayOfMonth / daysInMonth;
+        achievedAmount = Math.floor(targetAmount * progressRate * (0.8 + Math.random() * 0.4));
+      }
+      // Future months: achievedAmount remains 0
+
+      await prisma.companyTargets.create({
+        data: {
+          id: uuid(),
+          targetType: "MONTHLY",
+          targetPeriod: targetPeriod,
+          targetAmount: targetAmount,
+          achievedAmount: achievedAmount,
+          isActive: true,
+          createdAt: targetDate,
+          updatedAt: now,
+        },
+      });
+      companyTargets++;
+    }
+
+    // Create quarterly company targets for current year
+    for (let quarter = 1; quarter <= 4; quarter++) {
+      const targetPeriod = `${now.getFullYear()}-Q${quarter}`;
+      const quarterStartMonth = (quarter - 1) * 3;
+      const targetDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+      
+      const baseQuarterlyTarget = 150000000; // 150M per quarter
+      const seasonalFactor = 1 + Math.sin((quarter / 4) * 2 * Math.PI) * 0.2; // ±20% seasonal variation
+      const targetAmount = Math.floor(baseQuarterlyTarget * seasonalFactor);
+      
+      // Calculate achieved amount based on current quarter
+      let achievedAmount = 0;
+      const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+      
+      if (quarter < currentQuarter) {
+        // Past quarters: 85-115% achievement
+        achievedAmount = Math.floor(targetAmount * (0.85 + Math.random() * 0.3));
+      } else if (quarter === currentQuarter) {
+        // Current quarter: progress based on months elapsed
+        const monthsInQuarter = 3;
+        const monthsElapsed = (now.getMonth() % 3) + 1;
+        const progressRate = monthsElapsed / monthsInQuarter;
+        achievedAmount = Math.floor(targetAmount * progressRate * (0.85 + Math.random() * 0.3));
+      }
+
+      await prisma.companyTargets.create({
+        data: {
+          id: uuid(),
+          targetType: "QUARTERLY",
+          targetPeriod: targetPeriod,
+          targetAmount: targetAmount,
+          achievedAmount: achievedAmount,
+          isActive: true,
+          createdAt: targetDate,
+          updatedAt: now,
+        },
+      });
+      companyTargets++;
+    }
+
+    // Create yearly company target
+    const yearlyTargetPeriod = now.getFullYear().toString();
+    const yearlyTargetAmount = 600000000; // 600M per year
+    
+    // Calculate achieved amount based on year progress
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+    const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
+    const yearProgressRate = dayOfYear / daysInYear;
+    const yearlyAchievedAmount = Math.floor(yearlyTargetAmount * yearProgressRate * (0.85 + Math.random() * 0.3));
+
+    await prisma.companyTargets.create({
+      data: {
+        id: uuid(),
+        targetType: "YEARLY",
+        targetPeriod: yearlyTargetPeriod,
+        targetAmount: yearlyTargetAmount,
+        achievedAmount: yearlyAchievedAmount,
+        isActive: true,
+        createdAt: new Date(now.getFullYear(), 0, 1),
+        updatedAt: now,
+      },
+    });
+    companyTargets++;
+
+    console.log(`✅ Created ${companyTargets} company targets`);
 
     // Create additional orders to ensure rich analytics data
     console.log("📈 Creating additional analytics-focused orders...");
