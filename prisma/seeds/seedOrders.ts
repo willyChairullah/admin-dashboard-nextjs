@@ -1,4 +1,10 @@
-import { PrismaClient, Customers, Products, Users } from "@prisma/client";
+import {
+  PrismaClient,
+  Customers,
+  Products,
+  Users,
+  Orders,
+} from "@prisma/client";
 import { v4 as uuid } from "uuid";
 
 export async function seedOrders(
@@ -6,8 +12,10 @@ export async function seedOrders(
   customers: Customers[],
   products: Products[],
   salesUser: Users
-) {
+): Promise<Orders[]> {
   console.log("📝 Creating sample orders with updated discounts...");
+
+  const createdOrders: Orders[] = []; // Array untuk menyimpan orders yang dibuat
 
   const createOrderWithItems = async (orderData: any, items: any[]) => {
     let subTotal = 0;
@@ -47,6 +55,7 @@ export async function seedOrders(
     console.log(
       `✅ Created order: ${newOrder.orderNumber} with total: ${totalAmount}`
     );
+    createdOrders.push(newOrder); // Tambahkan ke array
     return newOrder;
   };
 
@@ -193,4 +202,5 @@ export async function seedOrders(
   );
 
   console.log("✅ Sample orders with variations created successfully.");
+  return createdOrders; // Return array orders yang dibuat
 }

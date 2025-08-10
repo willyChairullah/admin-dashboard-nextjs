@@ -5,6 +5,7 @@ import { seedStores } from "./seeds/seedStores";
 import { seedCategoriesAndProducts } from "./seeds/seedCategoriesAndProducts";
 import { seedCustomers } from "./seeds/seedCustomers";
 import { seedOrders } from "./seeds/seedOrders";
+// import { seedPurchaseOrdersInvoicesDeliveryNotes } from "./seeds/seedPurchaseOrdersInvoicesDeliveryNotes";
 
 const prisma = new PrismaClient();
 
@@ -15,112 +16,32 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🗑️ Clearing existing data...");
 
-  // Clear in order due to foreign key constraints
-  // Use try-catch to handle missing tables gracefully
-  try {
-    await prisma.userNotifications.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ userNotifications table not found, skipping...");
-  }
-  try {
-    await prisma.companyTargets.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ companyTargets table not found, skipping...");
-  }
-  try {
-    await prisma.salesTargets.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ salesTargets table not found, skipping...");
-  }
-  try {
-    await prisma.payments.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ payments table not found, skipping...");
-  }
-  try {
-    await prisma.invoiceItems.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ invoiceItems table not found, skipping...");
-  }
-  try {
-    await prisma.invoices.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ invoices table not found, skipping...");
-  }
-  try {
-    await prisma.purchaseOrderItems.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ purchaseOrderItems table not found, skipping...");
-  }
-  try {
-    await prisma.purchaseOrders.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ purchaseOrders table not found, skipping...");
-  }
-  try {
-    await prisma.orderItems.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ orderItems table not found, skipping...");
-  }
-  try {
-    await prisma.deliveryNotes.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ deliveryNotes table not found, skipping...");
-  }
-  try {
-    await prisma.customerVisits.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ customerVisits table not found, skipping...");
-  }
-  try {
-    await prisma.fieldVisit.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ fieldVisit table not found, skipping...");
-  }
-  try {
-    await prisma.orders.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ orders table not found, skipping...");
-  }
-  try {
-    await prisma.stockMovements.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ stockMovements table not found, skipping...");
-  }
-  try {
-    await prisma.transactions.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ transactions table not found, skipping...");
-  }
-  try {
-    await prisma.store.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ store table not found, skipping...");
-  }
-  try {
-    await prisma.products.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ products table not found, skipping...");
-  }
-  try {
-    await prisma.categories.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ categories table not found, skipping...");
-  }
-  try {
-    await prisma.customers.deleteMany({});
-  } catch (e) {
-    console.log("⚠️ customers table not found, skipping...");
-  }
+  // Hapus dari model yang memiliki relasi 'child' terlebih dahulu,
+  // bergerak ke atas menuju model 'parent'.
+  await prisma.userNotifications.deleteMany({});
+  await prisma.stockMovements.deleteMany({});
+  await prisma.delivery_note_items.deleteMany({});
+  await prisma.deliveryNotes.deleteMany({});
+  await prisma.payments.deleteMany({});
+  await prisma.invoiceItems.deleteMany({});
+  await prisma.invoices.deleteMany({});
+  await prisma.purchaseOrderItems.deleteMany({});
+  await prisma.purchaseOrders.deleteMany({});
+  await prisma.orderItems.deleteMany({});
+  await prisma.orders.deleteMany({});
+  await prisma.customerVisits.deleteMany({});
+  await prisma.fieldVisit.deleteMany({});
+  await prisma.transactions.deleteMany({});
+  await prisma.store.deleteMany({});
+  await prisma.salesReturnItems.deleteMany({}); // Tambahan jika ada
+  await prisma.salesReturns.deleteMany({}); // Tambahan jika ada
+  await prisma.products.deleteMany({});
+  await prisma.categories.deleteMany({});
+  await prisma.customers.deleteMany({});
+  await prisma.users.deleteMany({});
 
-  let deletedUsersCount = 0;
-  try {
-    const deletedUsers = await prisma.users.deleteMany({});
-    deletedUsersCount = deletedUsers.count;
-  } catch (e) {
-    console.log("⚠️ users table not found, skipping...");
-  }
-  console.log(`✅ Cleared ${deletedUsersCount} users and related data`);
+  console.log("✅ Database cleared.");
+}
 
   try {
     console.log("👥 Creating 4 users with proper roles...");
@@ -1117,153 +1038,13 @@ async function main() {
         );
       }
 
-      await prisma.companyTargets.create({
-        data: {
-          id: uuid(),
-          targetType: "QUARTERLY",
-          targetPeriod: targetPeriod,
-          targetAmount: targetAmount,
-          achievedAmount: achievedAmount,
-          isActive: true,
-          createdAt: targetDate,
-          updatedAt: now,
-        },
-      });
-      companyTargets++;
-    }
-
-    // Create yearly company target
-    const yearlyTargetPeriod = now.getFullYear().toString();
-    const yearlyTargetAmount = 600000000; // 600M per year
-
-    // Calculate achieved amount based on year progress
-    const dayOfYear = Math.floor(
-      (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) /
-        (1000 * 60 * 60 * 24)
+    // Kirim data master yang relevan ke seeder order
+    const createdOrders = await seedOrders(
+      prisma,
+      createdCustomers,
+      createdProducts,
+      salesUser
     );
-    const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
-    const yearProgressRate = dayOfYear / daysInYear;
-    const yearlyAchievedAmount = Math.floor(
-      yearlyTargetAmount * yearProgressRate * (0.92 + Math.random() * 0.16)
-    ); // 92-108% range
-
-    await prisma.companyTargets.create({
-      data: {
-        id: uuid(),
-        targetType: "YEARLY",
-        targetPeriod: yearlyTargetPeriod,
-        targetAmount: yearlyTargetAmount,
-        achievedAmount: yearlyAchievedAmount,
-        isActive: true,
-        createdAt: new Date(now.getFullYear(), 0, 1),
-        updatedAt: now,
-      },
-    });
-    companyTargets++;
-
-    console.log(`✅ Created ${companyTargets} company targets`);
-
-    // Create additional orders to ensure rich analytics data
-    console.log("📈 Creating additional analytics-focused orders...");
-    let additionalOrders = 0;
-
-    // Create orders specifically distributed to show trends
-    for (let monthOffset = 12; monthOffset >= 0; monthOffset--) {
-      const orderDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - monthOffset,
-        1
-      );
-
-      // Create more orders for recent months to show growth trend
-      const baseOrdersPerMonth = 25; // Increased from 15
-      const growthFactor = 1 + (12 - monthOffset) * 0.05; // 5% growth per month
-      const ordersInMonth =
-        Math.floor(baseOrdersPerMonth * growthFactor) +
-        Math.floor(Math.random() * 10); // Increased variance
-
-      for (let i = 0; i < ordersInMonth; i++) {
-        const orderDay = new Date(orderDate);
-        orderDay.setDate(Math.floor(Math.random() * 28) + 1);
-
-        const dueDate = new Date(orderDay);
-        dueDate.setDate(dueDate.getDate() + 30);
-
-        const randomCustomer =
-          createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
-
-        // Vary order values to create realistic AOV trends
-        const baseOrderValue = 1500000; // 1.5M base (increased from 500K)
-        const seasonalFactor =
-          1 + Math.sin((orderDate.getMonth() / 12) * 2 * Math.PI) * 0.2; // Seasonal variation
-        const growthFactor2 = 1 + (12 - monthOffset) * 0.03; // 3% value growth per month
-        const randomFactor = 0.7 + Math.random() * 1.0; // Random variation 70%-170%
-
-        const itemsInOrder = Math.floor(Math.random() * 6) + 2; // 2-7 items (increased)
-        let orderTotal = 0;
-
-        const order = await prisma.orders.create({
-          data: {
-            id: uuid(),
-            orderNumber: `ANL-${orderDate.getFullYear()}${String(
-              orderDate.getMonth() + 1
-            ).padStart(2, "0")}-${String(additionalOrders + 1).padStart(
-              4,
-              "0"
-            )}`,
-            orderDate: orderDay,
-            dueDate: dueDate,
-            deliveryAddress: randomCustomer.address,
-            deliveryCity: randomCustomer.city,
-            customerId: randomCustomer.id,
-            salesId: salesUser.id,
-            status: monthOffset === 0 ? "PROCESSING" : "COMPLETED", // Current month processing, others completed
-            totalAmount: 0, // Will be calculated after items
-            notes: `Analytics order for ${orderDay.toLocaleDateString("id-ID", {
-              month: "long",
-              year: "numeric",
-            })}`,
-            createdAt: orderDay,
-            updatedAt: orderDay,
-          },
-        });
-
-        // Create order items with varied pricing
-        for (let j = 0; j < itemsInOrder; j++) {
-          const randomProduct =
-            createdProducts[Math.floor(Math.random() * createdProducts.length)];
-          const quantity = Math.floor(Math.random() * 200) + 30; // 30-230 bulk quantity (increased from 1-10)
-          const basePrice = randomProduct.price;
-          const priceVariation =
-            basePrice * seasonalFactor * growthFactor2 * randomFactor;
-          const finalPrice = Math.floor(priceVariation);
-          const totalPrice = quantity * finalPrice;
-          orderTotal += totalPrice;
-
-          await prisma.orderItems.create({
-            data: {
-              id: uuid(),
-              orderId: order.id,
-              productId: randomProduct.id,
-              quantity: quantity,
-              price: finalPrice,
-              totalPrice: totalPrice,
-              createdAt: orderDay,
-              updatedAt: orderDay,
-            },
-          });
-        }
-
-        // Update order total
-        await prisma.orders.update({
-          where: { id: order.id },
-          data: { totalAmount: orderTotal },
-        });
-
-        additionalOrders++;
-      }
-    }
-    console.log(`✅ Created ${additionalOrders} additional analytics orders`);
 
     console.log("🎉 Seed completed successfully!");
     console.log("\n📋 Test Accounts Created:");
