@@ -172,7 +172,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
       return productionLog;
     });
 
-    revalidatePath("/inventory/manajemen-stok");
+    revalidatePath("/inventory/produksi");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating production log:", error);
@@ -288,8 +288,8 @@ export async function updateProductionLog(
       return updatedLog;
     });
 
-    revalidatePath("/inventory/manajemen-stok");
-    revalidatePath(`/inventory/manajemen-stok/edit/${id}`);
+    revalidatePath("/inventory/produksi");
+    revalidatePath(`/inventory/produksi/edit/${id}`);
     return { success: true, data: result };
   } catch (error) {
     console.error("Error updating production log:", error);
@@ -345,7 +345,7 @@ export async function deleteProductionLog(id: string) {
       });
     });
 
-    revalidatePath("/inventory/manajemen-stok");
+    revalidatePath("/inventory/produksi");
     return { success: true };
   } catch (error) {
     console.error("Error deleting production log:", error);

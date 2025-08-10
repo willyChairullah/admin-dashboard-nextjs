@@ -511,7 +511,7 @@ export default function EditManagementStockPage() {
               <button
                 type="button"
                 onClick={addItem}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
               >
                 <Plus size={16} />
                 Tambah Item
@@ -568,8 +568,7 @@ export default function EditManagementStockPage() {
                       <option value="">Pilih Produk</option>
                       {availableProducts.map(product => (
                         <option key={product.id} value={product.id}>
-                          {product.name} (Stok: {product.currentStock}{" "}
-                          {product.unit})
+                          {product.name}
                         </option>
                       ))}
                     </select>

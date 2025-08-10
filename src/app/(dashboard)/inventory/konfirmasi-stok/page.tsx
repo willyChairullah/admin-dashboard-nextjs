@@ -93,7 +93,7 @@ export default function KonfirmasiStokPage() {
         headerTittle={`Konfirmasi Stok Barang`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
-        isAddHidden={true}
+        isAddHidden={false}
       />
       <ManagementContent
         sampleData={data.data || []}
