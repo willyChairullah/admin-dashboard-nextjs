@@ -277,7 +277,15 @@ export default function FieldVisitsPage() {
                     </h3>
                     <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded-full w-fit">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {formatDate(visit.visitDate)}
+                      {new Date(visit.visitDate).toLocaleString("id-ID", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false,
+                      })}
                     </div>
                   </div>
                   <div className="flex space-x-2 ml-4">

@@ -5,7 +5,7 @@ export async function seedUsers(prisma: PrismaClient) {
   console.log("👥 Creating 4 users...");
   const usersToCreate = [
     {
-      id: uuid(),
+      id: "owner123",
       email: "owner@indana.com",
       name: "Owner User",
       password: "password123",
@@ -16,7 +16,7 @@ export async function seedUsers(prisma: PrismaClient) {
       updatedAt: new Date(),
     },
     {
-      id: uuid(),
+      id: "admin123",
       email: "admin@indana.com",
       name: "Admin User",
       password: "password123",
@@ -27,7 +27,7 @@ export async function seedUsers(prisma: PrismaClient) {
       updatedAt: new Date(),
     },
     {
-      id: uuid(),
+      id: "warehouse123",
       email: "warehouse@indana.com",
       name: "Warehouse User",
       password: "password123",
@@ -38,7 +38,7 @@ export async function seedUsers(prisma: PrismaClient) {
       updatedAt: new Date(),
     },
     {
-      id: uuid(),
+      id: "sales123",
       email: "sales@indana.com",
       name: "Sales User",
       password: "password123",

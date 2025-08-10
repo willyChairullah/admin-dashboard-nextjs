@@ -611,6 +611,12 @@ enum PaymentStatus {
   OVERPAID
 }
 
+enum PaidStatus {
+  PENDING
+  CLEARED
+  CANCELED
+}
+
 enum OrderStatus {
   NEW
   PROCESSING

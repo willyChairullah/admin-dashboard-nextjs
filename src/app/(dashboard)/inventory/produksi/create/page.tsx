@@ -12,7 +12,6 @@ import {
 import {
   createProductionLog,
   getAvailableProducts,
-  getAvailableUsers,
 } from "@/lib/actions/productions";
 // [PERBAIKAN IMPORT] Perbaiki import getActiveCategories
 import { getActiveCategories } from "@/lib/actions/categories"; // Pastikan path ini benar jika getActiveCategories ada di file ini
@@ -21,6 +20,7 @@ import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { generateCodeByTable } from "@/utils/getCode"; // Pastikan path ini benar
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ProductionLogItemFormData {
   productId: string;
@@ -40,7 +40,6 @@ interface ProductionLogFormErrors {
   code?: string; // [PERUBAHAN] Tambahkan 'code' ke interface error
   productionDate?: string;
   notes?: string;
-  producedById?: string;
   items?: {
     [key: number]: { productId?: string; quantity?: string; notes?: string };
   };
@@ -62,9 +61,9 @@ interface User {
 export default function CreateProductionLogPage() {
   const data = useSharedData();
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   // [PERUBAHAN] Ganti isLoading menjadi isLoadingData untuk kejelasan
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null); // [BARU] State untuk error loading data
@@ -73,7 +72,7 @@ export default function CreateProductionLogPage() {
     code: "", // [PERUBAHAN] Default kosong, akan diisi useEffect
     productionDate: new Date().toISOString().split("T")[0],
     notes: "",
-    producedById: "",
+    producedById: user?.id || "",
     items: [{ productId: "", quantity: 0, notes: "" }],
   });
 
@@ -89,18 +88,17 @@ export default function CreateProductionLogPage() {
         setErrorLoadingData(null); // Reset error
 
         // [PERUBAHAN] Lakukan Promise.all untuk mengambil semua data yang dibutuhkan
-        // Termasuk generate code, pastikan nama model 'ProductionLogs' sesuai schema.prisma
-        const [products, users, newCode] = await Promise.all([
+        // Termasuk generate code, pastikan nama model 'Productions' sesuai schema.prisma
+        const [products, newCode] = await Promise.all([
           getAvailableProducts(),
-          getAvailableUsers(),
-          generateCodeByTable("ProductionLogs"), // [PERUBAHAN] Panggil generateCodeByTable di sini
+          generateCodeByTable("Productions"), // [PERUBAHAN] Panggil generateCodeByTable di sini
         ]);
 
         setAvailableProducts(products);
-        setAvailableUsers(users);
         setFormData(prevData => ({
           ...prevData,
           code: newCode, // Set kode yang digenerate
+          producedById: user?.id || prevData.producedById,
         }));
       } catch (error: any) {
         // Tangkap error dengan tipe 'any' untuk mengakses 'message'
@@ -125,7 +123,7 @@ export default function CreateProductionLogPage() {
     };
 
     fetchDataAndCode();
-  }, []); // Array dependensi kosong agar hanya berjalan sekali saat komponen mount
+  }, [user]); // Array dependensi dengan user agar berjalan saat komponen mount dan saat user berubah
 
   const validateForm = (): boolean => {
     const errors: ProductionLogFormErrors = {};
@@ -137,10 +135,6 @@ export default function CreateProductionLogPage() {
 
     if (!formData.productionDate) {
       errors.productionDate = "Tanggal produksi wajib diisi";
-    }
-
-    if (!formData.producedById) {
-      errors.producedById = "User yang melakukan produksi wajib dipilih";
     }
 
     if (formData.items.length === 0) {
@@ -194,7 +188,10 @@ export default function CreateProductionLogPage() {
   ) => {
     setFormData({ ...formData, [field]: value });
 
-    if (formErrors[field]) {
+    if (
+      field !== "producedById" &&
+      formErrors[field as keyof ProductionLogFormErrors]
+    ) {
       setFormErrors(prevErrors => ({ ...prevErrors, [field]: undefined }));
     }
   };
@@ -291,11 +288,6 @@ export default function CreateProductionLogPage() {
     }
   };
 
-  const userOptions = availableUsers.map(user => ({
-    value: user.id,
-    label: `${user.name} (${user.role})`,
-  }));
-
   // [PERUBAHAN] Conditional rendering untuk loading atau error data/kode
   if (isLoadingData) {
     return (
@@ -367,25 +359,6 @@ export default function CreateProductionLogPage() {
             />
           </FormField>
         </div>
-
-        <FormField label="Dibuat Oleh" errorMessage={formErrors.producedById}>
-          <select
-            value={formData.producedById}
-            onChange={e => handleInputChange("producedById", e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-              formErrors.producedById
-                ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                : "border-gray-300 dark:border-gray-600"
-            }`}
-          >
-            <option value="">Pilih User</option>
-            {userOptions.map(user => (
-              <option key={user.value} value={user.value}>
-                {user.label}
-              </option>
-            ))}
-          </select>
-        </FormField>
 
         <FormField label="Catatan" errorMessage={formErrors.notes}>
           <InputTextArea

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   Camera,
   CheckCircle,
@@ -8,6 +9,7 @@ import {
   Users,
   MapPin,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
@@ -44,9 +46,15 @@ export default function SalesFieldPage() {
   const [filteredStores, setFilteredStores] = useState<Store[]>([]);
   const [storeSearchQuery, setStoreSearchQuery] = useState("");
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -58,7 +66,9 @@ export default function SalesFieldPage() {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
       ) {
         setShowStoreDropdown(false);
       }
@@ -186,6 +196,16 @@ export default function SalesFieldPage() {
       setFilteredStores(filtered);
       setShowStoreDropdown(true);
 
+      // Calculate dropdown position
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+
       // Clear selected store if it's not in the filtered results
       if (
         selectedStore &&
@@ -230,12 +250,6 @@ export default function SalesFieldPage() {
     }
 
     // Clear photos from state
-    setPhotos([]);
-  };
-
-  const clearPhotosFromState = () => {
-    // Only clear photos from state without deleting from server
-    // Used when form is successfully submitted and photos are saved to database
     setPhotos([]);
   };
 
@@ -290,7 +304,7 @@ export default function SalesFieldPage() {
 
             // Reset form
             setCurrentLocation(null);
-            setPhotos([]); // Only clear photos from state, don't delete from server since they're saved
+            setPhotos([]);
             setSelectedStore("");
             setStoreName("");
             setStoreAddress("");
@@ -335,381 +349,425 @@ export default function SalesFieldPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Check-in Kunjungan
-            </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Form check-in untuk sales lapangan - {user.name || user.email}
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Username
-              </p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {user.name}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-indigo-900/20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 bg-clip-text text-transparent">
+                Check-in Kunjungan
+              </h1>
+              <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-300">
+                Form check-in untuk sales lapangan -{" "}
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {user.name || user.email}
+                </span>
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+            <div className="flex items-center space-x-4">
+              <div className="text-left lg:text-right">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  Sales Representative
+                </p>
+                <p className="font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate max-w-[200px]">
+                  {user.email}
+                </p>
+              </div>
+              <div className="relative">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Check-in Form */}
-      <div className="max-w-2xl">
-        <div className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Check-in Kunjungan Baru
-            </h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              Catat bukti kunjungan lapangan dengan lokasi GPS dan foto
-            </p>
-          </div>
-
-          <div className="p-6 space-y-6">
-            {/* Store Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pilih Toko *
-              </label>
-
-              {/* Toggle between existing and new store */}
-              <div className="mb-4">
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="storeType"
-                      checked={useExistingStore}
-                      onChange={() => setUseExistingStore(true)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Pilih dari daftar toko
-                    </span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="storeType"
-                      checked={!useExistingStore}
-                      onChange={() => setUseExistingStore(false)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Toko baru
-                    </span>
-                  </label>
-                </div>
+        {/* Check-in Form */}
+        <div className="max-w-3xl mx-auto">
+          <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/20">
+            {/* Form Header */}
+            <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 sm:p-8">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative z-10">
+                <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center">
+                  <MapPin className="h-6 w-6 mr-3 text-white/90" />
+                  Check-in Kunjungan Baru
+                </h3>
+                <p className="mt-2 text-blue-100 text-sm sm:text-base">
+                  Catat bukti kunjungan lapangan dengan lokasi GPS dan foto
+                </p>
               </div>
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-10 -translate-x-10"></div>
+            </div>
 
-              {useExistingStore ? (
-                <>
-                  {/* Searchable dropdown for existing stores */}
-                  <div className="relative" ref={dropdownRef}>
-                    <input
-                      type="text"
-                      value={storeSearchQuery}
-                      onChange={(e) => handleStoreSearch(e.target.value)}
-                      onFocus={() => {
-                        if (storeSearchQuery.trim() !== "") {
-                          setShowStoreDropdown(true);
-                        }
-                      }}
-                      placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
-                      className="block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                    />
+            <div className="p-8 space-y-8">
+              {/* Store Selection */}
+              <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-900/20 dark:to-indigo-900/10 backdrop-blur-sm rounded-2xl p-6 border border-blue-100/50 dark:border-blue-800/30">
+                <label className="flex items-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <Users className="w-5 h-5 mr-3 text-blue-500" />
+                  Pilih Toko *
+                </label>
 
-                    {/* Custom Dropdown */}
-                    {showStoreDropdown && filteredStores.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
-                        {filteredStores.map((store) => (
-                          <button
-                            key={store.id}
-                            type="button"
-                            onClick={() =>
-                              handleStoreSelect(store.id, store.name)
+                {/* Toggle between existing and new store */}
+                <div className="mb-6">
+                  <div className="flex space-x-6">
+                    <label className="flex items-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-blue-100/50 dark:border-blue-800/30 hover:bg-blue-50/70 dark:hover:bg-blue-900/30 transition-all cursor-pointer">
+                      <input
+                        type="radio"
+                        name="storeType"
+                        checked={useExistingStore}
+                        onChange={() => setUseExistingStore(true)}
+                        className="mr-3 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Pilih dari daftar toko
+                      </span>
+                    </label>
+                    <label className="flex items-center p-3 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-blue-100/50 dark:border-blue-800/30 hover:bg-blue-50/70 dark:hover:bg-blue-900/30 transition-all cursor-pointer">
+                      <input
+                        type="radio"
+                        name="storeType"
+                        checked={!useExistingStore}
+                        onChange={() => setUseExistingStore(false)}
+                        className="mr-3 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Toko baru
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {useExistingStore ? (
+                  <>
+                    {/* Modern Searchable Input with Portal Dropdown */}
+                    <div className="relative">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={storeSearchQuery}
+                        onChange={(e) => handleStoreSearch(e.target.value)}
+                        onFocus={() => {
+                          if (storeSearchQuery.trim() !== "") {
+                            setShowStoreDropdown(true);
+                            if (inputRef.current) {
+                              const rect =
+                                inputRef.current.getBoundingClientRect();
+                              setDropdownPosition({
+                                top: rect.bottom + window.scrollY + 8,
+                                left: rect.left + window.scrollX,
+                                width: rect.width,
+                              });
                             }
-                            className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-600 last:border-b-0 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20"
-                          >
-                            <div className="font-medium">{store.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                              {store.address}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                          }
+                        }}
+                        placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
+                        className="block w-full px-4 py-4 text-base border-2 border-blue-200/50 dark:border-blue-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
+                      />
+                      <ChevronDown
+                        className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 transition-transform ${
+                          showStoreDropdown ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
 
-                    {/* Show "no results" message */}
+                    {/* Portal Dropdown */}
                     {showStoreDropdown &&
-                      filteredStores.length === 0 &&
-                      storeSearchQuery && (
-                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg p-3">
-                          <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            Tidak ditemukan toko dengan kata kunci "
-                            {storeSearchQuery}"
-                          </div>
-                        </div>
+                      typeof window !== "undefined" &&
+                      createPortal(
+                        <div
+                          ref={dropdownRef}
+                          style={{
+                            position: "absolute",
+                            top: dropdownPosition.top,
+                            left: dropdownPosition.left,
+                            width: dropdownPosition.width,
+                            zIndex: 9999,
+                          }}
+                          className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-blue-200/50 dark:border-blue-700/50 rounded-xl shadow-2xl max-h-64 overflow-auto"
+                        >
+                          {filteredStores.length > 0 ? (
+                            filteredStores.map((store) => (
+                              <button
+                                key={store.id}
+                                type="button"
+                                onClick={() =>
+                                  handleStoreSelect(store.id, store.name)
+                                }
+                                className="w-full px-4 py-3 text-left hover:bg-blue-50/70 dark:hover:bg-blue-900/30 border-b border-blue-100/50 dark:border-blue-800/30 last:border-b-0 focus:outline-none focus:bg-blue-100/70 dark:focus:bg-blue-900/40 transition-all"
+                              >
+                                <div className="font-semibold text-gray-900 dark:text-white">
+                                  {store.name}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                                  {store.address}
+                                </div>
+                              </button>
+                            ))
+                          ) : storeSearchQuery ? (
+                            <div className="px-4 py-3">
+                              <div className="text-base text-red-600 dark:text-red-400 text-center font-medium">
+                                Tidak ditemukan toko dengan kata kunci "
+                                {storeSearchQuery}"
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>,
+                        document.body
                       )}
 
                     {/* Search results info */}
                     {storeSearchQuery && !showStoreDropdown && (
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <div className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium">
                         {filteredStores.length > 0
                           ? `Ditemukan ${filteredStores.length} dari ${stores.length} toko`
                           : `Tidak ditemukan toko dengan kata kunci "${storeSearchQuery}"`}
                       </div>
                     )}
-                  </div>
 
-                  {/* Store location info */}
-                  {selectedStore &&
-                    getSelectedStore()?.latitude &&
-                    getSelectedStore()?.longitude && (
-                      <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-blue-700 dark:text-blue-300">
-                            <p className="font-medium">
-                              {getSelectedStore()?.name}
-                            </p>
-                            <p>
-                              Lat: {getSelectedStore()?.latitude?.toFixed(6)},
-                              Lng: {getSelectedStore()?.longitude?.toFixed(6)}
-                            </p>
+                    {/* Store location info */}
+                    {selectedStore &&
+                      getSelectedStore()?.latitude &&
+                      getSelectedStore()?.longitude && (
+                        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 dark:from-blue-900/30 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                              <p>
+                                Lat: {getSelectedStore()?.latitude?.toFixed(6)}
+                              </p>
+                              <p>
+                                Lng: {getSelectedStore()?.longitude?.toFixed(6)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const store = getSelectedStore();
+                                if (store?.latitude && store?.longitude) {
+                                  window.open(
+                                    `https://www.google.com/maps?q=${store.latitude},${store.longitude}`,
+                                    "_blank"
+                                  );
+                                }
+                              }}
+                              className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-all"
+                            >
+                              <MapPin className="h-5 w-5" />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const store = getSelectedStore();
-                              if (store?.latitude && store?.longitude) {
-                                const url = `https://www.google.com/maps?q=${store.latitude},${store.longitude}`;
-                                window.open(url, "_blank");
-                              }
-                            }}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
-                          >
-                            <MapPin className="h-5 w-5" />
-                          </button>
                         </div>
-                      </div>
-                    )}
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Nama Toko *
-                    </label>
-                    <input
-                      type="text"
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      placeholder="Masukkan nama toko"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Alamat Toko *
-                    </label>
-                    <input
-                      type="text"
-                      value={storeAddress}
-                      required
-                      onChange={(e) => setStoreAddress(e.target.value)}
-                      placeholder="Masukkan alamat toko (wajib)"
-                      className="block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md">
-                    💡 Toko baru akan disimpan ke database dengan lokasi GPS
-                    saat ini
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Visit Purpose */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Tujuan Kunjungan *
-              </label>
-              <select
-                value={visitPurpose}
-                onChange={(e) => setVisitPurpose(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
-              >
-                <option value="">Pilih tujuan kunjungan</option>
-                <option value="sales">Sales Visit</option>
-                <option value="followup">Follow-up Visit</option>
-                <option value="newcustomer">New Customer Visit</option>
-                <option value="collection">Collection Visit</option>
-                <option value="survey">Survey Visit</option>
-                <option value="delivery">Delivery Visit</option>
-                <option value="maintenance">Maintenance Visit</option>
-              </select>
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Lokasi GPS *
-              </label>
-              <div className="flex items-center space-x-3">
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isCheckingIn}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <Navigation className="h-4 w-4 mr-2" />
-                  {isCheckingIn ? "Mendapatkan Lokasi..." : "Ambil Lokasi GPS"}
-                </button>
-                {currentLocation && (
-                  <>
-                    <span className="text-sm text-green-600 font-medium">
-                      📍 Lokasi berhasil didapat
-                    </span>
-                    <button
-                      type="button"
-                      onClick={openInMaps}
-                      className="inline-flex items-center px-3 py-1 border border-blue-300 dark:border-blue-600 shadow-sm text-sm font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      Buka di Maps
-                    </button>
+                      )}
                   </>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nama Toko *
+                      </label>
+                      <input
+                        type="text"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        placeholder="Masukkan nama toko"
+                        className="block w-full px-4 py-3 text-base border-2 border-blue-200/50 dark:border-blue-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Alamat Toko *
+                      </label>
+                      <input
+                        type="text"
+                        value={storeAddress}
+                        required
+                        onChange={(e) => setStoreAddress(e.target.value)}
+                        placeholder="Masukkan alamat toko (wajib)"
+                        className="block w-full px-4 py-3 text-base border-2 border-blue-200/50 dark:border-blue-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
+                      />
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-yellow-50/70 to-amber-50/50 dark:from-yellow-900/30 dark:to-amber-900/20 p-4 rounded-xl border border-yellow-200/50 dark:border-yellow-700/50">
+                      💡 Toko baru akan disimpan ke database dengan lokasi GPS
+                      saat ini
+                    </div>
+                  </div>
                 )}
               </div>
-              {currentLocation && (
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                  <p>Latitude: {currentLocation.lat.toFixed(6)}</p>
-                  <p>Longitude: {currentLocation.lng.toFixed(6)}</p>
-                </div>
-              )}
-            </div>
 
-            {/* Photos */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Foto Kunjungan
-              </label>
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingPhotos}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              {/* Visit Purpose */}
+              <div className="bg-gradient-to-br from-purple-50/50 to-pink-50/30 dark:from-purple-900/20 dark:to-pink-900/10 backdrop-blur-sm rounded-2xl p-6 border border-purple-100/50 dark:border-purple-800/30">
+                <label className="flex items-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <MapPin className="w-5 h-5 mr-3 text-purple-500" />
+                  Tujuan Kunjungan *
+                </label>
+                <select
+                  value={visitPurpose}
+                  onChange={(e) => setVisitPurpose(e.target.value)}
+                  className="block w-full px-4 py-4 text-base border-2 border-purple-200/50 dark:border-purple-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 rounded-xl backdrop-blur-sm transition-all shadow-lg"
                 >
-                  <Camera className="h-4 w-4 mr-2" />
-                  {isUploadingPhotos ? "Mengupload..." : "Tambah Foto"}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                />
+                  <option value="">Pilih tujuan kunjungan</option>
+                  <option value="sales">Sales Visit</option>
+                  <option value="followup">Follow-up Visit</option>
+                  <option value="newcustomer">New Customer Visit</option>
+                  <option value="collection">Collection Visit</option>
+                  <option value="survey">Survey Visit</option>
+                  <option value="delivery">Delivery Visit</option>
+                  <option value="maintenance">Maintenance Visit</option>
+                </select>
+              </div>
 
-                {photos.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {photos.length} foto telah diupload
-                      </p>
+              {/* Location */}
+              <div className="bg-gradient-to-br from-emerald-50/50 to-teal-50/30 dark:from-emerald-900/20 dark:to-teal-900/10 backdrop-blur-sm rounded-2xl p-6 border border-emerald-100/50 dark:border-emerald-800/30">
+                <label className="flex items-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <Navigation className="w-5 h-5 mr-3 text-emerald-500" />
+                  Lokasi GPS *
+                </label>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isCheckingIn}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Navigation className="h-5 w-5 mr-2" />
+                    {isCheckingIn
+                      ? "Mendapatkan Lokasi..."
+                      : "Ambil Lokasi GPS"}
+                  </button>
+                  {currentLocation && (
+                    <>
+                      <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Lokasi berhasil didapat
+                      </span>
                       <button
                         type="button"
-                        onClick={clearAllPhotos}
-                        disabled={isUploadingPhotos}
-                        className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 px-2 py-1 border border-red-300 dark:border-red-600 rounded disabled:opacity-50"
+                        onClick={openInMaps}
+                        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                       >
-                        Hapus Semua
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Buka di Maps
                       </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      {photos.map((photo, index) => (
-                        <div key={index} className="relative">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={photo}
-                            alt={`Foto ${index + 1}`}
-                            className="h-24 w-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
-                          />
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              // Delete file from server
-                              await deleteUploadedFile(photo);
-                              // Remove from state
-                              setPhotos((prevPhotos) =>
-                                prevPhotos.filter((_, i) => i !== index)
-                              );
-                            }}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      📁 Foto disimpan di folder uploads server
-                    </div>
+                    </>
+                  )}
+                </div>
+                {currentLocation && (
+                  <div className="mt-4 text-sm text-emerald-700 dark:text-emerald-300 bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg border border-emerald-200/50 dark:border-emerald-700/50">
+                    <p className="font-mono">
+                      Latitude: {currentLocation.lat.toFixed(6)}
+                    </p>
+                    <p className="font-mono">
+                      Longitude: {currentLocation.lng.toFixed(6)}
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Catatan Kunjungan
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                className="block w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Tuliskan catatan mengenai kunjungan ini..."
-              />
-            </div>
+              {/* Photos */}
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-900/20 dark:to-orange-900/10 backdrop-blur-sm rounded-2xl p-6 border border-amber-100/50 dark:border-amber-800/30">
+                <label className="flex items-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <Camera className="w-5 h-5 mr-3 text-amber-500" />
+                  Foto Kunjungan
+                </label>
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingPhotos}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Camera className="h-5 w-5 mr-2" />
+                    {isUploadingPhotos ? "Mengupload..." : "Tambah Foto"}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
 
-            {/* Check-in Button */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={handleCheckIn}
-                disabled={
-                  !currentLocation ||
+                  {photos.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {photos.length} foto telah diupload
+                        </p>
+                        <button
+                          type="button"
+                          onClick={clearAllPhotos}
+                          className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-medium"
+                        >
+                          Hapus Semua
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {photos.map((photo, index) => (
+                          <div key={index} className="relative group">
+                            <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={photo}
+                                alt={`Photo ${index + 1}`}
+                                className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-110"
+                                onClick={() => window.open(photo, "_blank")}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        📁 Foto disimpan di folder uploads server
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="bg-gradient-to-br from-slate-50/50 to-gray-50/30 dark:from-slate-900/20 dark:to-gray-900/10 backdrop-blur-sm rounded-2xl p-6 border border-slate-100/50 dark:border-slate-800/30">
+                <label className="flex items-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  <ExternalLink className="w-5 h-5 mr-3 text-slate-500" />
+                  Catatan Kunjungan
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                  className="block w-full px-4 py-3 border-2 border-slate-200/50 dark:border-slate-700/50 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white rounded-xl placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 backdrop-blur-sm transition-all shadow-lg resize-none"
+                  placeholder="Tuliskan catatan mengenai kunjungan ini..."
+                />
+              </div>
+
+              {/* Check-in Button */}
+              <div className="pt-6 border-t border-white/20 dark:border-gray-700/30">
+                <button
+                  type="button"
+                  onClick={handleCheckIn}
+                  disabled={
+                    !currentLocation ||
+                    (useExistingStore ? !selectedStore : !storeName) ||
+                    !visitPurpose ||
+                    isSaving
+                  }
+                  className="w-full inline-flex justify-center items-center px-8 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white text-lg font-bold rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  <CheckCircle className="h-6 w-6 mr-3" />
+                  {isSaving ? "Menyimpan..." : "Check-in Kunjungan"}
+                </button>
+                {(!currentLocation ||
                   (useExistingStore ? !selectedStore : !storeName) ||
-                  !visitPurpose ||
-                  isSaving
-                }
-                className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <CheckCircle className="h-5 w-5 mr-2" />
-                {isSaving ? "Menyimpan..." : "Check-in Kunjungan"}
-              </button>
-              {(!currentLocation ||
-                (useExistingStore ? !selectedStore : !storeName) ||
-                !visitPurpose) &&
-                !isSaving && (
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                    * Lengkapi semua field yang wajib diisi
-                  </p>
-                )}
+                  !visitPurpose) &&
+                  !isSaving && (
+                    <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      * Lengkapi semua field yang wajib diisi
+                    </p>
+                  )}
+              </div>
             </div>
           </div>
         </div>
