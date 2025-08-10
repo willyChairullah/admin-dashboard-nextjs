@@ -192,7 +192,7 @@ export async function createManagementStock(data: ManagementStockFormData) {
               : null,
             ManagementStockItemsId: item.stockOpnameItemId
               ? null
-              : managementStock.id,
+              : managementStockItem.id,
             productId: item.productId,
             userId: data.producedById,
             notes: item.notes || null,
