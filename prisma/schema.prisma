@@ -504,7 +504,6 @@ model ManagementStockItems {
   productId         String
   stockOpnamesId    String?
   notes             String?
-  stockOpnamesId    String?
   managementStock   ManagementStocks @relation(fields: [managementStockId], references: [id], onDelete: Cascade)
   product           Products         @relation(fields: [productId], references: [id])
   StockMovements    StockMovements[]

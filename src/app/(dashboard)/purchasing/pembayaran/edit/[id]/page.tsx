@@ -129,7 +129,7 @@ export default function EditPaymentPage() {
           customer: payment.invoice.customer,
         };
 
-        const allInvoices = invoices.some(inv => inv.id === currentInvoice.id)
+        const allInvoices = invoices.some((inv) => inv.id === currentInvoice.id)
           ? invoices
           : [currentInvoice, ...invoices];
 
@@ -163,13 +163,13 @@ export default function EditPaymentPage() {
     field: keyof PaymentFormData,
     value: string | number
   ) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
 
     if (formErrors[field]) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         [field]: undefined,
       }));
@@ -177,17 +177,17 @@ export default function EditPaymentPage() {
   };
 
   const handleInvoiceChange = (invoiceId: string) => {
-    const invoice = availableInvoices.find(inv => inv.id === invoiceId);
+    const invoice = availableInvoices.find((inv) => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
 
     // Don't auto-fill amount when changing invoice in edit mode
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       invoiceId,
     }));
 
     if (formErrors.invoiceId) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         invoiceId: undefined,
       }));
@@ -227,7 +227,7 @@ export default function EditPaymentPage() {
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) {
-      setFormData(prev => ({ ...prev, proofUrl: "" }));
+      setFormData((prev) => ({ ...prev, proofUrl: "" }));
       return;
     }
 
@@ -248,7 +248,7 @@ export default function EditPaymentPage() {
       const result = await response.json();
 
       if (result.success && result.files.length > 0) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           proofUrl: result.files[0],
         }));
@@ -374,7 +374,7 @@ export default function EditPaymentPage() {
               value={
                 formData.paymentDate ? new Date(formData.paymentDate) : null
               }
-              onChange={date => {
+              onChange={(date) => {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("paymentDate", dateString);
               }}
@@ -392,14 +392,10 @@ export default function EditPaymentPage() {
             <Select
               value={formData.invoiceId || ""}
               onChange={handleInvoiceChange}
-              options={availableInvoices.map(invoice => ({
+              options={availableInvoices.map((invoice) => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
-<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/edit/[id]/page.tsx
-                  invoice.customer?.name || "Unknown Customer"
-=======
                   invoice.customer?.name || "No Customer"
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/edit/[id]/page.tsx
                 } (${formatRupiah(invoice.remainingAmount)})`,
               }))}
               placeholder="Pilih Invoice"
@@ -417,7 +413,7 @@ export default function EditPaymentPage() {
           >
             <select
               value={formData.userId}
-              onChange={e => handleInputChange("userId", e.target.value)}
+              onChange={(e) => handleInputChange("userId", e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
                 formErrors.userId
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -425,7 +421,7 @@ export default function EditPaymentPage() {
               }`}
             >
               <option value="">Pilih User</option>
-              {availableUsers.map(user => (
+              {availableUsers.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name} ({user.role})
                 </option>
@@ -445,13 +441,9 @@ export default function EditPaymentPage() {
                 <span className="text-gray-600 dark:text-gray-400">
                   Customer:
                 </span>
-<<<<<<< HEAD:src/app/(dashboard)/sales/pembayaran/edit/[id]/page.tsx
-                <p className="font-medium">{selectedInvoice.customer?.name || "Unknown Customer"}</p>
-=======
                 <p className="font-medium">
                   {selectedInvoice.customer?.name || "No Customer"}
                 </p>
->>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:src/app/(dashboard)/purchasing/pembayaran/edit/[id]/page.tsx
               </div>
               <div>
                 <span className="text-gray-600 dark:text-gray-400">
@@ -486,7 +478,7 @@ export default function EditPaymentPage() {
               min="0"
               step="0.01"
               value={formData.amount.toString()}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("amount", parseFloat(e.target.value) || 0)
               }
               errorMessage={formErrors.amount}
@@ -502,7 +494,7 @@ export default function EditPaymentPage() {
           >
             <select
               value={formData.method}
-              onChange={e => handleInputChange("method", e.target.value)}
+              onChange={(e) => handleInputChange("method", e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
                 formErrors.method
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -523,7 +515,7 @@ export default function EditPaymentPage() {
           <FormField label="Status" errorMessage={formErrors.status} required>
             <select
               value={formData.status}
-              onChange={e => handleInputChange("status", e.target.value)}
+              onChange={(e) => handleInputChange("status", e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
                 formErrors.status
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -567,7 +559,7 @@ export default function EditPaymentPage() {
             name="notes"
             placeholder="Catatan pembayaran (opsional)"
             value={formData.notes}
-            onChange={e => handleInputChange("notes", e.target.value)}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
             errorMessage={formErrors.notes}
             rows={3}
           />
