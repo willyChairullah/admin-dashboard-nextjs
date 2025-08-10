@@ -117,6 +117,8 @@ export default function InvoiceDetailPage() {
       if (result.success) {
         toast.success("Invoice berhasil dihapus");
         router.push(`/${data.module}/${data.subModule}`);
+      } else {
+        toast.error("Gagal menghapus invoice");
       }
     } catch (err: any) {
       toast.error(err.message || "Terjadi kesalahan saat menghapus invoice");

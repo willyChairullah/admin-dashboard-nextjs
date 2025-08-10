@@ -78,7 +78,7 @@ interface PurchaseOrderFormErrors {
 interface Order {
   id: string;
   orderNumber: string;
-  paymentDeadline: Date | string | null;
+  paymentDeadline?: Date | string | null;
   discount: number;
   shippingCost: number;
   customer: {
@@ -91,7 +91,13 @@ interface Order {
   orderItems: {
     id: string;
     quantity: number;
+    price: number;
     discount: number;
+    totalPrice: number;
+    orderId: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
     products: {
       id: string;
       name: string;

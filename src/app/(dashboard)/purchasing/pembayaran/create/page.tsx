@@ -103,7 +103,7 @@ export default function CreatePaymentPage() {
 
         // Generate payment code
         const code = await generateCodeByTable("Payments");
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           paymentCode: code,
           userId: user?.id || prev.userId,
@@ -125,13 +125,13 @@ export default function CreatePaymentPage() {
     field: keyof PaymentFormData,
     value: string | number
   ) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
 
     if (field !== "userId" && formErrors[field as keyof PaymentFormErrors]) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         [field]: undefined,
       }));
@@ -139,17 +139,17 @@ export default function CreatePaymentPage() {
   };
 
   const handleInvoiceChange = (invoiceId: string) => {
-    const invoice = availableInvoices.find(inv => inv.id === invoiceId);
+    const invoice = availableInvoices.find((inv) => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       invoiceId,
       amount: invoice?.remainingAmount || 0,
     }));
 
     if (formErrors.invoiceId) {
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         invoiceId: undefined,
       }));
@@ -189,7 +189,7 @@ export default function CreatePaymentPage() {
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) {
-      setFormData(prev => ({ ...prev, proofUrl: "" }));
+      setFormData((prev) => ({ ...prev, proofUrl: "" }));
       return;
     }
 
@@ -210,7 +210,7 @@ export default function CreatePaymentPage() {
       const result = await response.json();
 
       if (result.success && result.files.length > 0) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           proofUrl: result.files[0],
         }));
@@ -316,7 +316,7 @@ export default function CreatePaymentPage() {
               value={
                 formData.paymentDate ? new Date(formData.paymentDate) : null
               }
-              onChange={date => {
+              onChange={(date) => {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("paymentDate", dateString);
               }}
@@ -333,7 +333,7 @@ export default function CreatePaymentPage() {
             <Select
               value={formData.invoiceId || ""}
               onChange={handleInvoiceChange}
-              options={availableInvoices.map(invoice => ({
+              options={availableInvoices.map((invoice) => ({
                 value: invoice.id,
                 label: `${invoice.code} - ${
                   invoice.customer?.name || "No Customer"
@@ -397,7 +397,7 @@ export default function CreatePaymentPage() {
                 type="text"
                 name="amount"
                 value={formatInputRupiah(formData.amount)}
-                onChange={e => {
+                onChange={(e) => {
                   const value = parseInputRupiah(e.target.value);
                   handleInputChange("amount", value);
                 }}
@@ -420,7 +420,7 @@ export default function CreatePaymentPage() {
           >
             <select
               value={formData.method}
-              onChange={e => handleInputChange("method", e.target.value)}
+              onChange={(e) => handleInputChange("method", e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
                 formErrors.method
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -441,7 +441,7 @@ export default function CreatePaymentPage() {
           <FormField label="Status" errorMessage={formErrors.status} required>
             <select
               value={formData.status}
-              onChange={e => handleInputChange("status", e.target.value)}
+              onChange={(e) => handleInputChange("status", e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
                 formErrors.status
                   ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
@@ -485,7 +485,7 @@ export default function CreatePaymentPage() {
             name="notes"
             placeholder="Catatan pembayaran (opsional)"
             value={formData.notes}
-            onChange={e => handleInputChange("notes", e.target.value)}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
             rows={3}
           />
         </FormField>

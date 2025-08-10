@@ -188,7 +188,16 @@ export async function getAvailableOrders(currentPoId?: string) {
           },
         },
         orderItems: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            discount: true,
+            totalPrice: true,
+            orderId: true,
+            productId: true,
+            createdAt: true,
+            updatedAt: true,
             products: {
               select: {
                 id: true,
@@ -287,7 +296,7 @@ export async function createPurchaseOrder(
     }
 
     // Create purchase order with items
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Create the main purchase order
       const purchaseOrder = await tx.purchaseOrders.create({
         data: {
@@ -301,7 +310,7 @@ export async function createPurchaseOrder(
           orderLevelDiscount: data.orderLevelDiscount,
           totalDiscount: data.totalDiscount,
           totalTax: data.totalTax,
-          taxPercentage: data.taxPercentage || 0, // Convert null to 0
+          taxPercentage: data.taxPercentage || 0,
           shippingCost: data.shippingCost,
           totalPayment: data.totalPayment,
           paymentDeadline: data.paymentDeadline,
@@ -311,7 +320,7 @@ export async function createPurchaseOrder(
 
       // Create purchase order items
       const items = await tx.purchaseOrderItems.createMany({
-        data: data.items.map(item => ({
+        data: data.items.map((item) => ({
           purchaseOrderId: purchaseOrder.id,
           productId: item.productId,
           quantity: item.quantity,
@@ -357,7 +366,7 @@ export async function updatePurchaseOrder(
       };
     }
 
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Update the main purchase order
       const purchaseOrder = await tx.purchaseOrders.update({
         where: { id },
@@ -386,7 +395,7 @@ export async function updatePurchaseOrder(
 
       // Create new items
       const items = await tx.purchaseOrderItems.createMany({
-        data: data.items.map(item => ({
+        data: data.items.map((item) => ({
           purchaseOrderId: id,
           productId: item.productId,
           quantity: item.quantity,
@@ -415,7 +424,7 @@ export async function deletePurchaseOrder(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await db.$transaction(async tx => {
+    await db.$transaction(async (tx) => {
       // Delete items first (cascade should handle this, but being explicit)
       await tx.purchaseOrderItems.deleteMany({
         where: { purchaseOrderId: id },

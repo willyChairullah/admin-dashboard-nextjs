@@ -19,7 +19,29 @@ export type StockConfirmationFormData = {
   }[];
 };
 
-export type PurchaseOrderForConfirmation = PurchaseOrders & {
+export type PurchaseOrderForConfirmation = {
+  id: string;
+  code: string;
+  poDate: Date;
+  dateline: Date;
+  status: string;
+  notes: string | null;
+  totalAmount: number;
+  orderLevelDiscount?: number;
+  totalDiscount?: number;
+  totalTax?: number;
+  taxPercentage?: number;
+  shippingCost?: number;
+  totalPayment?: number;
+  paymentDeadline?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  statusStockConfirmation: StockConfirmationStatus;
+  dateStockConfirmation?: Date | null;
+  userStockConfirmationId?: string | null;
+  notesStockConfirmation?: string | null;
+  orderId: string;
+  creatorId: string;
   creator: {
     id: string;
     name: string;
@@ -166,8 +188,7 @@ export async function confirmPurchaseOrderStock(
   data: StockConfirmationFormData
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
-    
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Update the main purchase order
       const purchaseOrder = await tx.purchaseOrders.update({
         where: { id },

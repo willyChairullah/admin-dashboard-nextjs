@@ -56,7 +56,7 @@ export default function ConfirmStockPage() {
   // Update userStockConfirmation when user data is available
   useEffect(() => {
     if (user?.id) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         userStockConfirmation: user.id,
       }));
@@ -81,7 +81,7 @@ export default function ConfirmStockPage() {
           statusStockConfirmation: poData.statusStockConfirmation,
           notesStockConfirmation: poData.notesStockConfirmation || "",
           userStockConfirmation: user?.id || "",
-          items: poData.items.map(item => ({
+          items: poData.items.map((item) => ({
             id: item.id,
             notesStockConfirmation: item.notesStockConfirmation || "",
           })),
@@ -234,7 +234,9 @@ export default function ConfirmStockPage() {
                 Total Bayar:
               </span>
               <p className="text-gray-900 dark:text-gray-100">
-                {formatRupiah(purchaseOrder.totalPayment)}
+                {formatRupiah(
+                  purchaseOrder.totalPayment || purchaseOrder.totalAmount
+                )}
               </p>
             </div>
             <div>
@@ -267,7 +269,7 @@ export default function ConfirmStockPage() {
           >
             <select
               value={formData.statusStockConfirmation}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange(
                   "statusStockConfirmation",
                   e.target.value as StockConfirmationStatus
@@ -299,7 +301,7 @@ export default function ConfirmStockPage() {
             <InputTextArea
               name="notesStockConfirmation"
               value={formData.notesStockConfirmation}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("notesStockConfirmation", e.target.value)
               }
               placeholder="Catatan tambahan untuk konfirmasi stok (opsional)"
@@ -382,7 +384,9 @@ export default function ConfirmStockPage() {
                     type="text"
                     name={`itemNotes-${index}`}
                     value={formData.items[index]?.notesStockConfirmation || ""}
-                    onChange={e => handleItemNotesChange(index, e.target.value)}
+                    onChange={(e) =>
+                      handleItemNotesChange(index, e.target.value)
+                    }
                     placeholder="Catatan khusus untuk item ini (opsional)"
                   />
                 </FormField>

@@ -22,9 +22,8 @@ import {
 } from "lucide-react";
 import { getOrders } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import Loading from "@/components/ui/common/Loading";
-import { Button } from "@/components/ui/common";
 import { OrderTracking } from "@/components/sales";
+import Loading from "@/components/ui/common/Loading";
 
 interface OrderItem {
   id: string;

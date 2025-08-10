@@ -1,5 +1,6 @@
 import { PrismaClient, Customers, Products, Users } from "@prisma/client";
 import { v4 as uuid } from "uuid";
+import { generateCodeByTable } from "../src/utils/getCode";
 
 const prisma = new PrismaClient();
 
@@ -370,15 +371,24 @@ async function main() {
         customerId: paidOrder.customerId,
       },
     });
+    const paymentCode = await generateCodeByTable("Payments");
     await prisma.payments.create({
       data: {
         id: uuid(),
+<<<<<<< HEAD:prisma/allSeed.ts
+        paymentCode: paymentCode,
+=======
         paymentCode: "PAY/08/2025/0001",
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:prisma/allSeed.txt
         paymentDate: new Date("2025-07-23T10:00:00Z"),
         amount: paidOrder.totalAmount,
         method: "TRANSFER",
         invoiceId: invoiceForPaidOrder.id,
+<<<<<<< HEAD:prisma/allSeed.ts
+        userId: salesUser.id,
+=======
         userId: adminUser.id,
+>>>>>>> 3bd94b0f90d227f9cc523b116fa2a6fe382768d9:prisma/allSeed.txt
       },
     });
     console.log(`✅ Created Invoice and Payment for ${paidOrder.orderNumber}`);

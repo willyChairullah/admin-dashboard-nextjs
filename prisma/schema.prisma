@@ -134,6 +134,20 @@ model SalesTargets {
   @@map("sales_targets")
 }
 
+model CompanyTargets {
+  id             String     @id @default(cuid())
+  targetType     TargetType @default(MONTHLY)
+  targetPeriod   String
+  targetAmount   Float
+  achievedAmount Float      @default(0)
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([targetPeriod, targetType])
+  @@map("company_targets")
+}
+
 model PurchaseOrders {
   id                      String                  @id @default(cuid())
   poDate                  DateTime                @default(now())
