@@ -220,7 +220,7 @@ export async function getAvailablePurchaseOrders() {
       where: {
         // PO should not already have an invoice
         invoices: {
-          none: {},
+          is: null, // Mencari PO yang tidak memiliki invoice
         },
         // PO status should be PROCESSING
         status: PurchaseOrderStatus.PROCESSING,

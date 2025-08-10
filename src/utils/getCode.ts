@@ -24,10 +24,11 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "SMN";
     case "Productions":
       return "PDK";
+    case "DeliveryNotes":
+      return "SJN";
     // Tambahkan singkatan untuk tabel lain yang akan memiliki kode
     // case 'Users': return 'USR'; // Contoh jika Users juga punya kode format ini
     // case 'Orders': return 'ORD'; // Contoh jika Orders juga punya kode format ini
-    // case 'DeliveryNotes': return 'DNO'; // Contoh jika DeliveryNotes juga punya kode format ini
     default:
       return null;
   }
@@ -170,6 +171,19 @@ async function getLastCodeForCurrentMonth(
           select: { code: true },
         });
         lastCode = lastManagementStock?.code || null;
+        break;
+
+      case "DeliveryNotes":
+        const lastDeliveryNote = await db.deliveryNotes.findFirst({
+          where: {
+            code: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { code: "desc" },
+          select: { code: true },
+        });
+        lastCode = lastDeliveryNote?.code || null;
         break;
 
       default:

@@ -230,6 +230,14 @@ export default function SideBar({
             children: [],
             roles: ["OWNER", "ADMIN"],
           },
+          {
+            id: "surat-jalan",
+            label: "Surat Jalan",
+            icon: "🚚",
+            href: "/sales/surat-jalan",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
+          },
         ],
       },
       {
