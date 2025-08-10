@@ -188,7 +188,7 @@ export default function SideBar({
             icon: "📊",
             href: "/sales",
             children: [],
-            roles: ["SALES", "OWNER"],
+            roles: ["SALES"],
           },
           {
             id: "sales-field",
@@ -196,7 +196,7 @@ export default function SideBar({
             icon: "📝",
             href: "/sales/fields",
             children: [],
-            roles: ["SALES", "OWNER"],
+            roles: ["SALES"],
           },
           {
             id: "field-visits",
@@ -204,7 +204,7 @@ export default function SideBar({
             icon: "🚚",
             href: "/sales/field-visits",
             children: [],
-            roles: ["SALES", "OWNER"],
+            roles: ["SALES"],
           },
           {
             id: "orders",
@@ -212,7 +212,7 @@ export default function SideBar({
             icon: "📦",
             href: "/sales/orders",
             children: [],
-            roles: ["SALES", "OWNER"],
+            roles: ["SALES"],
           },
           {
             id: "order-history",
@@ -220,7 +220,7 @@ export default function SideBar({
             icon: "📜",
             href: "/sales/order-history",
             children: [],
-            roles: ["SALES", "OWNER"],
+            roles: ["SALES"],
           },
           {
             id: "Invoice",
@@ -333,15 +333,7 @@ export default function SideBar({
             id: "revenue",
             label: "Revenue",
             icon: "📈",
-            href: "/finance/revenue",
-            children: [],
-            roles: ["ADMIN", "OWNER"],
-          },
-          {
-            id: "expenses",
-            label: "Expenses",
-            icon: "📉",
-            href: "/finance/expenses",
+            href: "/management/finance/revenue-analytics",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },
