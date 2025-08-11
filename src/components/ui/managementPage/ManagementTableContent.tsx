@@ -84,7 +84,6 @@ const ManagementFormContent = () => {
 
     setFormErrors(errors);
     if (!errors.name && !errors.email && !errors.category) {
-      console.log("Form submitted:", formData);
       setIsModalOpen(false);
     }
   };

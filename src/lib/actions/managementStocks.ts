@@ -130,8 +130,6 @@ export async function createManagementStock(data: ManagementStockFormData) {
         },
       });
 
-      console.log(data);
-
       // Create management stock items and update stock
       for (const item of data.items) {
         // Get current product stock

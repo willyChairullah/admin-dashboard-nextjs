@@ -326,7 +326,6 @@ export async function getAvailableUsers() {
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
-    console.log(data);
 
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -376,9 +375,6 @@ export async function createInvoice(data: InvoiceFormData) {
 
       return { invoice, invoiceItems };
     });
-
-    // revalidatePath("/sales/invoice");
-    console.log("backend");
 
     return { success: true, data: result };
   } catch (error) {
