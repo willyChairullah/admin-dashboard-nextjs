@@ -92,13 +92,19 @@ export default function RevenueAnalytics() {
           ? "QUARTERLY"
           : "YEARLY";
 
+      console.log("🔍 Fetching targets with targetType:", targetType);
+
       const response = await fetch(
         `/api/company-targets?targetType=${targetType}`
       );
       const result = await response.json();
 
+      console.log("📥 Targets API response:", result);
+      console.log("📊 Targets data:", result.data);
+
       if (result.success) {
         setTargets(result.data || []);
+        console.log("✅ Targets set to state:", result.data || []);
       } else {
         console.error("Failed to fetch company targets:", result.error);
         setTargets([]);
@@ -113,8 +119,18 @@ export default function RevenueAnalytics() {
   };
 
   const handleTargetSuccess = () => {
+    console.log("🎯 Target success callback triggered, refreshing targets...");
     toast.success("Target saved successfully! Refreshing data...");
-    fetchTargets(); // Refresh targets after adding/updating
+
+    // Also log the current state
+    console.log("🔄 Current targets before refresh:", targets);
+    console.log("🔄 Current timeRange:", timeRange);
+
+    // Add a small delay to ensure the target was saved before refetching
+    setTimeout(() => {
+      fetchTargets(); // Refresh targets after adding/updating
+    }, 500);
+
     setEditingTarget(null); // Close edit mode
   };
 
@@ -190,6 +206,11 @@ export default function RevenueAnalytics() {
     loadData();
     fetchTargets(); // Also load targets when timeRange changes
   }, [timeRange]);
+
+  // Load targets on initial mount
+  useEffect(() => {
+    fetchTargets();
+  }, []); // Empty dependency array for initial load only
 
   // Show loading if user is still loading
   if (userLoading) {
@@ -549,14 +570,15 @@ export default function RevenueAnalytics() {
             {targets.length > 0 && (
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Company Revenue Targets Overview
+                  Company Revenue Targets Overview ({targets.length} targets
+                  found)
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                   Company-wide revenue targets and achievements across all
                   revenue streams
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {targets.slice(0, 6).map((target) => (
+                  {targets.map((target) => (
                     <div
                       key={target.period}
                       className="bg-white/50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600"

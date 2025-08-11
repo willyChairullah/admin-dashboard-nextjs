@@ -250,6 +250,49 @@ async function main() {
         categoryId: oilCategory.id,
         updatedAt: new Date(),
       },
+      {
+        id: uuid(),
+        code: "PDK/04/2025/0007",
+        name: "Minyak Indana Premium 2 Liter",
+        description: "Minyak goreng Indana premium kemasan 2 liter",
+        unit: "Pcs",
+        price: 40000,
+        cost: 32000,
+        minStock: 10,
+        currentStock: 100,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "PDK/04/2025/0008",
+        name: "Minyak Indana Bulk 5 Liter",
+        description:
+          "Minyak goreng Indana kemasan bulk 5 liter untuk wholesale",
+        unit: "Pcs",
+        price: 90000,
+        cost: 75000,
+        minStock: 5,
+        currentStock: 50,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
+      {
+        id: uuid(),
+        code: "PDK/04/2025/0009",
+        name: "Minyak Indana Industrial 20 Liter",
+        description: "Minyak goreng Indana untuk kebutuhan industri 20 liter",
+        unit: "Pcs",
+        price: 350000,
+        cost: 300000,
+        minStock: 3,
+        currentStock: 20,
+        isActive: true,
+        categoryId: oilCategory.id,
+        updatedAt: new Date(),
+      },
     ];
 
     const createdProducts = [];
@@ -316,18 +359,22 @@ async function main() {
       console.log(`✅ Created customer: ${customer.name}`);
     }
 
-    // Create sample orders over the last 6 months
-    console.log("📦 Creating sample orders...");
+    // Create sample orders over all months of current year for better analytics
+    console.log("📦 Creating sample orders for revenue analytics...");
     const ordersToCreate = [];
     const now = new Date();
+    const currentYear = now.getFullYear();
 
-    for (let monthOffset = 6; monthOffset >= 0; monthOffset--) {
-      const orderDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - monthOffset,
-        1
-      );
-      const ordersInMonth = Math.floor(Math.random() * 50) + 30; // 30-80 orders per month (increased for 50M target)
+    // Create orders for all 12 months of the current year (2025)
+    for (let month = 0; month < 12; month++) {
+      const orderDate = new Date(currentYear, month, 1);
+
+      // Seasonal variation: Higher orders in certain months
+      const baseOrdersPerMonth = 40;
+      const seasonalMultiplier = 1 + Math.sin((month / 12) * 2 * Math.PI) * 0.3; // ±30% seasonal variation
+      const ordersInMonth =
+        Math.floor(baseOrdersPerMonth * seasonalMultiplier) +
+        Math.floor(Math.random() * 20); // 30-70 orders per month
 
       for (let i = 0; i < ordersInMonth; i++) {
         const orderDay = new Date(orderDate);
@@ -336,9 +383,11 @@ async function main() {
         const dueDate = new Date(orderDay);
         dueDate.setDate(dueDate.getDate() + 30); // 30 days later
 
-        const randomCustomer =
-          createdCustomers[Math.floor(Math.random() * createdCustomers.length)];
-        const randomSales = salesUser;
+        // Rotate through customers and sales reps more evenly
+        const randomCustomer = createdCustomers[i % createdCustomers.length];
+        const randomSales = salesUser; // For now, single sales user
+
+        // Higher completion rate for analytics
         const orderStatus:
           | "NEW"
           | "PROCESSING"
@@ -347,8 +396,8 @@ async function main() {
           | "PENDING_CONFIRMATION"
           | "IN_PROCESS"
           | "CANCELED" =
-          Math.random() > 0.2
-            ? "COMPLETED"
+          Math.random() > 0.1
+            ? "COMPLETED" // 90% completion rate
             : Math.random() > 0.5
             ? "PROCESSING"
             : "NEW";
@@ -383,19 +432,96 @@ async function main() {
     }
     console.log(`✅ Created ${createdOrders.length} sample orders`);
 
-    // Create order items for each order
-    console.log("📦 Creating order items...");
+    // Create order items for each order with realistic revenue patterns
+    console.log("📦 Creating order items with revenue analytics focus...");
     let totalOrderItems = 0;
 
     for (const order of createdOrders) {
-      const itemsInOrder = Math.floor(Math.random() * 6) + 2; // 2-7 items per order
+      const itemsInOrder = Math.floor(Math.random() * 4) + 2; // 2-5 items per order (more focused)
       let orderTotal = 0;
 
       for (let i = 0; i < itemsInOrder; i++) {
-        const randomProduct =
-          createdProducts[Math.floor(Math.random() * createdProducts.length)];
-        // Simulate bulk orders with larger quantities (50-500 units per item)
-        const quantity = Math.floor(Math.random() * 450) + 50; // 50-500 quantity for bulk orders
+        // Create product preference patterns for analytics
+        let randomProduct;
+        if (Math.random() < 0.4) {
+          // 40% chance for popular small packages (high volume, lower value)
+          const popularProducts = createdProducts.filter(
+            (p) =>
+              p.name.includes("250 ml") ||
+              p.name.includes("500 ml") ||
+              p.name.includes("1 Liter")
+          );
+          randomProduct =
+            popularProducts[Math.floor(Math.random() * popularProducts.length)];
+        } else if (Math.random() < 0.7) {
+          // 30% chance for premium products (medium volume, higher value)
+          const premiumProducts = createdProducts.filter(
+            (p) => p.name.includes("Premium") || p.name.includes("2 Liter")
+          );
+          if (premiumProducts.length > 0) {
+            randomProduct =
+              premiumProducts[
+                Math.floor(Math.random() * premiumProducts.length)
+              ];
+          } else {
+            randomProduct =
+              createdProducts[
+                Math.floor(Math.random() * createdProducts.length)
+              ];
+          }
+        } else {
+          // 30% chance for bulk/industrial products (low volume, very high value)
+          const bulkProducts = createdProducts.filter(
+            (p) => p.name.includes("Bulk") || p.name.includes("Industrial")
+          );
+          if (bulkProducts.length > 0) {
+            randomProduct =
+              bulkProducts[Math.floor(Math.random() * bulkProducts.length)];
+          } else {
+            randomProduct =
+              createdProducts[
+                Math.floor(Math.random() * createdProducts.length)
+              ];
+          }
+        }
+
+        // More realistic quantity distribution for revenue analytics
+        let quantity;
+        if (
+          randomProduct.name.includes("250 ml") ||
+          randomProduct.name.includes("500 ml")
+        ) {
+          // Smaller packages: higher quantities
+          quantity = Math.floor(Math.random() * 400) + 100; // 100-500 units
+        } else if (
+          randomProduct.name.includes("1 Liter") ||
+          randomProduct.name.includes("900 ml")
+        ) {
+          // Medium packages: medium quantities
+          quantity = Math.floor(Math.random() * 200) + 50; // 50-250 units
+        } else if (
+          randomProduct.name.includes("2 Liter") ||
+          randomProduct.name.includes("Premium")
+        ) {
+          // Premium products: moderate quantities
+          quantity = Math.floor(Math.random() * 100) + 20; // 20-120 units
+        } else if (
+          randomProduct.name.includes("5 Liter") ||
+          randomProduct.name.includes("Bulk")
+        ) {
+          // Bulk products: smaller quantities, higher value
+          quantity = Math.floor(Math.random() * 50) + 10; // 10-60 units
+        } else if (
+          randomProduct.name.includes("20 Liter") ||
+          randomProduct.name.includes("Industrial")
+        ) {
+          // Industrial products: very small quantities, very high value
+          quantity = Math.floor(Math.random() * 15) + 2; // 2-17 units
+        } else {
+          // Other products: default quantities
+          quantity = Math.floor(Math.random() * 150) + 30; // 30-180 units
+        }
+
         const unitPrice = randomProduct.price;
         const totalPrice = quantity * unitPrice;
         orderTotal += totalPrice;
@@ -423,14 +549,77 @@ async function main() {
     }
     console.log(`✅ Created ${totalOrderItems} order items`);
 
-    // Create invoices for completed orders
-    console.log("🧾 Creating invoices for completed orders...");
+    // Create purchase orders for completed orders (required for revenue analytics)
+    console.log("📋 Creating purchase orders for revenue analytics...");
+    const completedOrdersForPO = await prisma.orders.findMany({
+      where: { status: "COMPLETED" },
+    });
+    let totalPurchaseOrders = 0;
+
+    for (const order of completedOrdersForPO) {
+      const poDate = new Date(order.orderDate);
+      poDate.setDate(poDate.getDate() + Math.floor(Math.random() * 3) + 1); // 1-3 days after order
+
+      const purchaseOrder = await prisma.purchaseOrders.create({
+        data: {
+          id: uuid(),
+          code: `PO-${poDate.getFullYear()}${String(
+            poDate.getMonth() + 1
+          ).padStart(2, "0")}-${String(totalPurchaseOrders + 1).padStart(
+            3,
+            "0"
+          )}`,
+          orderId: order.id,
+          creatorId: order.salesId, // Using sales person as creator
+          poDate: poDate,
+          status: "COMPLETED",
+          totalAmount: order.totalAmount,
+          notes: `PO for order ${order.orderNumber}`,
+          createdAt: poDate,
+          updatedAt: poDate,
+        },
+      });
+
+      // Create purchase order items
+      const orderItems = await prisma.orderItems.findMany({
+        where: { orderId: order.id },
+      });
+
+      for (const orderItem of orderItems) {
+        await prisma.purchaseOrderItems.create({
+          data: {
+            id: uuid(),
+            purchaseOrderId: purchaseOrder.id,
+            productId: orderItem.productId,
+            quantity: orderItem.quantity,
+            price: orderItem.price,
+            totalPrice: orderItem.totalPrice,
+          },
+        });
+      }
+
+      totalPurchaseOrders++;
+    }
+    console.log(`✅ Created ${totalPurchaseOrders} purchase orders with items`);
+
+    // Create invoices for completed orders with strategic payment status
+    console.log("🧾 Creating invoices for revenue analytics...");
     const completedOrders = await prisma.orders.findMany({
       where: { status: "COMPLETED" },
     });
     let totalInvoices = 0;
 
     for (const order of completedOrders) {
+      // Find the corresponding purchase order
+      const purchaseOrder = await prisma.purchaseOrders.findFirst({
+        where: { orderId: order.id },
+      });
+
+      if (!purchaseOrder) {
+        console.log(`Warning: No purchase order found for order ${order.id}`);
+        continue;
+      }
+
       const invoiceDate = new Date(order.orderDate);
       invoiceDate.setDate(
         invoiceDate.getDate() + Math.floor(Math.random() * 7) + 1
@@ -439,6 +628,29 @@ async function main() {
         invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000
       ); // 30 days later
 
+      // Strategic payment status distribution for analytics
+      let invoiceStatus: "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED";
+      const monthsDiff =
+        (now.getFullYear() - invoiceDate.getFullYear()) * 12 +
+        (now.getMonth() - invoiceDate.getMonth());
+
+      if (monthsDiff > 3) {
+        // Invoices older than 3 months: mostly paid
+        invoiceStatus = Math.random() > 0.05 ? "PAID" : "OVERDUE"; // 95% paid for older invoices
+      } else if (monthsDiff > 0) {
+        // Invoices from 1-3 months ago: mix of paid and pending
+        invoiceStatus =
+          Math.random() > 0.2 ? "PAID" : Math.random() > 0.6 ? "SENT" : "DRAFT"; // 80% paid
+      } else if (monthsDiff === 0) {
+        // Current month invoices: some paid, some pending
+        invoiceStatus =
+          Math.random() > 0.4 ? "PAID" : Math.random() > 0.7 ? "SENT" : "DRAFT"; // 60% paid
+      } else {
+        // Future invoices: mostly draft/sent, some paid for advanced payments
+        invoiceStatus =
+          Math.random() > 0.8 ? "PAID" : Math.random() > 0.5 ? "SENT" : "DRAFT"; // 20% paid
+      }
+
       const invoice = await prisma.invoices.create({
         data: {
           id: uuid(),
@@ -446,14 +658,12 @@ async function main() {
             invoiceDate.getMonth() + 1
           ).padStart(2, "0")}-${String(totalInvoices + 1).padStart(3, "0")}`,
           customerId: order.customerId,
+          purchaseOrderId: purchaseOrder.id, // Link to purchase order for revenue analytics
           createdBy: order.salesId, // Add sales rep to track achievements
           invoiceDate: invoiceDate,
           dueDate: dueDate,
-          status: (Math.random() > 0.2
-            ? "PAID"
-            : Math.random() > 0.5
-            ? "SENT"
-            : "DRAFT") as "DRAFT" | "SENT" | "PAID" | "OVERDUE" | "CANCELLED", // 80% PAID, 10% SENT, 10% DRAFT for better analytics
+          status: invoiceStatus,
+          paymentStatus: invoiceStatus === "PAID" ? "PAID" : "UNPAID", // Set paymentStatus for revenue analytics
           totalAmount: order.totalAmount,
           notes: `Invoice for order ${order.orderNumber}`,
           createdAt: invoiceDate,
@@ -486,18 +696,36 @@ async function main() {
     }
     console.log(`✅ Created ${totalInvoices} invoices with items`);
 
-    // Create payments for paid invoices
-    console.log("💰 Creating payments for paid invoices...");
+    // Create payments for paid invoices with strategic timing
+    console.log("💰 Creating payments for revenue analytics...");
     const paidInvoices = await prisma.invoices.findMany({
-      where: { status: "PAID" },
+      where: { paymentStatus: "PAID" }, // Use paymentStatus instead of status
     });
 
     let paymentCounter = 1;
     for (const invoice of paidInvoices) {
       const paymentDate = new Date(invoice.invoiceDate);
-      paymentDate.setDate(
-        paymentDate.getDate() + Math.floor(Math.random() * 10) + 1
-      ); // 1-10 days after invoice
+      // Strategic payment timing based on invoice age
+      const invoiceAge = Math.floor(
+        (now.getTime() - invoice.invoiceDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (invoiceAge > 60) {
+        // Old invoices: paid within 5-15 days
+        paymentDate.setDate(
+          paymentDate.getDate() + Math.floor(Math.random() * 10) + 5
+        );
+      } else if (invoiceAge > 30) {
+        // Medium age: paid within 1-10 days
+        paymentDate.setDate(
+          paymentDate.getDate() + Math.floor(Math.random() * 9) + 1
+        );
+      } else {
+        // Recent invoices: paid quickly (1-5 days)
+        paymentDate.setDate(
+          paymentDate.getDate() + Math.floor(Math.random() * 4) + 1
+        );
+      }
 
       await prisma.payments.create({
         data: {
@@ -1057,12 +1285,17 @@ async function main() {
     // Create yearly company target
     const yearlyTargetPeriod = now.getFullYear().toString();
     const yearlyTargetAmount = 600000000; // 600M per year
-    
+
     // Calculate achieved amount based on year progress
-    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+    const dayOfYear = Math.floor(
+      (now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
     const daysInYear = 365 + (now.getFullYear() % 4 === 0 ? 1 : 0);
     const yearProgressRate = dayOfYear / daysInYear;
-    const yearlyAchievedAmount = Math.floor(yearlyTargetAmount * yearProgressRate * (0.92 + Math.random() * 0.16)); // 92-108% range
+    const yearlyAchievedAmount = Math.floor(
+      yearlyTargetAmount * yearProgressRate * (0.92 + Math.random() * 0.16)
+    ); // 92-108% range
 
     await prisma.companyTargets.create({
       data: {

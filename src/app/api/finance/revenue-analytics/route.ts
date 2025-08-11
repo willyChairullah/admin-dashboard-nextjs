@@ -159,7 +159,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
   const productPerformanceData = await Promise.all(
     productPerformance.map(async (item) => {
       if (!item.productId) return null; // Skip if productId is null
-      
+
       const product = await db.products.findUnique({
         where: { id: item.productId },
         include: {
@@ -217,7 +217,9 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
   );
 
   // Filter out null results
-  const filteredProductPerformanceData = productPerformanceData.filter(item => item !== null);
+  const filteredProductPerformanceData = productPerformanceData.filter(
+    (item) => item !== null
+  );
 
   // Fetch sales by representative based on paid invoices through purchase orders
   const salesByRep = await db.invoices.findMany({
@@ -242,12 +244,18 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
   });
 
   // Group by salesId manually
-  const salesRevenue = new Map<string, { totalAmount: number; count: number }>();
-  
-  salesByRep.forEach(invoice => {
+  const salesRevenue = new Map<
+    string,
+    { totalAmount: number; count: number }
+  >();
+
+  salesByRep.forEach((invoice) => {
     const salesId = invoice.purchaseOrder?.order?.salesId;
     if (salesId) {
-      const existing = salesRevenue.get(salesId) || { totalAmount: 0, count: 0 };
+      const existing = salesRevenue.get(salesId) || {
+        totalAmount: 0,
+        count: 0,
+      };
       salesRevenue.set(salesId, {
         totalAmount: existing.totalAmount + invoice.totalAmount,
         count: existing.count + 1,
@@ -283,7 +291,8 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
       });
 
       const completedOrders = item.count;
-      const conversion = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+      const conversion =
+        totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
 
       return {
         id: item.salesId,
@@ -324,12 +333,18 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
   });
 
   // Group by customerId manually
-  const customerRevenue = new Map<string, { totalAmount: number; customer: any }>();
-  
-  storePerformance.forEach(invoice => {
+  const customerRevenue = new Map<
+    string,
+    { totalAmount: number; customer: any }
+  >();
+
+  storePerformance.forEach((invoice) => {
     const customer = invoice.purchaseOrder?.order?.customer;
     if (customer) {
-      const existing = customerRevenue.get(customer.id) || { totalAmount: 0, customer };
+      const existing = customerRevenue.get(customer.id) || {
+        totalAmount: 0,
+        customer,
+      };
       customerRevenue.set(customer.id, {
         totalAmount: existing.totalAmount + invoice.totalAmount,
         customer,
