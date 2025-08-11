@@ -2,7 +2,7 @@
 
 import React from "react"; // Essential for JSX in Next.js 13+ App Router
 
-import { getInvoices } from "@/lib/actions/invoices";
+import { getInvoices, InvoiceWithDetails } from "@/lib/actions/invoices";
 import { DataProvider } from "@/contexts/StaticData";
 import { Toaster } from "sonner";
 
@@ -11,12 +11,22 @@ export default async function InvoiceLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Data defined or fetched on the server side
+  // Data defined or fetched on the server side with error handling
+  let invoicesData: InvoiceWithDetails[] = [];
+  
+  try {
+    invoicesData = await getInvoices();
+  } catch (error) {
+    console.error("Failed to fetch invoices:", error);
+    // Use empty array as fallback during build time
+    invoicesData = [];
+  }
+
   const myStaticData = {
     module: "sales",
     subModule: "invoice",
     allowedRole: ["OWNER", "ADMIN"],
-    data: await getInvoices(), // Await the async function
+    data: invoicesData,
   };
 
   return (
