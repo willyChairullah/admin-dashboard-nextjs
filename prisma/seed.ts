@@ -19,6 +19,8 @@ async function main() {
   // Hapus dari model yang memiliki relasi 'child' terlebih dahulu,
   // bergerak ke atas menuju model 'parent'.
   await prisma.userNotifications.deleteMany({});
+  await prisma.companyTargets.deleteMany({});
+  await prisma.salesTargets.deleteMany({});
   await prisma.stockMovements.deleteMany({});
   await prisma.delivery_note_items.deleteMany({});
   await prisma.deliveryNotes.deleteMany({});
