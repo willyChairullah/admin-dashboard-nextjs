@@ -69,6 +69,8 @@ const excludedAccessors = ["invoiceDate", "dueDate", "status", "notes"];
 export default function InvoicePage() {
   const data = useSharedData();
 
+  console.log(data);
+
   // Add safety checks for data
   if (!data) {
     return (

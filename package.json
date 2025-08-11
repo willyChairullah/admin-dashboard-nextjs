@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "start-3001": "set PORT=3001 && npm run start",
     "lint": "next lint",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio ",

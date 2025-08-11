@@ -125,7 +125,6 @@ export async function getInvoices(): Promise<InvoiceWithDetails[]> {
     return invoices;
   } catch (error) {
     console.error("Error getting invoices:", error);
-    // Return empty array instead of throwing during build time
     return [];
   }
 }
@@ -327,7 +326,6 @@ export async function getAvailableUsers() {
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
-
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
@@ -377,6 +375,7 @@ export async function createInvoice(data: InvoiceFormData) {
       return { invoice, invoiceItems };
     });
 
+    revalidatePath("/sales/invoice");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating invoice:", error);

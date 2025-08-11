@@ -121,6 +121,70 @@ export async function getInvoicesForPreparation(): Promise<
   }
 }
 
+// Get all invoices that need preparation confirmation (PAID status)
+export async function getAvailableInvoicesForPreparation(): Promise<
+  InvoiceForPreparation[]
+> {
+  try {
+    const invoices = await db.invoices.findMany({
+      where: {
+        // paymentStatus: "PAID", // Only paid invoices
+        // status: "PAID", // Only confirmed invoices
+        statusPreparation: {
+          in: ["WAITING_PREPARATION", "PREPARING"], // Can still be confirmed
+        },
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+        purchaseOrder: {
+          select: {
+            id: true,
+            code: true,
+          },
+        },
+        invoiceItems: {
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                currentStock: true,
+              },
+            },
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        updater: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        invoiceDate: "desc",
+      },
+    });
+
+    return invoices;
+  } catch (error) {
+    console.error("Error getting invoices for preparation:", error);
+    throw new Error("Failed to fetch invoices for preparation");
+  }
+}
+
 // Get invoice by ID for preparation confirmation
 export async function getInvoiceForPreparationById(
   id: string
