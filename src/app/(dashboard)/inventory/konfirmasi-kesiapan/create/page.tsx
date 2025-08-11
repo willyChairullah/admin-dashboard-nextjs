@@ -7,7 +7,7 @@ import {
   InputTextArea,
 } from "@/components/ui";
 import {
-  getInvoicesForPreparation,
+  getAvailableInvoicesForPreparation,
   confirmInvoicePreparation,
   type InvoiceForPreparation,
   type PreparationConfirmationFormData,
@@ -65,7 +65,7 @@ export default function CreatePreparationConfirmationPage() {
     const fetchData = async () => {
       try {
         setIsLoadingData(true);
-        const invoices = await getInvoicesForPreparation();
+        const invoices = await getAvailableInvoicesForPreparation();
 
         // Filter only invoices that are PAID and need preparation confirmation
         const needingPreparation = invoices.filter(

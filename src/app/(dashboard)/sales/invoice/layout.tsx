@@ -12,22 +12,24 @@ export default async function InvoiceLayout({
   children: React.ReactNode;
 }>) {
   // Data defined or fetched on the server side with error handling
-  let invoicesData: InvoiceWithDetails[] = [];
-  
-  try {
-    invoicesData = await getInvoices();
-  } catch (error) {
-    console.error("Failed to fetch invoices:", error);
-    // Use empty array as fallback during build time
-    invoicesData = [];
-  }
+  // let invoicesData: InvoiceWithDetails[] = [];
+
+  // try {
+  //   invoicesData = await getInvoices();
+  // } catch (error) {
+  //   console.error("Failed to fetch invoices:", error);
+  //   // Use empty array as fallback during build time
+  //   invoicesData = [];
+  // }
 
   const myStaticData = {
     module: "sales",
     subModule: "invoice",
     allowedRole: ["OWNER", "ADMIN"],
-    data: invoicesData,
+    data: await getInvoices(),
   };
+
+  console.log("data Invoice: ", myStaticData);
 
   return (
     // Wrap children with your DataProvider

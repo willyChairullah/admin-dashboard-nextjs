@@ -76,7 +76,67 @@ export async function getPurchaseOrdersForConfirmation(): Promise<
     const purchaseOrders = await db.purchaseOrders.findMany({
       where: {
         status: {
-          in: ["PENDING", "PROCESSING"],
+          in: ["PROCESSING"],
+        },
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        order: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                currentStock: true,
+              },
+            },
+          },
+        },
+        stockConfirmationUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return purchaseOrders;
+  } catch (error) {
+    console.error("Error getting purchase orders for confirmation:", error);
+    // Return empty array instead of throwing during build time
+    return [];
+  }
+}
+
+// Get all purchase orders for stock confirmation
+export async function getAvailablePurchaseOrdersForConfirmation(): Promise<
+  PurchaseOrderForConfirmation[]
+> {
+  try {
+    const purchaseOrders = await db.purchaseOrders.findMany({
+      where: {
+        status: {
+          in: ["PENDING"],
         },
       },
       include: {

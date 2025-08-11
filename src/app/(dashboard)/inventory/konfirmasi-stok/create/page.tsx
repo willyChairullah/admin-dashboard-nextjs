@@ -8,7 +8,7 @@ import {
   InputTextArea,
 } from "@/components/ui";
 import {
-  getPurchaseOrdersForConfirmation,
+  getAvailablePurchaseOrdersForConfirmation,
   confirmPurchaseOrderStock,
   type PurchaseOrderForConfirmation,
   type StockConfirmationFormData,
@@ -71,7 +71,8 @@ export default function CreateStockConfirmationPage() {
     const fetchData = async () => {
       try {
         setIsLoadingData(true);
-        const purchaseOrders = await getPurchaseOrdersForConfirmation();
+        const purchaseOrders =
+          await getAvailablePurchaseOrdersForConfirmation();
 
         // Filter only purchase orders that need confirmation
         const needingConfirmation = purchaseOrders.filter(
