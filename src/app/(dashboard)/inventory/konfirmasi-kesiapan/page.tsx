@@ -125,7 +125,7 @@ export default function KonfirmasiKesiapanPage() {
         headerTittle={`Konfirmasi Kesiapan Pengiriman`}
         mainPageName={`/${data.module}/${data.subModule}`}
         allowedRoles={data.allowedRole}
-        isAddHidden={true}
+        isAddHidden={false}
       />
       <ManagementContent
         sampleData={data.data || []}

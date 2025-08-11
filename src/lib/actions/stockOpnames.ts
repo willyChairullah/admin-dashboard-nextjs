@@ -138,7 +138,6 @@ export async function createStockOpname(data: CreateStockOpnameData) {
   try {
     const result = await db.$transaction(async tx => {
       // Calculate differences and determine status
-      console.log(data);
 
       const itemsWithDifference = data.items.map(item => ({
         ...item,

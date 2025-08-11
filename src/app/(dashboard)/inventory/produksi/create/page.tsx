@@ -379,7 +379,7 @@ export default function CreateProductionLogPage() {
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
               <Plus size={16} />
               Tambah Item
@@ -406,10 +406,11 @@ export default function CreateProductionLogPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <FormField
                   label="Produk"
                   errorMessage={formErrors.items?.[index]?.productId}
+                  required
                 >
                   <select
                     value={item.productId}
@@ -425,16 +426,39 @@ export default function CreateProductionLogPage() {
                     <option value="">Pilih Produk</option>
                     {availableProducts.map(product => (
                       <option key={product.id} value={product.id}>
-                        {product.name} ({product.unit}) - Stock:{" "}
-                        {product.currentStock}
+                        {product.name}
                       </option>
                     ))}
                   </select>
                 </FormField>
 
                 <FormField
+                  label="Stok Saat Ini"
+                  errorMessage={formErrors.items?.[index]?.productId}
+                >
+                  <Input
+                    type="text"
+                    name={`currentStock-${index}`}
+                    value={
+                      item.productId
+                        ? `${
+                            availableProducts.find(p => p.id === item.productId)
+                              ?.currentStock || 0
+                          } ${
+                            availableProducts.find(p => p.id === item.productId)
+                              ?.unit || ""
+                          }`
+                        : "-"
+                    }
+                    readOnly
+                    className="bg-gray-100 dark:bg-gray-700 cursor-default"
+                  />
+                </FormField>
+
+                <FormField
                   label="Quantity"
                   errorMessage={formErrors.items?.[index]?.quantity}
+                  required
                 >
                   <Input
                     type="number"

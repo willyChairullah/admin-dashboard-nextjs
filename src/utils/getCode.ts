@@ -244,7 +244,7 @@ export async function generateCodeByTable(tableName: string): Promise<string> {
   }
 
   const paddedNextIndex = String(nextIndex).padStart(4, "0"); // Format indeks menjadi 4 digit (0001)
-  console.log(`${baseCodePrefix}${paddedNextIndex}`);
+  // console.log(`${baseCodePrefix}${paddedNextIndex}`);
 
   return `${baseCodePrefix}${paddedNextIndex}`;
 }

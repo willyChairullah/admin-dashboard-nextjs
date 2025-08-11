@@ -29,6 +29,6 @@ export async function hashPassword(password: string): Promise<{ hashedPassword: 
   const password = "MySecurePassword123";
   const { hashedPassword, salt } = await hashPassword(password); // Hash the password and generate salt
 
-  console.log("Salt:", salt);
-  console.log("Hashed Password:", hashedPassword);
+  // console.log("Salt:", salt);
+  // console.log("Hashed Password:", hashedPassword);
 })();

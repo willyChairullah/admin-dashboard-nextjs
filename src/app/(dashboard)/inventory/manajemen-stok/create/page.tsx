@@ -20,6 +20,7 @@ import {
 } from "@/lib/actions/stockOpnames";
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { ManagementStockStatus } from "@prisma/client";
@@ -98,6 +99,7 @@ interface ReconciledOpname {
 export default function CreateManagementStockPage() {
   const data = useSharedData();
   const router = useRouter();
+  const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -111,7 +113,7 @@ export default function CreateManagementStockPage() {
     managementDate: new Date().toISOString().split("T")[0],
     status: ManagementStockStatus.IN,
     notes: "",
-    producedById: "",
+    producedById: user?.id || "", // Auto-set from current user
     items: [{ productId: "", quantity: 0, notes: "", stockOpnameItemId: "" }],
   });
 
@@ -146,7 +148,19 @@ export default function CreateManagementStockPage() {
     };
 
     fetchData();
-  }, []); // Auto-populate items when opname is selected for OPNAME_ADJUSTMENT
+  }, []);
+
+  // Update producedById when user is loaded
+  useEffect(() => {
+    if (user?.id && !formData.producedById) {
+      setFormData(prev => ({
+        ...prev,
+        producedById: user.id,
+      }));
+    }
+  }, [user, formData.producedById]);
+
+  // Auto-populate items when opname is selected for OPNAME_ADJUSTMENT
 
   useEffect(() => {
     if (
@@ -440,28 +454,14 @@ export default function CreateManagementStockPage() {
             </select>
           </FormField>
 
-          <FormField
-            required
-            label="User yang Melakukan"
-            errorMessage={formErrors.producedById}
-          >
-            <select
-              value={formData.producedById}
-              onChange={e => handleInputChange("producedById", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
-                formErrors.producedById
-                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            >
-              <option value="">Pilih User</option>
-              {availableUsers.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <Input
+            type="hidden"
+            name="producedByName"
+            value={user?.name || "Loading user..."}
+            readOnly
+            className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+          />
+          <input type="hidden" value={formData.producedById} />
         </div>
         {/* Dropdown untuk memilih Stock Opname yang sudah RECONCILED */}
         {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT && (
@@ -513,7 +513,7 @@ export default function CreateManagementStockPage() {
               <button
                 type="button"
                 onClick={addItem}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
               >
                 <Plus size={16} />
                 Tambah Item
@@ -546,7 +546,7 @@ export default function CreateManagementStockPage() {
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <FormField
                     required
                     label="Produk"
@@ -573,13 +573,47 @@ export default function CreateManagementStockPage() {
                       }`}
                     >
                       <option value="">Pilih Produk</option>
-                      {availableProducts.map(product => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} (Stok: {product.currentStock}{" "}
-                          {product.unit})
-                        </option>
-                      ))}
+                      {availableProducts
+                        .filter(
+                          product =>
+                            // Filter out already selected products except current selection
+                            !formData.items.some(
+                              (formItem, formIndex) =>
+                                formIndex !== index &&
+                                formItem.productId === product.id
+                            )
+                        )
+                        .map(product => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
                     </select>
+                  </FormField>
+
+                  <FormField
+                    label="Stok Saat Ini"
+                    errorMessage={formErrors.items?.[index]?.productId}
+                  >
+                    <Input
+                      type="text"
+                      name={`currentStock-${index}`}
+                      value={
+                        item.productId
+                          ? `${
+                              availableProducts.find(
+                                p => p.id === item.productId
+                              )?.currentStock || 0
+                            } ${
+                              availableProducts.find(
+                                p => p.id === item.productId
+                              )?.unit || ""
+                            }`
+                          : "-"
+                      }
+                      readOnly
+                      className="bg-gray-100 dark:bg-gray-700 cursor-default"
+                    />
                   </FormField>
 
                   <FormField
@@ -602,7 +636,9 @@ export default function CreateManagementStockPage() {
                         handleItemChange(
                           index,
                           "quantity",
-                          parseFloat(e.target.value) || 0
+                          e.target.value === ""
+                            ? 0
+                            : parseFloat(e.target.value) || 0
                         )
                       }
                       disabled={
@@ -612,12 +648,12 @@ export default function CreateManagementStockPage() {
                       errorMessage={formErrors.items?.[index]?.quantity}
                       placeholder="0"
                     />
-                    {selectedProduct && (
+                    {/* {selectedProduct && (
                       <span className="text-xs text-gray-500 mt-1">
                         Stok saat ini: {selectedProduct.currentStock}{" "}
                         {selectedProduct.unit}
                       </span>
-                    )}
+                    )} */}
                   </FormField>
 
                   {formData.status ===
@@ -677,6 +713,25 @@ export default function CreateManagementStockPage() {
                       />
                     </FormField>
                   )}
+
+                  {/* {formData.status !==
+                    ManagementStockStatus.OPNAME_ADJUSTMENT && (
+                    <FormField
+                      label="Catatan Item"
+                      errorMessage={formErrors.items?.[index]?.notes}
+                    >
+                      <Input
+                        type="text"
+                        name={`notesExtra-${index}`}
+                        value={item.notes || ""}
+                        onChange={e =>
+                          handleItemChange(index, "notes", e.target.value)
+                        }
+                        errorMessage={formErrors.items?.[index]?.notes}
+                        placeholder="Catatan untuk item ini (opsional)"
+                      />
+                    </FormField>
+                  )} */}
                 </div>
                 {formData.status === ManagementStockStatus.OPNAME_ADJUSTMENT ? (
                   <FormField

@@ -368,7 +368,7 @@ const CreateStokOpnamePage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <ManagementHeader
         allowedRoles={["OWNER", "WAREHOUSE", "ADMIN"]}
         mainPageName="/inventory/stok-opname"
@@ -459,7 +459,7 @@ const CreateStokOpnamePage = () => {
               className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
               <Plus size={16} />
-              Tambah Produk
+              Tambah Item
             </button>
           </div>
 
@@ -473,7 +473,9 @@ const CreateStokOpnamePage = () => {
                 className="p-4 border border-gray-200 dark:border-gray-600 rounded-md space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Produk {index + 1}</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Item #{index + 1}
+                  </h4>
                   {formData.items.length > 1 && (
                     <button
                       type="button"
@@ -485,7 +487,7 @@ const CreateStokOpnamePage = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <FormField
                     label="Produk"
                     errorMessage={errors.items?.[index]?.productId}
@@ -503,12 +505,21 @@ const CreateStokOpnamePage = () => {
                       }`}
                     >
                       <option value="">Pilih Produk</option>
-                      {products.map(product => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} ({product.category.name}) -{" "}
-                          {product.currentStock} {product.unit}
-                        </option>
-                      ))}
+                      {products
+                        .filter(
+                          product =>
+                            // Filter out already selected products except current selection
+                            !formData.items.some(
+                              (formItem, formIndex) =>
+                                formIndex !== index &&
+                                formItem.productId === product.id
+                            )
+                        )
+                        .map(product => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
                     </select>
                   </FormField>
 
@@ -566,19 +577,22 @@ const CreateStokOpnamePage = () => {
                       </p>
                     )}
                   </FormField>
-                </div>
 
-                <FormField label="Catatan Item">
-                  <InputTextArea
-                    name={`itemNotes-${index}`}
-                    value={item.notes || ""}
-                    onChange={e =>
-                      handleItemChange(index, "notes", e.target.value)
-                    }
-                    placeholder="Catatan untuk item ini..."
-                    rows={2}
-                  />
-                </FormField>
+                  <FormField
+                    label="Catatan Item"
+                    errorMessage={errors.items?.[index]?.notes}
+                  >
+                    <Input
+                      type="text"
+                      name={`notes-${index}`}
+                      value={item.notes || ""}
+                      onChange={e =>
+                        handleItemChange(index, "notes", e.target.value)
+                      }
+                      placeholder="Catatan untuk item ini (opsional)"
+                    />
+                  </FormField>
+                </div>
               </div>
             );
           })}

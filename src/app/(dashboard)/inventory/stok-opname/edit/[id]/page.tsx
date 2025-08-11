@@ -555,7 +555,9 @@ const EditStokOpnamePage = () => {
                 className="p-4 border border-gray-200 dark:border-gray-600 rounded-md space-y-4"
               >
                 <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Produk {index + 1}</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Item #{index + 1}
+                  </h4>
                   {canEdit && formData.items.length > 1 && (
                     <button
                       type="button"
