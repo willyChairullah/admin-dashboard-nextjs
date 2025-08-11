@@ -125,7 +125,7 @@ export default function CreatePurchaseOrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  console.log(user);
+  // console.log(user);
 
   const [formData, setFormData] = useState<PurchaseOrderFormData>({
     code: "",

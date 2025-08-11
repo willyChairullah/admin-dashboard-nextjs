@@ -125,7 +125,6 @@ export async function getInvoices(): Promise<InvoiceWithDetails[]> {
     return invoices;
   } catch (error) {
     console.error("Error getting invoices:", error);
-    // Return empty array instead of throwing during build time
     return [];
   }
 }
@@ -376,6 +375,7 @@ export async function createInvoice(data: InvoiceFormData) {
       return { invoice, invoiceItems };
     });
 
+    revalidatePath("/sales/invoice");
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating invoice:", error);

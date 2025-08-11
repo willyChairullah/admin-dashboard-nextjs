@@ -143,7 +143,7 @@ export default function CreateInvoicePage() {
     ],
   });
 
-  console.log(formData);
+  // console.log(formData);
 
   const [formErrors, setFormErrors] = useState<InvoiceFormErrors>({});
 
