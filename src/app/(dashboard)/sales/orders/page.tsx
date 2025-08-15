@@ -33,6 +33,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   discount?: number; // Diskon per item
+  crates?: number; // Jumlah krat
 }
 
 export default function OrdersPage() {
@@ -84,7 +85,7 @@ export default function OrdersPage() {
   const [paymentDeadline, setPaymentDeadline] = useState("");
 
   const [items, setItems] = useState<OrderItem[]>([
-    { productName: "", quantity: 1, price: 0, discount: 0 },
+    { productName: "", quantity: 1, price: 0, discount: 0, crates: 0 },
   ]);
 
   // Helper function to get bottles per crate based on volume
@@ -93,14 +94,23 @@ export default function OrdersPage() {
     if (!product) return 24; // default
 
     // Extract volume from product name or unit
-    const volumeMatch =
+    const mlMatch =
       product.unit.match(/(\d+)\s*ml/i) || product.name.match(/(\d+)\s*ml/i);
-    if (volumeMatch) {
-      const volume = parseInt(volumeMatch[1]);
-      if (volume >= 800 && volume <= 1000) return 12;
-      if (volume >= 250 && volume <= 500) return 24;
+    const literMatch =
+      product.unit.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i) ||
+      product.name.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i);
+
+    if (literMatch) {
+      // Convert liters to ml (1 liter = 1000ml)
+      const volume = parseFloat(literMatch[1]) * 1000;
+      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
+      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
+    } else if (mlMatch) {
+      const volume = parseInt(mlMatch[1]);
+      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
+      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
     }
-    return 24; // default for 250-500ml
+    return 24; // default for smaller volumes
   };
 
   // Helper function to calculate crates from quantity
@@ -227,7 +237,7 @@ export default function OrdersPage() {
   const addItem = () => {
     setItems([
       ...items,
-      { productName: "", quantity: 1, price: 0, discount: 0 },
+      { productName: "", quantity: 1, price: 0, discount: 0, crates: 0 },
     ]);
   };
 
@@ -243,11 +253,27 @@ export default function OrdersPage() {
     value: string | number
   ) => {
     const updatedItems = [...items];
-    if (field === "quantity" || field === "price" || field === "discount") {
+    if (
+      field === "quantity" ||
+      field === "price" ||
+      field === "discount" ||
+      field === "crates"
+    ) {
       updatedItems[index][field] = Number(value);
     } else {
       (updatedItems[index] as any)[field] = value as string;
     }
+    setItems(updatedItems);
+  };
+
+  const updateCrateAndQuantity = (index: number, crateValue: number) => {
+    const updatedItems = [...items];
+    const item = updatedItems[index];
+    const bottlesPerCrate = getBottlesPerCrate(item.productName);
+
+    updatedItems[index].crates = crateValue;
+    updatedItems[index].quantity = crateValue * bottlesPerCrate;
+
     setItems(updatedItems);
   };
 
@@ -284,6 +310,21 @@ export default function OrdersPage() {
     }
 
     return subtotal - discount + shippingCost;
+  };
+
+  const calculateActualDiscount = () => {
+    const subtotal = calculateSubtotal();
+    let discount = 0;
+
+    if (discountType === "OVERALL") {
+      if (discountUnit === "PERCENTAGE") {
+        discount = (subtotal * totalDiscount) / 100;
+      } else {
+        discount = totalDiscount;
+      }
+    }
+
+    return discount;
   };
 
   const handleSubmitOrder = async () => {
@@ -385,7 +426,15 @@ export default function OrdersPage() {
             setPaymentDeadline("");
             setDiscountType("OVERALL");
             setDiscountUnit("AMOUNT");
-            setItems([{ productName: "", quantity: 1, price: 0, discount: 0 }]);
+            setItems([
+              {
+                productName: "",
+                quantity: 1,
+                price: 0,
+                discount: 0,
+                crates: 0,
+              },
+            ]);
           } else {
             toast.error(
               "Gagal menyimpan order: " + (result.error || "Unknown error")
@@ -1068,6 +1117,9 @@ export default function OrdersPage() {
                                       selectedProduct.price
                                     );
                                   }
+                                  // Reset crates and quantity when product changes
+                                  updateItem(index, "crates", 0);
+                                  updateItem(index, "quantity", 1);
                                 }}
                                 className="block w-full px-4 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md appearance-none"
                               >
@@ -1112,7 +1164,30 @@ export default function OrdersPage() {
                           <div className="flex items-end gap-3">
                             <div className="w-20 sm:w-24 flex-shrink-0">
                               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                                Qty
+                                Krat
+                              </label>
+                              <input
+                                type="number"
+                                value={item.crates || 0}
+                                onChange={(e) =>
+                                  updateCrateAndQuantity(
+                                    index,
+                                    Number(e.target.value)
+                                  )
+                                }
+                                placeholder="0"
+                                min="0"
+                                step="0.1"
+                                className="block w-full px-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-center"
+                              />
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {getBottlesPerCrate(item.productName)} btl/krat
+                              </div>
+                            </div>
+
+                            <div className="w-20 sm:w-24 flex-shrink-0">
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                                Qty (Pieces)
                               </label>
                               <input
                                 type="number"
@@ -1122,7 +1197,8 @@ export default function OrdersPage() {
                                 }
                                 placeholder="1"
                                 min="1"
-                                className="block w-full px-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-center"
+                                disabled={true}
+                                className="block w-full px-3 py-3 text-sm border-0 bg-gray-100 dark:bg-gray-500 text-gray-500 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg shadow-sm text-center cursor-not-allowed"
                               />
                             </div>
 
@@ -1140,10 +1216,11 @@ export default function OrdersPage() {
                                   placeholder="0"
                                   min="0"
                                   step="0.01"
-                                  className="block w-full pl-8 pr-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+                                  disabled={true}
+                                  className="block w-full pl-8 pr-3 py-3 text-sm border-0 bg-gray-100 dark:bg-gray-500 text-gray-500 dark:text-gray-400 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg shadow-sm cursor-not-allowed"
                                 />
                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                  <span className="text-gray-500 text-xs">
+                                  <span className="text-gray-400 text-xs">
                                     Rp
                                   </span>
                                 </div>
@@ -1272,10 +1349,17 @@ export default function OrdersPage() {
                         {discountType === "OVERALL" && totalDiscount > 0 && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-600 dark:text-gray-300 font-medium">
-                              Diskon:
+                              Diskon{" "}
+                              {discountUnit === "PERCENTAGE"
+                                ? `(${totalDiscount}%)`
+                                : ""}
+                              :
                             </span>
                             <span className="font-bold text-red-600">
-                              -Rp {totalDiscount.toLocaleString("id-ID")}
+                              -Rp{" "}
+                              {calculateActualDiscount().toLocaleString(
+                                "id-ID"
+                              )}
                             </span>
                           </div>
                         )}
