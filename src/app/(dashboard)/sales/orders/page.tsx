@@ -626,7 +626,7 @@ export default function OrdersPage() {
                     </h4>
                     {useExistingStore && selectedStore && (
                       <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
-                        Auto dari toko terpilih
+                        Auto-filled • Dapat diedit
                       </span>
                     )}
                   </div>
@@ -640,12 +640,7 @@ export default function OrdersPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Masukkan nama customer"
-                        disabled={useExistingStore && !!selectedStore}
-                        className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
-                          useExistingStore && selectedStore
-                            ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
-                            : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
-                        }`}
+                        className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -658,12 +653,7 @@ export default function OrdersPage() {
                           value={customerEmail}
                           onChange={(e) => setCustomerEmail(e.target.value)}
                           placeholder="email@customer.com"
-                          disabled={useExistingStore && !!selectedStore}
-                          className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
-                            useExistingStore && selectedStore
-                              ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
-                              : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
-                          }`}
+                          className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
                       </div>
                       <div className="min-w-0">
@@ -675,12 +665,7 @@ export default function OrdersPage() {
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
                           placeholder="08xxxxxxxxxx"
-                          disabled={useExistingStore && !!selectedStore}
-                          className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
-                            useExistingStore && selectedStore
-                              ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
-                              : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
-                          }`}
+                          className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
                       </div>
                     </div>
@@ -699,7 +684,7 @@ export default function OrdersPage() {
                     </h4>
                     {useExistingStore && selectedStore && (
                       <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">
-                        Alamat auto dari toko
+                        Auto-filled • Dapat diedit
                       </span>
                     )}
                   </div>
@@ -713,12 +698,7 @@ export default function OrdersPage() {
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="Masukkan alamat lengkap pengiriman"
                         rows={3}
-                        disabled={useExistingStore && !!selectedStore}
-                        className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 resize-none ${
-                          useExistingStore && selectedStore
-                            ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed opacity-75"
-                            : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:shadow-xl"
-                        }`}
+                        className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 resize-none bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:shadow-xl"
                       />
                     </div>
 
