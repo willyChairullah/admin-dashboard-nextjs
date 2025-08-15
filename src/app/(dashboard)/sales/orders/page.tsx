@@ -70,10 +70,13 @@ export default function OrdersPage() {
 
   // New form states for shipping, discount, and payment
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [discountType, setDiscountType] = useState<"PER_ITEM" | "TOTAL">(
-    "TOTAL"
+  const [discountType, setDiscountType] = useState<"OVERALL" | "PER_CRATE">(
+    "OVERALL"
   );
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
+  const [discountUnit, setDiscountUnit] = useState<"AMOUNT" | "PERCENTAGE">(
+    "AMOUNT"
+  );
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEADLINE">(
     "IMMEDIATE"
@@ -83,6 +86,28 @@ export default function OrdersPage() {
   const [items, setItems] = useState<OrderItem[]>([
     { productName: "", quantity: 1, price: 0, discount: 0 },
   ]);
+
+  // Helper function to get bottles per crate based on volume
+  const getBottlesPerCrate = (productName: string): number => {
+    const product = products.find((p) => p.name === productName);
+    if (!product) return 24; // default
+
+    // Extract volume from product name or unit
+    const volumeMatch =
+      product.unit.match(/(\d+)\s*ml/i) || product.name.match(/(\d+)\s*ml/i);
+    if (volumeMatch) {
+      const volume = parseInt(volumeMatch[1]);
+      if (volume >= 800 && volume <= 1000) return 12;
+      if (volume >= 250 && volume <= 500) return 24;
+    }
+    return 24; // default for 250-500ml
+  };
+
+  // Helper function to calculate crates from quantity
+  const calculateCrates = (quantity: number, productName: string): number => {
+    const bottlesPerCrate = getBottlesPerCrate(productName);
+    return quantity / bottlesPerCrate;
+  };
 
   // Load data on component mount
   useEffect(() => {
@@ -229,15 +254,35 @@ export default function OrdersPage() {
   const calculateSubtotal = () => {
     return items.reduce((sum, item) => {
       const itemTotal = item.quantity * item.price;
-      const itemDiscount =
-        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
+      let itemDiscount = 0;
+
+      if (discountType === "PER_CRATE") {
+        const crates = calculateCrates(item.quantity, item.productName);
+        if (discountUnit === "PERCENTAGE") {
+          // Percentage discount per crate
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          // Amount discount per crate
+          itemDiscount = crates * (item.discount || 0);
+        }
+      }
+
       return sum + (itemTotal - itemDiscount);
     }, 0);
   };
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
-    const discount = discountType === "TOTAL" ? totalDiscount : 0;
+    let discount = 0;
+
+    if (discountType === "OVERALL") {
+      if (discountUnit === "PERCENTAGE") {
+        discount = (subtotal * totalDiscount) / 100;
+      } else {
+        discount = totalDiscount;
+      }
+    }
+
     return subtotal - discount + shippingCost;
   };
 
@@ -338,7 +383,8 @@ export default function OrdersPage() {
             setTotalDiscount(0);
             setShippingCost(0);
             setPaymentDeadline("");
-            setDiscountType("TOTAL");
+            setDiscountType("OVERALL");
+            setDiscountUnit("AMOUNT");
             setItems([{ productName: "", quantity: 1, price: 0, discount: 0 }]);
           } else {
             toast.error(
@@ -796,7 +842,7 @@ export default function OrdersPage() {
                       <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4">
                         <label
                           className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
-                            discountType === "TOTAL"
+                            discountType === "OVERALL"
                               ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg transform scale-105"
                               : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
                           }`}
@@ -804,17 +850,17 @@ export default function OrdersPage() {
                           <input
                             type="radio"
                             name="discountType"
-                            checked={discountType === "TOTAL"}
-                            onChange={() => setDiscountType("TOTAL")}
+                            checked={discountType === "OVERALL"}
+                            onChange={() => setDiscountType("OVERALL")}
                             className="sr-only"
                           />
                           <span className="text-sm font-medium">
-                            Diskon Total
+                            Diskon Keseluruhan
                           </span>
                         </label>
                         <label
                           className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
-                            discountType === "PER_ITEM"
+                            discountType === "PER_CRATE"
                               ? "bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg transform scale-105"
                               : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
                           }`}
@@ -822,33 +868,148 @@ export default function OrdersPage() {
                           <input
                             type="radio"
                             name="discountType"
-                            checked={discountType === "PER_ITEM"}
-                            onChange={() => setDiscountType("PER_ITEM")}
+                            checked={discountType === "PER_CRATE"}
+                            onChange={() => setDiscountType("PER_CRATE")}
                             className="sr-only"
                           />
                           <span className="text-sm font-medium">
-                            Diskon Per Pcs
+                            Diskon Per Krat
                           </span>
                         </label>
                       </div>
 
-                      {discountType === "TOTAL" && (
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={totalDiscount}
-                            onChange={(e) =>
-                              setTotalDiscount(Number(e.target.value))
-                            }
-                            placeholder="Masukkan total diskon"
-                            min="0"
-                            step="1000"
-                            className="block w-full pl-12 pr-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
-                          />
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-                            <span className="text-gray-500 text-sm font-medium">
-                              Rp
-                            </span>
+                      {discountType === "OVERALL" && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                              Unit Diskon
+                            </label>
+                            <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              <label
+                                className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                                  discountUnit === "AMOUNT"
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="discountUnit"
+                                  checked={discountUnit === "AMOUNT"}
+                                  onChange={() => setDiscountUnit("AMOUNT")}
+                                  className="sr-only"
+                                />
+                                <span className="text-sm font-medium">
+                                  Nominal (Rp)
+                                </span>
+                              </label>
+                              <label
+                                className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                                  discountUnit === "PERCENTAGE"
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="discountUnit"
+                                  checked={discountUnit === "PERCENTAGE"}
+                                  onChange={() => setDiscountUnit("PERCENTAGE")}
+                                  className="sr-only"
+                                />
+                                <span className="text-sm font-medium">
+                                  Persen (%)
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={totalDiscount}
+                              onChange={(e) =>
+                                setTotalDiscount(Number(e.target.value))
+                              }
+                              placeholder={`Masukkan total diskon ${
+                                discountUnit === "PERCENTAGE" ? "(%)" : "(Rp)"
+                              }`}
+                              min="0"
+                              max={
+                                discountUnit === "PERCENTAGE"
+                                  ? "100"
+                                  : undefined
+                              }
+                              step={
+                                discountUnit === "PERCENTAGE" ? "1" : "1000"
+                              }
+                              className="block w-full pl-12 pr-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
+                            />
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-4">
+                              <span className="text-gray-500 text-sm font-medium">
+                                {discountUnit === "PERCENTAGE" ? "%" : "Rp"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {discountType === "PER_CRATE" && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                              Unit Diskon
+                            </label>
+                            <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              <label
+                                className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                                  discountUnit === "AMOUNT"
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="discountUnit"
+                                  checked={discountUnit === "AMOUNT"}
+                                  onChange={() => setDiscountUnit("AMOUNT")}
+                                  className="sr-only"
+                                />
+                                <span className="text-sm font-medium">
+                                  Nominal (Rp)
+                                </span>
+                              </label>
+                              <label
+                                className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
+                                  discountUnit === "PERCENTAGE"
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="discountUnit"
+                                  checked={discountUnit === "PERCENTAGE"}
+                                  onChange={() => setDiscountUnit("PERCENTAGE")}
+                                  className="sr-only"
+                                />
+                                <span className="text-sm font-medium">
+                                  Persen (%)
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                            <div className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
+                              Informasi Krat:
+                            </div>
+                            <div className="text-xs text-blue-600 dark:text-blue-300 space-y-1">
+                              <div>• 250-500ml: 1 krat = 24 botol</div>
+                              <div>• 800-1000ml: 1 krat = 12 botol</div>
+                              <div className="mt-2 font-medium">
+                                Diskon akan dihitung berdasarkan jumlah krat per
+                                item.
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -989,10 +1150,12 @@ export default function OrdersPage() {
                               </div>
                             </div>
 
-                            {discountType === "PER_ITEM" && (
+                            {discountType === "PER_CRATE" && (
                               <div className="w-24 sm:w-28 md:w-32 flex-shrink-0">
                                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                                  Diskon/pcs
+                                  {discountUnit === "PERCENTAGE"
+                                    ? "Diskon %"
+                                    : "Diskon/krat"}
                                 </label>
                                 <div className="relative">
                                   <input
@@ -1007,14 +1170,32 @@ export default function OrdersPage() {
                                     }
                                     placeholder="0"
                                     min="0"
-                                    step="100"
+                                    step={
+                                      discountUnit === "PERCENTAGE"
+                                        ? "0.1"
+                                        : "100"
+                                    }
+                                    max={
+                                      discountUnit === "PERCENTAGE"
+                                        ? "100"
+                                        : undefined
+                                    }
                                     className="block w-full pl-8 pr-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
                                   />
                                   <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span className="text-gray-500 text-xs">
-                                      Rp
+                                    <span className="text-gray-500 text-xs font-medium">
+                                      {discountUnit === "PERCENTAGE"
+                                        ? "%"
+                                        : "Rp"}
                                     </span>
                                   </div>
+                                </div>
+                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  {calculateCrates(
+                                    item.quantity,
+                                    item.productName
+                                  ).toFixed(2)}{" "}
+                                  krat
                                 </div>
                               </div>
                             )}
@@ -1025,12 +1206,29 @@ export default function OrdersPage() {
                               </label>
                               <div className="px-3 py-3 text-sm font-bold bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-green-800 dark:text-green-200 rounded-lg text-center">
                                 Rp{" "}
-                                {(
-                                  item.quantity * item.price -
-                                  (discountType === "PER_ITEM"
-                                    ? item.quantity * (item.discount || 0)
-                                    : 0)
-                                ).toLocaleString("id-ID")}
+                                {(() => {
+                                  const itemTotal = item.quantity * item.price;
+                                  let itemDiscount = 0;
+
+                                  if (discountType === "PER_CRATE") {
+                                    const crates = calculateCrates(
+                                      item.quantity,
+                                      item.productName
+                                    );
+                                    if (discountUnit === "PERCENTAGE") {
+                                      itemDiscount =
+                                        (itemTotal * (item.discount || 0)) /
+                                        100;
+                                    } else {
+                                      itemDiscount =
+                                        crates * (item.discount || 0);
+                                    }
+                                  }
+
+                                  return (
+                                    itemTotal - itemDiscount
+                                  ).toLocaleString("id-ID");
+                                })()}
                               </div>
                             </div>
 
@@ -1071,7 +1269,7 @@ export default function OrdersPage() {
                             Rp {calculateSubtotal().toLocaleString("id-ID")}
                           </span>
                         </div>
-                        {discountType === "TOTAL" && totalDiscount > 0 && (
+                        {discountType === "OVERALL" && totalDiscount > 0 && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-600 dark:text-gray-300 font-medium">
                               Diskon:
