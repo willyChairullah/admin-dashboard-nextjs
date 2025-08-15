@@ -11,6 +11,7 @@ import {
   ExternalLink,
   ChevronDown,
 } from "lucide-react";
+import { toast } from "sonner";
 import { getCurrentPosition } from "@/lib/utils";
 import { createFieldVisit } from "@/lib/actions/field-visits";
 import { getStores } from "@/lib/actions/stores";
@@ -102,7 +103,7 @@ export default function SalesFieldPage() {
       });
     } catch (error) {
       console.error("Error getting location:", error);
-      alert(
+      toast.error(
         "Gagal mendapatkan lokasi. Pastikan GPS aktif dan izin lokasi diberikan."
       );
     } finally {
@@ -125,14 +126,14 @@ export default function SalesFieldPage() {
       Array.from(files).forEach((file) => {
         // Validate file type
         if (!file.type.startsWith("image/")) {
-          alert(`File ${file.name} bukan gambar yang valid`);
+          toast.error(`File ${file.name} bukan gambar yang valid`);
           return;
         }
 
         // Validate file size (max 5MB)
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (file.size > maxSize) {
-          alert(`File ${file.name} terlalu besar. Maksimal 5MB`);
+          toast.error(`File ${file.name} terlalu besar. Maksimal 5MB`);
           return;
         }
 
@@ -164,15 +165,15 @@ export default function SalesFieldPage() {
           fileInputRef.current.value = "";
         }
 
-        alert(`${result.files.length} foto berhasil diupload!`);
+        toast.success(`${result.files.length} foto berhasil diupload!`);
         console.log(`${result.files.length} foto berhasil diupload ke server`);
       } else {
         console.error("Upload failed:", result.error);
-        alert(`Gagal mengupload foto: ${result.error}`);
+        toast.error(`Gagal mengupload foto: ${result.error}`);
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert(
+      toast.error(
         `Gagal mengupload foto: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
@@ -255,27 +256,27 @@ export default function SalesFieldPage() {
 
   const handleCheckIn = async () => {
     if (!currentLocation) {
-      alert("Lokasi belum didapatkan. Klik tombol GPS terlebih dahulu.");
+      toast.error("Lokasi belum didapatkan. Klik tombol GPS terlebih dahulu.");
       return;
     }
 
     if (!selectedStore && useExistingStore) {
-      alert("Pilih toko yang dikunjungi terlebih dahulu.");
+      toast.error("Pilih toko yang dikunjungi terlebih dahulu.");
       return;
     }
 
     if (!storeName && !useExistingStore) {
-      alert("Masukkan nama toko yang dikunjungi.");
+      toast.error("Masukkan nama toko yang dikunjungi.");
       return;
     }
 
     if (!visitPurpose) {
-      alert("Pilih tujuan kunjungan terlebih dahulu.");
+      toast.error("Pilih tujuan kunjungan terlebih dahulu.");
       return;
     }
 
     if (!user) {
-      alert("User not authenticated");
+      toast.error("User not authenticated");
       return;
     }
 
@@ -297,7 +298,7 @@ export default function SalesFieldPage() {
           });
 
           if (result.success) {
-            alert(
+            toast.success(
               result.message ||
                 "Check-in berhasil! Data kunjungan telah disimpan ke database."
             );
@@ -314,11 +315,13 @@ export default function SalesFieldPage() {
             setShowStoreDropdown(false);
             setFilteredStores(stores);
           } else {
-            alert("Gagal menyimpan data: " + (result.error || "Unknown error"));
+            toast.error(
+              "Gagal menyimpan data: " + (result.error || "Unknown error")
+            );
           }
         } catch (error) {
           console.error("Error saving check-in:", error);
-          alert("Gagal menyimpan data. Coba lagi nanti.");
+          toast.error("Gagal menyimpan data. Coba lagi nanti.");
         } finally {
           setIsSaving(false);
         }
@@ -331,7 +334,7 @@ export default function SalesFieldPage() {
 
   const openInMaps = () => {
     if (!currentLocation) {
-      alert("Lokasi belum didapatkan. Ambil lokasi GPS terlebih dahulu.");
+      toast.error("Lokasi belum didapatkan. Ambil lokasi GPS terlebih dahulu.");
       return;
     }
 

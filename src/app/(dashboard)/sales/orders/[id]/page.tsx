@@ -23,6 +23,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { getOrderById, updateOrder } from "@/lib/actions/orders";
 import { getProducts } from "@/lib/actions/products";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -169,7 +170,7 @@ export default function OrderDetailPage() {
         (item) => !item.productId || item.quantity <= 0 || item.price <= 0
       )
     ) {
-      alert("Lengkapi semua item dengan benar.");
+      toast.error("Lengkapi semua item dengan benar.");
       return;
     }
 
@@ -192,15 +193,15 @@ export default function OrderDetailPage() {
         });
 
         if (result.success) {
-          alert("Order berhasil diperbarui!");
+          toast.success("Order berhasil diperbarui!");
           setIsEditing(false);
           loadOrder(); // Reload order data
         } else {
-          alert(result.error || "Gagal memperbarui order.");
+          toast.error(result.error || "Gagal memperbarui order.");
         }
       } catch (error) {
         console.error("Error updating order:", error);
-        alert("Terjadi kesalahan saat memperbarui order.");
+        toast.error("Terjadi kesalahan saat memperbarui order.");
       } finally {
         setIsSaving(false);
       }

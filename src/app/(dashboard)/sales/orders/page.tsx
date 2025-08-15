@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ShoppingCart, Plus, Trash2, Users, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 import { createOrder } from "@/lib/actions/orders";
 import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -243,42 +244,42 @@ export default function OrdersPage() {
   const handleSubmitOrder = async () => {
     // Validation
     if (!user) {
-      alert("User tidak ditemukan. Silakan login ulang.");
+      toast.error("User tidak ditemukan. Silakan login ulang.");
       return;
     }
 
     if (useExistingStore && !selectedStore) {
-      alert("Pilih toko terlebih dahulu.");
+      toast.error("Pilih toko terlebih dahulu.");
       return;
     }
 
     if (!useExistingStore && !storeName) {
-      alert("Masukkan nama toko.");
+      toast.error("Masukkan nama toko.");
       return;
     }
 
     if (!useExistingStore && !storeAddress) {
-      alert("Masukkan alamat toko.");
+      toast.error("Masukkan alamat toko.");
       return;
     }
 
     if (!useExistingStore && !storeCity) {
-      alert("Masukkan nama kota toko.");
+      toast.error("Masukkan nama kota toko.");
       return;
     }
 
     if (!customerName) {
-      alert("Masukkan nama customer.");
+      toast.error("Masukkan nama customer.");
       return;
     }
 
     if (!deliveryAddress) {
-      alert("Masukkan alamat pengiriman.");
+      toast.error("Masukkan alamat pengiriman.");
       return;
     }
 
     if (paymentType === "DEADLINE" && !paymentDeadline) {
-      alert("Masukkan tenggat pembayaran.");
+      toast.error("Masukkan tenggat pembayaran.");
       return;
     }
 
@@ -287,7 +288,7 @@ export default function OrdersPage() {
         (item) => !item.productName || item.quantity <= 0 || item.price <= 0
       )
     ) {
-      alert("Lengkapi semua item produk dengan benar.");
+      toast.error("Lengkapi semua item produk dengan benar.");
       return;
     }
 
@@ -319,7 +320,7 @@ export default function OrdersPage() {
           });
 
           if (result.success) {
-            alert(result.message);
+            toast.success(result.message);
 
             // Reset form
             setSelectedStore("");
@@ -340,13 +341,13 @@ export default function OrdersPage() {
             setDiscountType("TOTAL");
             setItems([{ productName: "", quantity: 1, price: 0, discount: 0 }]);
           } else {
-            alert(
+            toast.error(
               "Gagal menyimpan order: " + (result.error || "Unknown error")
             );
           }
         } catch (error) {
           console.error("Error saving order:", error);
-          alert("Gagal menyimpan order. Coba lagi nanti.");
+          toast.error("Gagal menyimpan order. Coba lagi nanti.");
         } finally {
           setIsSaving(false);
         }
