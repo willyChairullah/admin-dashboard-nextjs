@@ -37,11 +37,13 @@ interface OrderItem {
   price: number;
   totalPrice: number;
   productId: string;
+  crates?: number; // Jumlah krat
   products?: {
     id: string;
     name: string;
     code: string;
     description?: string;
+    unit?: string;
   };
 }
 
@@ -73,6 +75,7 @@ interface Product {
   code: string;
   price: number;
   currentStock: number;
+  unit: string;
 }
 
 export default function OrderDetailPage() {
@@ -97,10 +100,42 @@ export default function OrderDetailPage() {
       productName: string;
       quantity: number;
       price: number;
+      crates?: number;
     }>,
   });
 
   const orderId = params.id as string;
+
+  // Helper function to get bottles per crate based on volume
+  const getBottlesPerCrate = (productId: string): number => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return 24; // default
+
+    // Extract volume from product name or unit
+    const mlMatch =
+      product.unit.match(/(\d+)\s*ml/i) || product.name.match(/(\d+)\s*ml/i);
+    const literMatch =
+      product.unit.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i) || 
+      product.name.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i);
+
+    if (literMatch) {
+      // Convert liters to ml (1 liter = 1000ml)
+      const volume = parseFloat(literMatch[1]) * 1000;
+      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
+      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
+    } else if (mlMatch) {
+      const volume = parseInt(mlMatch[1]);
+      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
+      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
+    }
+    return 24; // default for smaller volumes
+  };
+
+  // Helper function to calculate crates from quantity
+  const calculateCrates = (quantity: number, productId: string): number => {
+    const bottlesPerCrate = getBottlesPerCrate(productId);
+    return quantity / bottlesPerCrate;
+  };
 
   useEffect(() => {
     loadOrder();
@@ -133,6 +168,7 @@ export default function OrderDetailPage() {
               productName: item.products?.name || "",
               quantity: item.quantity,
               price: item.price,
+              crates: 0, // Initialize crates to 0
             })
           ),
         });
@@ -154,6 +190,7 @@ export default function OrderDetailPage() {
           code: p.code,
           price: p.price,
           currentStock: p.currentStock,
+          unit: p.unit,
         }))
       );
     } catch (error) {
@@ -218,6 +255,7 @@ export default function OrderDetailPage() {
           productName: "",
           quantity: 1,
           price: 0,
+          crates: 0,
         },
       ],
     }));
@@ -244,9 +282,29 @@ export default function OrderDetailPage() {
               updated.productName = selectedProduct.name;
               updated.price = selectedProduct.price;
             }
+            // Reset crates and quantity when product changes
+            updated.crates = 0;
+            updated.quantity = 1;
           }
 
           return updated;
+        }
+        return item;
+      }),
+    }));
+  };
+
+  const updateCrateAndQuantity = (index: number, crateValue: number) => {
+    setEditForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) => {
+        if (i === index) {
+          const bottlesPerCrate = getBottlesPerCrate(item.productId);
+          return {
+            ...item,
+            crates: crateValue,
+            quantity: crateValue * bottlesPerCrate,
+          };
         }
         return item;
       }),
@@ -602,7 +660,7 @@ export default function OrderDetailPage() {
                           key={index}
                           className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-purple-100/50 dark:border-purple-800/30"
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                             <div className="md:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Produk
@@ -624,7 +682,25 @@ export default function OrderDetailPage() {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Qty
+                                Krat
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={item.crates || 0}
+                                onChange={(e) =>
+                                  updateCrateAndQuantity(index, parseFloat(e.target.value))
+                                }
+                                className="w-full p-2 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+                              />
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {getBottlesPerCrate(item.productId)} btl/krat
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Qty (Pieces)
                               </label>
                               <input
                                 type="number"
@@ -637,7 +713,8 @@ export default function OrderDetailPage() {
                                     parseFloat(e.target.value)
                                   )
                                 }
-                                className="w-full p-2 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+                                disabled={true}
+                                className="w-full p-2 bg-gray-100 dark:bg-gray-500 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg cursor-not-allowed"
                               />
                             </div>
                             <div>
@@ -655,7 +732,8 @@ export default function OrderDetailPage() {
                                     parseFloat(e.target.value)
                                   )
                                 }
-                                className="w-full p-2 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+                                disabled={true}
+                                className="w-full p-2 bg-gray-100 dark:bg-gray-500 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg cursor-not-allowed"
                               />
                             </div>
                             <div>
