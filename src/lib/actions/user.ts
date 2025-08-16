@@ -9,11 +9,13 @@ export async function createUser({
   email,
   role,
   password,
+  isActive = true,
 }: {
   name: string;
   email: string;
   role: UserRole;
   password: string;
+  isActive?: boolean;
 }) {
   // validate required fields
   if (!name || !email || !role || !password) {
@@ -29,8 +31,10 @@ export async function createUser({
         email,
         role: role as UserRole,
         password,
+        isActive,
       },
     });
+    revalidatePath("/management/users");
     return {
       success: true,
     };
@@ -144,6 +148,80 @@ export async function updateUser({
     return {
       success: false,
       error: "Failed to update user",
+    };
+  }
+}
+
+export async function toggleUserStatus(id: string) {
+  try {
+    const user = await db.users.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    await db.users.update({
+      where: { id },
+      data: { isActive: !user.isActive },
+    });
+
+    revalidatePath("/management/users");
+    return {
+      success: true,
+      message: `User ${!user.isActive ? 'activated' : 'deactivated'} successfully`,
+    };
+  } catch (error) {
+    console.error("Failed to toggle user status:", error);
+    return {
+      success: false,
+      error: "Failed to update user status",
+    };
+  }
+}
+
+export async function deactivateUser(id: string) {
+  try {
+    await db.users.update({
+      where: { id },
+      data: { isActive: false },
+    });
+
+    revalidatePath("/management/users");
+    return {
+      success: true,
+      message: "User deactivated successfully",
+    };
+  } catch (error) {
+    console.error("Failed to deactivate user:", error);
+    return {
+      success: false,
+      error: "Failed to deactivate user",
+    };
+  }
+}
+
+export async function activateUser(id: string) {
+  try {
+    await db.users.update({
+      where: { id },
+      data: { isActive: true },
+    });
+
+    revalidatePath("/management/users");
+    return {
+      success: true,
+      message: "User activated successfully",
+    };
+  } catch (error) {
+    console.error("Failed to activate user:", error);
+    return {
+      success: false,
+      error: "Failed to activate user",
     };
   }
 }

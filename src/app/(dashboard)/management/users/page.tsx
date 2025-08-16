@@ -7,16 +7,21 @@ const columns = [
   { header: "Name", accessor: "name" },
   { header: "Email", accessor: "email" },
   { header: "Role", accessor: "role" },
+  { header: "Status", accessor: "status" },
   { header: "password", accessor: "password" },
 ];
 
 // Define the excluded accessors as an array
-const excludedAccessors = ["name", "email", "role", "isActive"];
+const excludedAccessors = ["name", "email", "role", "status", "isActive"];
 
 export default async function Page() {
   const users = await getUsers();
 
   // Transform users data to include status as string for display
+  const transformedUsers = users.map(user => ({
+    ...user,
+    status: user.isActive ? "Active" : "Inactive"
+  }));
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -27,7 +32,7 @@ export default async function Page() {
       />
       <ManagementContent
         linkPath="/management/users"
-        sampleData={users}
+        sampleData={transformedUsers}
         columns={columns}
         excludedAccessors={excludedAccessors}
         dateAccessor="createdAt"

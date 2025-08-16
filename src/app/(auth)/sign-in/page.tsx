@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/common";
 import { handleSignIn } from "@/lib/actions/signin";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 const Page = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +14,14 @@ const Page = () => {
     email?: string;
     password?: string;
   }>({});
+  const searchParams = useSearchParams();
+
+  // Check for deactivation message on component mount
+  useEffect(() => {
+    if (searchParams?.get('deactivated') === 'true') {
+      setError('Your account has been deactivated. Please contact your administrator.');
+    }
+  }, [searchParams]);
 
   const validateForm = (formData: FormData) => {
     const email = formData.get("email") as string;

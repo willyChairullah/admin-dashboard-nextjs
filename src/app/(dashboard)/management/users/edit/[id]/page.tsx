@@ -281,6 +281,22 @@ export default function EditUserPage({
                 placeholder="— Select a Role —"
               />
             </FormField>
+
+            <FormField
+              label="Account Status"
+              htmlFor="isActive"
+              errorMessage={formErrors.isActive}
+            >
+              <InputCheckbox
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => handleInputChange("isActive", e.target.checked)}
+                label="Active Account"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Deactivated users will not be able to login
+              </p>
+            </FormField>
             <div className="flex gap-4">
               <Button
                 type="button"
