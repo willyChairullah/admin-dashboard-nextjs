@@ -340,6 +340,58 @@ export async function getOrders({
   }
 }
 
+// Function specifically for sales dashboard to get latest 5 orders
+export async function getLatestOrdersForDashboard({
+  salesId,
+  limit = 5,
+}: {
+  salesId?: string;
+  limit?: number;
+} = {}) {
+  try {
+    const where: Record<string, unknown> = {};
+
+    if (salesId) {
+      where.salesId = salesId; // Using salesId as per schema
+    }
+
+    const orders = await db.orders.findMany({
+      where,
+      include: {
+        customer: true,
+        sales: true, // This is the sales rep relation
+        orderItems: {
+          include: {
+            products: true, // Include product details for better display
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit, // Limit to latest 5 orders
+    });
+
+    // Transform the data to match the expected format
+    const transformedOrders = orders.map((order) => ({
+      ...order,
+      order_items: order.orderItems,
+    }));
+
+    return {
+      success: true,
+      data: transformedOrders,
+    };
+  } catch (error) {
+    console.error("Error fetching latest orders for dashboard:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+      data: [],
+    };
+  }
+}
+
 export async function confirmOrder({
   orderId,
   approve,

@@ -652,7 +652,7 @@ async function getCompanyTargetsForChart(targetType: TargetType = "MONTHLY") {
   }
 }
 
-// Calculate achieved amount from all sales reps for a specific period
+// Calculate achieved amount from all sales reps for a specific period (based on quantity)
 async function calculateCompanyAchievedAmount(
   targetPeriod: string,
   targetType: TargetType,
@@ -681,31 +681,35 @@ async function calculateCompanyAchievedAmount(
       return 0;
     }
 
-    // Calculate total achieved revenue from all sales reps
-    const result = await db.invoices.aggregate({
+    // Calculate total achieved quantity from all sales reps
+    const result = await db.orderItems.aggregate({
       where: {
-        invoiceDate: {
-          gte: startDate,
-          lte: endDate,
-        },
-        status: "PAID",
-        createdBy: {
-          in: userIds, // Include all sales rep user IDs
+        orders: {
+          salesId: {
+            in: userIds, // Include all sales rep user IDs
+          },
+          orderDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: {
+            in: ["COMPLETED"], // Only count completed orders
+          },
         },
       },
       _sum: {
-        totalAmount: true,
+        quantity: true,
       },
     });
 
-    return result._sum?.totalAmount || 0;
+    return result._sum?.quantity || 0;
   } catch (error) {
-    console.error("Error calculating company achieved amount:", error);
+    console.error("Error calculating company achieved quantity:", error);
     return 0;
   }
 }
 
-// Calculate achieved amount from actual invoice data
+// Calculate achieved amount from actual order quantity data (krat/pieces)
 async function calculateAchievedAmount(
   userId: string,
   targetPeriod: string,
@@ -737,24 +741,28 @@ async function calculateAchievedAmount(
       return 0;
     }
 
-    // Calculate achieved revenue from invoices created by this sales rep
-    const result = await db.invoices.aggregate({
+    // Calculate achieved quantity from order items by this sales rep
+    const result = await db.orderItems.aggregate({
       where: {
-        invoiceDate: {
-          gte: startDate,
-          lte: endDate,
+        orders: {
+          salesId: userId,
+          orderDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: {
+            in: ["COMPLETED"], // Only count completed orders
+          },
         },
-        status: "PAID",
-        createdBy: userId, // Use createdBy field to track sales rep
       },
       _sum: {
-        totalAmount: true,
+        quantity: true,
       },
     });
 
-    return result._sum?.totalAmount || 0;
+    return result._sum?.quantity || 0;
   } catch (error) {
-    console.error("Error calculating achieved amount:", error);
+    console.error("Error calculating achieved quantity:", error);
     return 0;
   }
 }

@@ -165,7 +165,7 @@ export default function SalesTargetPage() {
     loadSalesTargets();
   }, []);
 
-  // Function to calculate real achieved amount from orders
+  // Function to calculate real achieved quantity from orders
   const calculateAchievedAmount = async (
     userId: string,
     targetPeriod: string,
@@ -185,6 +185,11 @@ export default function SalesTargetPage() {
       // Filter orders based on target period and type
       const filteredOrders = orders.filter((order) => {
         const orderDate = new Date(order.orderDate);
+
+        // Only count completed orders
+        if (order.status !== "COMPLETED") {
+          return false;
+        }
 
         if (targetType === "MONTHLY") {
           // Format: YYYY-MM
@@ -212,26 +217,24 @@ export default function SalesTargetPage() {
         filteredOrders.length
       );
 
-      // Calculate total amount from completed/delivered orders
-      const completedOrders = filteredOrders.filter(
-        (order) => order.status === "COMPLETED" || order.status === "DELIVERED"
-      );
-
-      console.log(`Completed orders:`, completedOrders.length);
-
-      const achievedAmount = completedOrders.reduce(
-        (total, order) => total + (order.totalAmount || 0),
-        0
-      );
+      // Calculate total quantity from completed orders
+      const achievedQuantity = filteredOrders.reduce((total, order) => {
+        const orderQuantity =
+          order.orderItems?.reduce(
+            (itemSum: number, item: any) => itemSum + (item.quantity || 0),
+            0
+          ) || 0;
+        return total + orderQuantity;
+      }, 0);
 
       console.log(
-        `Calculated achieved amount for user ${userId}, period ${targetPeriod}:`,
-        achievedAmount
+        `Calculated achieved quantity for user ${userId}, period ${targetPeriod}:`,
+        achievedQuantity
       );
 
-      return achievedAmount;
+      return achievedQuantity;
     } catch (error) {
-      console.error("Error calculating achieved amount:", error);
+      console.error("Error calculating achieved quantity:", error);
       return 0;
     }
   };
@@ -250,9 +253,12 @@ export default function SalesTargetPage() {
             target.targetType
           );
 
-          const percentage = target.targetAmount > 0
-            ? Number(((realAchievedAmount / target.targetAmount) * 100).toFixed(1))
-            : 0;
+          const percentage =
+            target.targetAmount > 0
+              ? Number(
+                  ((realAchievedAmount / target.targetAmount) * 100).toFixed(1)
+                )
+              : 0;
 
           return {
             ...target,
