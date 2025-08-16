@@ -22,7 +22,7 @@ export async function seedOrders(
     const orderItemsToCreate = [];
 
     for (const item of items) {
-      const product = products.find(p => p.id === item.productId);
+      const product = products.find((p) => p.id === item.productId);
       if (!product) continue;
 
       const itemDiscount = item.discount || 0;

@@ -115,7 +115,7 @@ export default function OrderDetailPage() {
     const mlMatch =
       product.unit.match(/(\d+)\s*ml/i) || product.name.match(/(\d+)\s*ml/i);
     const literMatch =
-      product.unit.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i) || 
+      product.unit.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i) ||
       product.name.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i);
 
     if (literMatch) {
@@ -690,7 +690,10 @@ export default function OrderDetailPage() {
                                 step="0.1"
                                 value={item.crates || 0}
                                 onChange={(e) =>
-                                  updateCrateAndQuantity(index, parseFloat(e.target.value))
+                                  updateCrateAndQuantity(
+                                    index,
+                                    parseFloat(e.target.value)
+                                  )
                                 }
                                 className="w-full p-2 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
                               />
