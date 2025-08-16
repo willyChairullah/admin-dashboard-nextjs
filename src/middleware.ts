@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
-import db from "@/lib/db";
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,27 +16,6 @@ export default async function middleware(request: NextRequest) {
   if (session?.user) {
     // console.log("🔥 User Role:", session.user.role);
     // console.log("🔥 Full Session:", JSON.stringify(session.user, null, 2));
-  }
-
-  // --- 1. Check if user is still active (if authenticated) ---
-  if (session?.user?.id) {
-    try {
-      const user = await db.users.findUnique({
-        where: { id: session.user.id },
-        select: { isActive: true }
-      });
-
-      if (user && !user.isActive) {
-        // User has been deactivated, force logout
-        const response = NextResponse.redirect(new URL("/sign-in?deactivated=true", request.url));
-        // Clear any session cookies here if needed
-        return response;
-      }
-    } catch (error) {
-      console.error("Error checking user status in middleware:", error);
-      // If there's an error checking user status, allow the request to continue
-      // rather than blocking the user
-    }
   }
 
   // --- 1. Handle unauthenticated users ---

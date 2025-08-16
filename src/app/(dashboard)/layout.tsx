@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import Navbar from "@/components/layouts/Navbar";
 import SideBar from "@/components/layouts/SideBar";
 import { SessionHandler } from "@/components/auth/SessionHandler";
+import UserStatusChecker from "@/components/UserStatusChecker";
 import { useIsMobile } from "@/hooks/useIsMobile"; // Adjust path as necessary
 
 export default function DashboardLayout({
@@ -42,6 +43,7 @@ export default function DashboardLayout({
   return (
     <SessionProvider>
       <SessionHandler />
+      <UserStatusChecker />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="flex">
           {/* Mobile Overlay */}
