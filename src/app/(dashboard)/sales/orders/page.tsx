@@ -9,7 +9,6 @@ import { getStores } from "@/lib/actions/stores";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Loading from "@/components/ui/common/Loading";
 import { Button } from "@/components/ui/common";
-import { Card } from "@/components/ui/common";
 import { getProducts } from "@/lib/actions/products";
 
 interface Store {
