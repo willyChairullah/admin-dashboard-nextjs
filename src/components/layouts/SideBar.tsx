@@ -337,6 +337,14 @@ export default function SideBar({
             children: [],
             roles: ["ADMIN", "OWNER"],
           },
+          {
+            id: "expenses",
+            label: "Expenses",
+            icon: "💸",
+            href: "/management/finance/expenses",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
         ],
       },
       {

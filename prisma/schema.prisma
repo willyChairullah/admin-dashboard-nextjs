@@ -680,6 +680,7 @@ enum UserRole {
   ADMIN
   SALES
   WAREHOUSE
+  HELPER
 }
 
 enum ReturnStatus {
