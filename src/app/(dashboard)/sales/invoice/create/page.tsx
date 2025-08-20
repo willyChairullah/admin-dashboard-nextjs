@@ -603,27 +603,26 @@ export default function CreateInvoicePage() {
 
           {/* Created By - Hidden input using session */}
           <input type="hidden" name="createdBy" value={formData.createdBy} />
-
-          {/* Biaya Pengiriman */}
-          <FormField label="Biaya Pengiriman">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                Rp
-              </span>
-              <Input
-                type="text"
-                name="shippingCost"
-                value={formatInputRupiah(formData.shippingCost)}
-                onChange={e => {
-                  const value = parseInputRupiah(e.target.value);
-                  handleInputChange("shippingCost", value);
-                }}
-                placeholder="0"
-                className="pl-10"
-              />
-            </div>
-          </FormField>
         </div>
+        {/* Biaya Pengiriman */}
+        <FormField label="Biaya Pengiriman">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+              Rp
+            </span>
+            <Input
+              type="text"
+              name="shippingCost"
+              value={formatInputRupiah(formData.shippingCost)}
+              onChange={e => {
+                const value = parseInputRupiah(e.target.value);
+                handleInputChange("shippingCost", value);
+              }}
+              placeholder="0"
+              className="pl-10"
+            />
+          </div>
+        </FormField>
 
         {/* Notes */}
         <div className="mt-6">
