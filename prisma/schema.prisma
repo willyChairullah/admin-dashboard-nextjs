@@ -24,6 +24,7 @@ model Store {
   id          String       @id @default(cuid())
   name        String
   address     String
+  city        String?
   phone       String?
   latitude    Float?
   longitude   Float?

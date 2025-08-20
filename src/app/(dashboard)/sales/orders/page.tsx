@@ -15,6 +15,7 @@ interface Store {
   id: string;
   name: string;
   address: string;
+  city: string | null;
   phone: string | null;
 }
 
@@ -184,7 +185,8 @@ export default function OrdersPage() {
       const filtered = stores.filter(
         (store) =>
           store.name.toLowerCase().includes(query.toLowerCase()) ||
-          store.address.toLowerCase().includes(query.toLowerCase())
+          store.address.toLowerCase().includes(query.toLowerCase()) ||
+          (store.city && store.city.toLowerCase().includes(query.toLowerCase()))
       );
       setFilteredStores(filtered);
       setShowStoreDropdown(true);
@@ -213,6 +215,15 @@ export default function OrdersPage() {
     setSelectedStore(storeId);
     setStoreSearchQuery(storeName);
     setShowStoreDropdown(false);
+    
+    // Auto-populate customer info
+    const selectedStore = stores.find((store) => store.id === storeId);
+    if (selectedStore) {
+      setCustomerName(selectedStore.name);
+      setCustomerPhone(selectedStore.phone || "");
+      setCustomerEmail(""); // Reset email as stores might not have email
+      setDeliveryAddress(selectedStore.address);
+    }
   };
 
   const addItem = () => {
@@ -400,6 +411,7 @@ export default function OrdersPage() {
             storeId: useExistingStore ? selectedStore : undefined,
             storeName: useExistingStore ? undefined : storeName,
             storeAddress: useExistingStore ? undefined : storeAddress,
+            storeCity: useExistingStore ? undefined : storeCity,
             customerName,
             customerEmail: customerEmail || undefined,
             customerPhone: customerPhone || undefined,
@@ -421,6 +433,9 @@ export default function OrdersPage() {
           if (result.success) {
             toast.success(result.message);
 
+            // Reload stores to include any newly created store
+            await loadStores();
+
             // Reset form
             setSelectedStore("");
             setStoreName("");
@@ -428,7 +443,7 @@ export default function OrdersPage() {
             setStoreCity("");
             setStoreSearchQuery("");
             setShowStoreDropdown(false);
-            setFilteredStores(stores);
+            // filteredStores will be updated automatically by loadStores()
             setCustomerName("");
             setCustomerEmail("");
             setCustomerPhone("");
@@ -616,7 +631,7 @@ export default function OrdersPage() {
                               }
                             }
                           }}
-                          placeholder="Cari dan pilih toko berdasarkan nama atau alamat..."
+                          placeholder="Cari dan pilih toko berdasarkan nama, alamat, atau kota..."
                           className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                         />
                         <ChevronDown
@@ -657,6 +672,11 @@ export default function OrdersPage() {
                                   <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
                                     {store.address}
                                   </div>
+                                  {store.city && (
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
+                                      📍 {store.city}
+                                    </div>
+                                  )}
                                 </button>
                               ))
                             ) : storeSearchQuery ? (

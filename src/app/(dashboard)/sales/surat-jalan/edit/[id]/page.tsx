@@ -96,11 +96,11 @@ export default function EditDeliveryNotePage() {
     field: keyof DeliveryNoteFormData,
     value: string
   ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
     if (formErrors[field as keyof DeliveryNoteFormErrors]) {
-      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+      setFormErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -172,7 +172,9 @@ export default function EditDeliveryNotePage() {
 
       if (result.success) {
         toast.success("Status berhasil diperbarui");
-        setDeliveryNote(prev => (prev ? { ...prev, status: newStatus } : null));
+        setDeliveryNote((prev) =>
+          prev ? { ...prev, status: newStatus } : null
+        );
       } else {
         toast.error(result.error || "Gagal memperbarui status");
       }
@@ -374,7 +376,7 @@ export default function EditDeliveryNotePage() {
             >
               <InputDate
                 value={new Date(formData.deliveryDate)}
-                onChange={value =>
+                onChange={(value) =>
                   value &&
                   handleInputChange(
                     "deliveryDate",
@@ -390,7 +392,9 @@ export default function EditDeliveryNotePage() {
                 name="driverName"
                 type="text"
                 value={formData.driverName}
-                onChange={e => handleInputChange("driverName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("driverName", e.target.value)
+                }
                 placeholder="Masukkan nama driver"
                 disabled={deliveryNote.status === DeliveryStatus.DELIVERED}
               />
@@ -406,7 +410,7 @@ export default function EditDeliveryNotePage() {
                 name="vehicleNumber"
                 type="text"
                 value={formData.vehicleNumber}
-                onChange={e =>
+                onChange={(e) =>
                   handleInputChange("vehicleNumber", e.target.value)
                 }
                 placeholder="Masukkan nomor kendaraan"
@@ -429,7 +433,7 @@ export default function EditDeliveryNotePage() {
             <InputTextArea
               name="notes"
               value={formData.notes}
-              onChange={e => handleInputChange("notes", e.target.value)}
+              onChange={(e) => handleInputChange("notes", e.target.value)}
               placeholder="Tambahkan catatan"
             />
           </FormField>

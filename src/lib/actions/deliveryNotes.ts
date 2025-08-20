@@ -203,11 +203,11 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
     });
 
     const existingInvoiceIds = new Set(
-      existingDeliveryNotes.map(dn => dn.invoiceId)
+      existingDeliveryNotes.map((dn) => dn.invoiceId)
     );
 
     return invoices.filter(
-      invoice => !existingInvoiceIds.has(invoice.id)
+      (invoice) => !existingInvoiceIds.has(invoice.id)
     ) as EligibleInvoice[];
   } catch (error) {
     console.error("Error fetching eligible invoices:", error);
@@ -218,7 +218,7 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
 // Create new delivery note
 export async function createDeliveryNote(data: DeliveryNoteFormData) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Get invoice details with all related data
       const invoice = await tx.invoices.findUnique({
         where: { id: data.invoiceId },
@@ -408,7 +408,7 @@ export async function updateDeliveryNote(
 // Delete delivery note (with stock reversal)
 export async function deleteDeliveryNote(id: string) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Get delivery note with related data
       const deliveryNote = await tx.deliveryNotes.findUnique({
         where: { id },

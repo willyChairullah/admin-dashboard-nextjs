@@ -16,6 +16,7 @@ export async function createOrder({
   storeId,
   storeName,
   storeAddress,
+  storeCity,
   customerName,
   customerEmail,
   customerPhone,
@@ -34,6 +35,7 @@ export async function createOrder({
   storeId?: string;
   storeName?: string;
   storeAddress?: string;
+  storeCity?: string;
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -140,6 +142,8 @@ export async function createOrder({
               storeAddress && storeAddress.trim()
                 ? storeAddress.trim()
                 : `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
+            city: storeCity || null,
+            phone: customerPhone || null, // Use customer phone as store phone for new stores
           },
         });
         finalStoreId = newStore.id;
@@ -167,7 +171,7 @@ export async function createOrder({
           phone: customerPhone || null,
           address:
             deliveryAddress || storeAddress || "Alamat belum diverifikasi",
-          city: "Unknown", // Default city since it's required
+          city: storeCity || "Unknown", // Use store city or default
           updatedAt: new Date(),
         },
       });
@@ -577,12 +581,18 @@ export async function getOrderById(orderId: string) {
 
 export async function updateOrder({
   orderId,
+  customerName,
+  customerEmail,
+  customerPhone,
   notes,
   deliveryAddress,
   paymentDeadline,
   items,
 }: {
   orderId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   notes?: string;
   deliveryAddress?: string;
   paymentDeadline?: Date;
@@ -591,6 +601,7 @@ export async function updateOrder({
     productId: string;
     quantity: number;
     price: number;
+    discount?: number;
   }>;
 }) {
   try {
@@ -598,6 +609,7 @@ export async function updateOrder({
     const existingOrder = await db.orders.findUnique({
       where: { id: orderId },
       include: {
+        customer: true,
         orderItems: true,
       },
     });
@@ -617,11 +629,26 @@ export async function updateOrder({
       };
     }
 
-    // Calculate new total amount
-    const totalAmount = items.reduce(
-      (sum, item) => sum + item.quantity * item.price,
-      0
-    );
+    // Calculate new total amount with discounts
+    const totalAmount = items.reduce((sum, item) => {
+      const itemSubtotal = item.quantity * item.price;
+      const discountAmount = itemSubtotal * ((item.discount || 0) / 100);
+      const itemTotal = itemSubtotal - discountAmount;
+      return sum + itemTotal;
+    }, 0);
+
+    // Update customer data if provided
+    if (customerName || customerEmail || customerPhone) {
+      await db.customers.update({
+        where: { id: existingOrder.customerId },
+        data: {
+          ...(customerName && { name: customerName }),
+          ...(customerEmail !== undefined && { email: customerEmail || null }),
+          ...(customerPhone !== undefined && { phone: customerPhone || null }),
+          ...(deliveryAddress && { address: deliveryAddress }),
+        },
+      });
+    }
 
     // Update order
     const updatedOrder = await db.orders.update({
@@ -642,13 +669,18 @@ export async function updateOrder({
 
     // Create new order items
     for (const item of items) {
+      const itemSubtotal = item.quantity * item.price;
+      const discountAmount = itemSubtotal * ((item.discount || 0) / 100);
+      const totalPrice = itemSubtotal - discountAmount;
+      
       await db.orderItems.create({
         data: {
           orderId,
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
-          totalPrice: item.quantity * item.price,
+          discount: item.discount || 0,
+          totalPrice,
         },
       });
     }
@@ -677,6 +709,193 @@ export async function updateOrder({
     };
   } catch (error) {
     console.error("Error updating order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function cancelOrder(orderId: string, reason?: string) {
+  try {
+    const existingOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!existingOrder) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Only allow cancellation for certain statuses
+    if (!["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"].includes(existingOrder.status)) {
+      return {
+        success: false,
+        error: "Order cannot be cancelled in current status",
+      };
+    }
+
+    // If order was confirmed and stock was reduced, restore the stock
+    if (existingOrder.status === "IN_PROCESS") {
+      for (const item of existingOrder.orderItems) {
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // Update order status to CANCELED
+    const cancelledOrder = await db.orders.update({
+      where: { id: orderId },
+      data: {
+        status: "CANCELED",
+        notes: reason ? `CANCELLED: ${reason}` : "CANCELLED",
+        updatedAt: new Date(),
+      },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    revalidatePath("/sales/order-history");
+    revalidatePath("/admin/orders");
+
+    return {
+      success: true,
+      data: cancelledOrder,
+      message: "Order berhasil dibatalkan!",
+    };
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function updateOrderStatus(orderId: string, newStatus: string, notes?: string) {
+  try {
+    const existingOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!existingOrder) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Handle stock changes based on status transitions
+    const oldStatus = existingOrder.status;
+    
+    // If moving from PENDING_CONFIRMATION to IN_PROCESS, reduce stock
+    if (oldStatus === "PENDING_CONFIRMATION" && newStatus === "IN_PROCESS") {
+      for (const item of existingOrder.orderItems) {
+        const product = await db.products.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product) {
+          return {
+            success: false,
+            error: `Product with ID ${item.productId} not found`,
+          };
+        }
+
+        if (product.currentStock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for product ${product.name}. Available: ${product.currentStock}, Required: ${item.quantity}`,
+          };
+        }
+
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // If moving from IN_PROCESS back to PENDING_CONFIRMATION, restore stock
+    if (oldStatus === "IN_PROCESS" && newStatus === "PENDING_CONFIRMATION") {
+      for (const item of existingOrder.orderItems) {
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // Update order status
+    const updatedOrder = await db.orders.update({
+      where: { id: orderId },
+      data: {
+        status: newStatus as any,
+        notes: notes || existingOrder.notes,
+        updatedAt: new Date(),
+      },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    revalidatePath("/sales/order-history");
+    revalidatePath("/admin/orders");
+
+    return {
+      success: true,
+      data: updatedOrder,
+      message: `Order status berhasil diubah ke ${newStatus}!`,
+    };
+  } catch (error) {
+    console.error("Error updating order status:", error);
     return {
       success: false,
       error: "Internal server error",

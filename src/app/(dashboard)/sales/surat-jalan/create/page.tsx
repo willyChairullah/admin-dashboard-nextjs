@@ -74,7 +74,7 @@ export default function CreateDeliveryNotePage() {
         ]);
 
         setEligibleInvoices(invoices);
-        setFormData(prevData => ({
+        setFormData((prevData) => ({
           ...prevData,
           code: newDeliveryNumber,
         }));
@@ -88,7 +88,7 @@ export default function CreateDeliveryNotePage() {
     };
 
     if (user?.id) {
-      setFormData(prevData => ({
+      setFormData((prevData) => ({
         ...prevData,
         warehouseUserId: user.id,
       }));
@@ -101,16 +101,16 @@ export default function CreateDeliveryNotePage() {
     field: keyof DeliveryNoteFormData,
     value: string
   ) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
     if (formErrors[field as keyof DeliveryNoteFormErrors]) {
-      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+      setFormErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
   const handleInvoiceChange = (invoiceId: string) => {
-    const invoice = eligibleInvoices.find(inv => inv.id === invoiceId);
+    const invoice = eligibleInvoices.find((inv) => inv.id === invoiceId);
     setSelectedInvoice(invoice || null);
     handleInputChange("invoiceId", invoiceId);
   };
@@ -243,7 +243,7 @@ export default function CreateDeliveryNotePage() {
           >
             <InputDate
               value={new Date(formData.deliveryDate)}
-              onChange={value =>
+              onChange={(value) =>
                 value &&
                 handleInputChange(
                   "deliveryDate",
@@ -258,7 +258,7 @@ export default function CreateDeliveryNotePage() {
           <Select
             value={formData.invoiceId || ""}
             onChange={handleInvoiceChange}
-            options={eligibleInvoices.map(invoice => ({
+            options={eligibleInvoices.map((invoice) => ({
               value: invoice.id,
               label: `${invoice.code} - ${invoice.customer.name}`,
             }))}
@@ -305,7 +305,7 @@ export default function CreateDeliveryNotePage() {
               name="driverName"
               type="text"
               value={formData.driverName}
-              onChange={e => handleInputChange("driverName", e.target.value)}
+              onChange={(e) => handleInputChange("driverName", e.target.value)}
               placeholder="Masukkan nama driver"
             />
           </FormField>
@@ -318,7 +318,9 @@ export default function CreateDeliveryNotePage() {
               name="vehicleNumber"
               type="text"
               value={formData.vehicleNumber}
-              onChange={e => handleInputChange("vehicleNumber", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("vehicleNumber", e.target.value)
+              }
               placeholder="Masukkan nomor kendaraan"
             />
           </FormField>
@@ -336,7 +338,7 @@ export default function CreateDeliveryNotePage() {
           <InputTextArea
             name="notes"
             value={formData.notes}
-            onChange={e => handleInputChange("notes", e.target.value)}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
             placeholder="Tambahkan catatan (opsional)"
           />
         </FormField>
