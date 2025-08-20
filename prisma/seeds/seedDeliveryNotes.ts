@@ -45,7 +45,6 @@ export async function seedDeliveryNotes(
       customerId:
         readyForDeliveryInvoices[1]?.customerId || createdCustomers[3].id,
       warehouseUserId: warehouseUser.id,
-      datePreparation: new Date("2025-02-01"),
       notesPreparation: "Barang telah disiapkan dan dimuat ke dalam kendaraan",
       userPreparationId: warehouseUser.id,
       invoiceId: readyForDeliveryInvoices[1]?.id || createdInvoices[3].id,
@@ -62,7 +61,6 @@ export async function seedDeliveryNotes(
       notes: "Pengiriman berhasil diselesaikan, barang diterima dengan baik",
       customerId: createdCustomers[0].id,
       warehouseUserId: warehouseUser.id,
-      datePreparation: new Date("2025-02-03"),
       notesPreparation:
         "Barang telah disiapkan dengan baik, dikemas dengan rapi",
       userPreparationId: warehouseUser.id,
@@ -95,7 +93,6 @@ export async function seedDeliveryNotes(
       notes: "Menunggu konfirmasi alamat pengiriman dari customer",
       customerId: createdCustomers[2].id,
       warehouseUserId: warehouseUser.id,
-      datePreparation: new Date("2025-02-09"),
       notesPreparation: "Barang sudah siap, menunggu konfirmasi pengiriman",
       userPreparationId: warehouseUser.id,
       invoiceId: createdInvoices[0].id,
@@ -107,8 +104,10 @@ export async function seedDeliveryNotes(
 
   const createdDeliveryNotes = [];
   for (const dnData of deliveryNotesData) {
+    const { notesPreparation, userPreparationId, ...restData } = dnData;
+
     const deliveryNote = await prisma.deliveryNotes.create({
-      data: dnData,
+      data: restData,
     });
     createdDeliveryNotes.push(deliveryNote);
   }

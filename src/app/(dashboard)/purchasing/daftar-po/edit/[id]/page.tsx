@@ -39,7 +39,7 @@ interface PurchaseOrderItemFormData {
 interface PurchaseOrderFormData {
   code: string;
   poDate: string;
-  dateline: string;
+  // dateline: string;
   notes: string;
   creatorId: string;
   orderId: string;
@@ -59,7 +59,7 @@ interface PurchaseOrderFormData {
 interface PurchaseOrderFormErrors {
   code?: string;
   poDate?: string;
-  dateline?: string;
+  // dateline?: string;
   notes?: string;
   orderId?: string;
   poType?: string;
@@ -145,7 +145,6 @@ export default function EditPurchaseOrderPage() {
   const [formData, setFormData] = useState<PurchaseOrderFormData>({
     code: "",
     poDate: new Date().toISOString().split("T")[0],
-    dateline: new Date().toISOString().split("T")[0],
     notes: "",
     creatorId: "",
     orderId: "",
@@ -232,9 +231,6 @@ export default function EditPurchaseOrderPage() {
         setFormData({
           code: purchaseOrder.code,
           poDate: new Date(purchaseOrder.poDate).toISOString().split("T")[0],
-          dateline: new Date(purchaseOrder.dateline)
-            .toISOString()
-            .split("T")[0],
           notes: purchaseOrder.notes || "",
           creatorId: purchaseOrder.creatorId,
           orderId: purchaseOrder.orderId || "",
@@ -357,11 +353,11 @@ export default function EditPurchaseOrderPage() {
     if (!formData.poDate) {
       errors.poDate = "Tanggal PO wajib diisi";
     }
-    if (!formData.dateline) {
-      errors.dateline = "Deadline wajib diisi";
-    } else if (new Date(formData.dateline) < new Date(formData.poDate)) {
-      errors.dateline = "Deadline tidak boleh lebih awal dari tanggal PO";
-    }
+    // if (!formData.dateline) {
+    //   errors.dateline = "Deadline wajib diisi";
+    // } else if (new Date(formData.dateline) < new Date(formData.poDate)) {
+    //   errors.dateline = "Deadline tidak boleh lebih awal dari tanggal PO";
+    // }
     // Removed creatorId validation - automatically filled from session
     if (!formData.orderId) {
       errors.orderId = "Order wajib dipilih";
@@ -601,7 +597,6 @@ export default function EditPurchaseOrderPage() {
       const result = await updatePurchaseOrder(purchaseOrderId, {
         ...formData,
         poDate: new Date(formData.poDate),
-        dateline: new Date(formData.dateline),
         paymentDeadline: formData.paymentDeadline
           ? new Date(formData.paymentDeadline)
           : null,

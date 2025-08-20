@@ -157,8 +157,21 @@ export async function seedInvoices(
 
   const createdInvoices = [];
   for (const invoiceData of invoicesData) {
+    const { customerId, createdBy, purchaseOrderId, statusPreparation, ...restData } = invoiceData;
+    
     const invoice = await prisma.invoices.create({
-      data: invoiceData,
+      data: {
+        ...restData,
+        customer: customerId ? {
+          connect: { id: customerId }
+        } : undefined,
+        creator: createdBy ? {
+          connect: { id: createdBy }
+        } : undefined,
+        purchaseOrder: purchaseOrderId ? {
+          connect: { id: purchaseOrderId }
+        } : undefined,
+      },
     });
     createdInvoices.push(invoice);
   }

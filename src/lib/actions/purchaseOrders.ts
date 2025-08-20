@@ -21,7 +21,7 @@ export type PurchaseOrderItemFormData = {
 export type PurchaseOrderFormData = {
   code: string;
   poDate: Date;
-  dateline: Date;
+  // dateline: Date;
   notes?: string;
   creatorId: string;
   orderId: string; // Optional untuk PO yang tidak berasal dari Order
@@ -304,12 +304,12 @@ export async function createPurchaseOrder(
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     // Validasi tanggal
-    if (data.dateline < data.poDate) {
-      return {
-        success: false,
-        error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
-      };
-    }
+    // if (data.dateline < data.poDate) {
+    //   return {
+    //     success: false,
+    //     error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
+    //   };
+    // }
 
     // Validasi taxPercentage
     if (data.taxPercentage === null || data.taxPercentage === undefined) {
@@ -348,7 +348,6 @@ export async function createPurchaseOrder(
         data: {
           code: data.code,
           poDate: data.poDate,
-          dateline: data.dateline,
           notes: data.notes,
           creatorId: data.creatorId,
           orderId: data.orderId,
@@ -401,12 +400,12 @@ export async function updatePurchaseOrder(
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     // Validasi tanggal
-    if (data.dateline < data.poDate) {
-      return {
-        success: false,
-        error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
-      };
-    }
+    // if (data.dateline < data.poDate) {
+    //   return {
+    //     success: false,
+    //     error: "Tanggal deadline tidak boleh lebih awal dari tanggal PO",
+    //   };
+    // }
 
     // Validasi taxPercentage
     if (data.taxPercentage === null || data.taxPercentage === undefined) {
@@ -445,7 +444,6 @@ export async function updatePurchaseOrder(
         data: {
           code: data.code,
           poDate: data.poDate,
-          dateline: data.dateline,
           notes: data.notes,
           creatorId: data.creatorId,
           orderId: data.orderId,
