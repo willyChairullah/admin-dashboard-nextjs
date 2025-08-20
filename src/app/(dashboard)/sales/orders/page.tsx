@@ -54,6 +54,7 @@ export default function OrdersPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerCity, setCustomerCity] = useState("");
   const [notes, setNotes] = useState("");
 
   // Store search states
@@ -137,6 +138,7 @@ export default function OrdersPage() {
         setCustomerName(selectedStoreData.name);
         setCustomerPhone(selectedStoreData.phone || "");
         setCustomerEmail(""); // Reset email as stores might not have email
+        setCustomerCity(selectedStoreData.city || ""); // Auto-fill city from store
         setDeliveryAddress(selectedStoreData.address);
       }
     } else if (!useExistingStore) {
@@ -144,6 +146,7 @@ export default function OrdersPage() {
       setCustomerName("");
       setCustomerPhone("");
       setCustomerEmail("");
+      setCustomerCity("");
       setDeliveryAddress("");
       setStoreSearchQuery("");
       setSelectedStore("");
@@ -222,6 +225,7 @@ export default function OrdersPage() {
       setCustomerName(selectedStore.name);
       setCustomerPhone(selectedStore.phone || "");
       setCustomerEmail(""); // Reset email as stores might not have email
+      setCustomerCity(selectedStore.city || ""); // Auto-fill city from store
       setDeliveryAddress(selectedStore.address);
     }
   };
@@ -771,7 +775,7 @@ export default function OrdersPage() {
                         className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                       />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="min-w-0">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                           Email Customer
@@ -794,6 +798,24 @@ export default function OrdersPage() {
                           onChange={(e) => setCustomerPhone(e.target.value)}
                           placeholder="Contoh: 081234567890"
                           className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                          Kota Toko
+                        </label>
+                        <input
+                          type="text"
+                          value={customerCity}
+                          onChange={(e) => setCustomerCity(e.target.value)}
+                          placeholder="Kota toko akan terisi otomatis"
+                          disabled={useExistingStore && selectedStore}
+                          className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
+                            useExistingStore && selectedStore
+                              ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed"
+                              : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
+                          }`}
+                          readOnly={useExistingStore && selectedStore}
                         />
                       </div>
                     </div>
