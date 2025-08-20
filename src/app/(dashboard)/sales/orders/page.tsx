@@ -261,20 +261,8 @@ export default function OrdersPage() {
   const calculateSubtotal = () => {
     return items.reduce((sum, item) => {
       const itemTotal = item.quantity * item.price;
-      let itemDiscount = 0;
-
-      if (discountType === "PER_CRATE") {
-        const crates = calculateCrates(item.quantity, item.productName);
-        if (discountUnit === "PERCENTAGE") {
-          // Percentage discount per crate
-          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
-        } else {
-          // Amount discount per crate
-          itemDiscount = crates * (item.discount || 0);
-        }
-      }
-
-      return sum + (itemTotal - itemDiscount);
+      // Don't subtract itemDiscount here for PER_CRATE, it will be calculated in discount calculation
+      return sum + itemTotal;
     }, 0);
   };
 

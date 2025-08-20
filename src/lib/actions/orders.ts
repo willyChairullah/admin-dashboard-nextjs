@@ -86,19 +86,8 @@ export async function createOrder({
     // Calculate total amount with discounts
     let subtotal = items.reduce((sum: number, item: OrderItem) => {
       const itemTotal = item.quantity * item.price;
-      let itemDiscount = 0;
-
-      if (discountType === "PER_CRATE") {
-        // For per-crate discount, calculate based on crates
-        const crates = item.crates || item.quantity / 24; // Default 24 bottles per crate if crates not provided
-        if (discountUnit === "PERCENTAGE") {
-          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
-        } else {
-          itemDiscount = crates * (item.discount || 0);
-        }
-      }
-
-      return sum + (itemTotal - itemDiscount);
+      // Don't subtract itemDiscount here for PER_CRATE, it will be calculated in totalDiscount
+      return sum + itemTotal;
     }, 0);
 
     // Calculate total discount
