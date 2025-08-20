@@ -5,7 +5,6 @@ import {
   DeliveryNotes,
   StockMovementType,
   DeliveryStatus,
-  PreparationStatus,
   PaymentStatus,
   InvoiceType,
 } from "@prisma/client";
@@ -92,12 +91,6 @@ export async function getDeliveryNotes(): Promise<DeliveryNoteWithDetails[]> {
             role: true,
           },
         },
-        userPreparation: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
       },
       orderBy: {
         code: "desc",
@@ -141,12 +134,6 @@ export async function getDeliveryNoteById(
             role: true,
           },
         },
-        userPreparation: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
       },
     });
 
@@ -163,8 +150,8 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
     const invoices = await db.invoices.findMany({
       where: {
         type: InvoiceType.PRODUCT,
-        paymentStatus: PaymentStatus.PAID,
-        statusPreparation: PreparationStatus.READY_FOR_DELIVERY,
+        // paymentStatus: PaymentStatus.PAID,
+        // statusPreparation field removed - all paid invoices are eligible for delivery
         purchaseOrder: {
           isNot: null,
         },
@@ -249,9 +236,7 @@ export async function createDeliveryNote(data: DeliveryNoteFormData) {
         throw new Error("Only paid invoices can have delivery notes");
       }
 
-      if (invoice.statusPreparation !== PreparationStatus.READY_FOR_DELIVERY) {
-        throw new Error("Invoice must be ready for delivery");
-      }
+      // statusPreparation validation removed - all paid invoices are ready for delivery
 
       // Check if delivery note already exists for this invoice
       const existingDeliveryNote = await tx.deliveryNotes.findFirst({

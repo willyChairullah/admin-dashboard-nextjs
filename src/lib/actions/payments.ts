@@ -434,53 +434,53 @@ export async function updatePayment(id: string, data: PaymentFormData) {
 // Delete payment
 export async function deletePayment(id: string) {
   try {
-    const result = await db.$transaction(async tx => {
-      // Get payment details
-      const payment = await tx.payments.findUnique({
-        where: { id },
-        include: {
-          invoice: {
-            select: {
-              totalAmount: true,
-              paidAmount: true,
-              remainingAmount: true,
-              paymentStatus: true,
-            },
-          },
-        },
-      });
+    // const result = await db.$transaction(async tx => {
+    //   // Get payment details
+    //   const payment = await tx.payments.findUnique({
+    //     where: { id },
+    //     include: {
+    //       invoice: {
+    //         select: {
+    //           totalAmount: true,
+    //           paidAmount: true,
+    //           remainingAmount: true,
+    //           paymentStatus: true,
+    //         },
+    //       },
+    //     },
+    //   });
 
-      if (!payment) {
-        throw new Error("Payment not found");
-      }
+    //   if (!payment) {
+    //     throw new Error("Payment not found");
+    //   }
 
-      // Delete payment
-      await tx.payments.delete({
-        where: { id },
-      });
+    //   // Delete payment
+    //   await tx.payments.delete({
+    //     where: { id },
+    //   });
 
-      // Update invoice payment status
-      const newPaidAmount = payment.invoice.paidAmount - payment.amount;
-      const newRemainingAmount = payment.invoice.totalAmount - newPaidAmount;
+    //   // Update invoice payment status
+    //   const newPaidAmount = payment.invoice.paidAmount - payment.amount;
+    //   const newRemainingAmount = payment.invoice.totalAmount - newPaidAmount;
 
-      let newPaymentStatus: PaymentStatus;
-      if (newRemainingAmount <= 0) {
-        newPaymentStatus = "PAID";
-      } else if (newPaidAmount > 0) {
-        newPaymentStatus = "PARTIALLY_PAID";
-      } else {
-        newPaymentStatus = "UNPAID";
-      }
+    //   let newPaymentStatus: PaymentStatus;
+    //   if (newRemainingAmount <= 0) {
+    //     newPaymentStatus = "PAID";
+    //   } else if (newPaidAmount > 0) {
+    //     newPaymentStatus = "PARTIALLY_PAID";
+    //   } else {
+    //     newPaymentStatus = "UNPAID";
+    //   }
 
-      await tx.invoices.update({
-        where: { id: payment.invoiceId },
-        data: {
-          paidAmount: newPaidAmount,
-          remainingAmount: newRemainingAmount,
-          paymentStatus: newPaymentStatus,
-        },
-      });
-    });
+    //   await tx.invoices.update({
+    //     where: { id: payment.invoiceId },
+    //     data: {
+    //       paidAmount: newPaidAmount,
+    //       remainingAmount: newRemainingAmount,
+    //       paymentStatus: newPaymentStatus,
+    //     },
+    //   });
+    // });
 
     revalidatePath("/purchasing/pembayaran");
     return { success: true };

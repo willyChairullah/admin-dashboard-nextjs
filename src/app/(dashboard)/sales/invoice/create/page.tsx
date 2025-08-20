@@ -8,6 +8,7 @@ import {
   InputDate,
   CustomerInfo,
   Select,
+  TaxSelect,
 } from "@/components/ui";
 import {
   createInvoice,
@@ -39,7 +40,7 @@ interface InvoiceItemFormData {
 interface InvoiceFormData {
   code: string;
   invoiceDate: string;
-  dueDate: string | null;
+  dueDate: Date | null;
   status: string;
   type: InvoiceType;
   subtotal: number;
@@ -207,11 +208,7 @@ export default function CreateInvoicePage() {
               taxPercentage: purchaseOrderDetails.taxPercentage || 0,
               shippingCost: purchaseOrderDetails.shippingCost || 0,
               discount: purchaseOrderDetails.orderLevelDiscount || 0,
-              dueDate: purchaseOrderDetails.paymentDeadline
-                ? new Date(purchaseOrderDetails.paymentDeadline)
-                    .toISOString()
-                    .split("T")[0]
-                : new Date(Date.now()).toISOString().split("T")[0],
+              dueDate: purchaseOrderDetails.paymentDeadline || null,
               items: purchaseOrderDetails.items.map(item => ({
                 productId: item.product.id,
                 description: item.product.name,
@@ -526,10 +523,7 @@ export default function CreateInvoicePage() {
           </FormField>
 
           {/* Tenggat Pembayaran */}
-          <FormField
-            label="Tenggat Pembayaran"
-            errorMessage={formErrors.dueDate}
-          >
+          <FormField label="Net Pembayaran" errorMessage={formErrors.dueDate}>
             <InputDate
               value={formData.dueDate ? new Date(formData.dueDate) : null}
               onChange={value =>
@@ -1022,28 +1016,19 @@ export default function CreateInvoicePage() {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <span>Pajak</span>
-                    <select
-                      value={
-                        formData.taxPercentage === null ||
-                        formData.taxPercentage === undefined
-                          ? ""
-                          : formData.taxPercentage
-                      }
-                      onChange={e => {
-                        const value = e.target.value;
+                    <TaxSelect
+                      value={formData.taxPercentage?.toString() || ""}
+                      onChange={(value, taxData) => {
                         const taxPercentage =
                           value === "" ? null : parseFloat(value);
                         handleInputChange("taxPercentage", taxPercentage);
                       }}
-                      className={`px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        formErrors.taxPercentage ? "border-red-500" : ""
-                      }`}
-                    >
-                      <option value="">Pilih Pajak</option>
-                      <option value={0}>0%</option>
-                      <option value={11}>11%</option>
-                      <option value={12}>12%</option>
-                    </select>
+                      name="taxPercentage"
+                      placeholder="Pilih Pajak"
+                      returnValue="percentage"
+                      className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      errorMessage={formErrors.taxPercentage}
+                    />
                   </div>
                   {formErrors.taxPercentage && (
                     <div className="text-xs text-red-500 mt-1">

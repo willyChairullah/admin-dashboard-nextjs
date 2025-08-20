@@ -211,7 +211,8 @@ const InputDate: React.FC<InputDateProps> = ({
               <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                 <button
                   onClick={handleClearToNull}
-                  className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md transition-colors"
+                  className="w-full px-3 py-2 text-sm bg-gray-100 
+                  dark:text-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md transition-colors"
                 >
                   {showNullAsText || "Clear Date"}
                 </button>

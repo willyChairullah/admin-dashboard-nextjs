@@ -10,11 +10,13 @@ import {
   InputDate,
   Select,
   CustomerInfo,
+  TaxSelect,
 } from "@/components/ui";
 import {
   createPurchaseOrder,
   getAvailableOrders,
   getProductsWithStock,
+  getProductStock,
 } from "@/lib/actions/purchaseOrders";
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
@@ -22,12 +24,14 @@ import { toast } from "sonner";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { generateCodeByTable } from "@/utils/getCode";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { FiTrash2, FiPlus } from "react-icons/fi";
 
 interface PurchaseOrderItemFormData {
   productId: string;
   quantity: number;
   price: number;
   discount: number;
+  discountType: "AMOUNT" | "PERCENTAGE";
   totalPrice: number;
 }
 
@@ -39,13 +43,15 @@ interface PurchaseOrderFormData {
   creatorId: string;
   orderId: string;
   orderLevelDiscount: number;
+  orderLevelDiscountType: "AMOUNT" | "PERCENTAGE";
+  paymentMethod: Date | null;
   totalAmount: number;
   totalDiscount: number;
   totalTax: number;
   taxPercentage: number | null;
   shippingCost: number;
   totalPayment: number;
-  paymentDeadline: string | null;
+  paymentDeadline: Date | null;
   items: PurchaseOrderItemFormData[];
 }
 
@@ -57,6 +63,8 @@ interface PurchaseOrderFormErrors {
   orderId?: string;
   poType?: string;
   orderLevelDiscount?: string;
+  orderLevelDiscountType?: string;
+  paymentMethod?: string;
   totalAmount?: string;
   totalDiscount?: string;
   totalTax?: string;
@@ -70,6 +78,7 @@ interface PurchaseOrderFormErrors {
       quantity?: string;
       price?: string;
       discount?: string;
+      discountType?: string;
       totalPrice?: string;
     };
   };
@@ -78,7 +87,7 @@ interface PurchaseOrderFormErrors {
 interface Order {
   id: string;
   orderNumber: string;
-  paymentDeadline?: Date | string | null;
+  paymentDeadline?: Date | null;
   discount: number;
   shippingCost: number;
   customer: {
@@ -113,6 +122,7 @@ interface Product {
   unit: string;
   price: number;
   currentStock: number;
+  code: string;
 }
 
 export default function CreatePurchaseOrderPage() {
@@ -125,8 +135,6 @@ export default function CreatePurchaseOrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // console.log(user);
-
   const [formData, setFormData] = useState<PurchaseOrderFormData>({
     code: "",
     poDate: new Date().toISOString().split("T")[0],
@@ -135,6 +143,8 @@ export default function CreatePurchaseOrderPage() {
     creatorId: "",
     orderId: "",
     orderLevelDiscount: 0,
+    orderLevelDiscountType: "AMOUNT",
+    paymentMethod: null,
     totalAmount: 0,
     totalDiscount: 0,
     totalTax: 0,
@@ -147,21 +157,55 @@ export default function CreatePurchaseOrderPage() {
 
   const [formErrors, setFormErrors] = useState<PurchaseOrderFormErrors>({});
 
+  // Fungsi untuk menghitung potongan item - dimemoized untuk performa
+  const calculateItemDiscount = React.useCallback(
+    (
+      price: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (price * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
+  // Fungsi untuk menghitung potongan order level - dimemoized untuk performa
+  const calculateOrderLevelDiscount = React.useCallback(
+    (
+      subtotal: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (subtotal * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Only fetch data if user is available and we haven't loaded yet
+        if (!user?.id) return;
+
         const [orders, products, newCode] = await Promise.all([
           getAvailableOrders("te"),
           getProductsWithStock(),
           generateCodeByTable("PurchaseOrders"),
         ]);
+
         setAvailableOrders(orders);
         setAvailableProducts(products);
 
         setFormData(prevData => ({
           ...prevData,
           code: newCode,
-          creatorId: user?.id || "",
+          creatorId: user.id,
         }));
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -172,42 +216,79 @@ export default function CreatePurchaseOrderPage() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not the entire user object
 
-  useEffect(() => {
-    // Subtotal sudah termasuk pengurangan diskon per item (harga - diskon per item) × jumlah
+  // Memoized calculations to prevent unnecessary recalculations
+  const calculations = React.useMemo(() => {
+    // Hitung total potongan item
+    const totalItemDiscount = formData.items.reduce((sum, item) => {
+      const itemDiscountAmount = calculateItemDiscount(
+        item.price || 0,
+        item.discount || 0,
+        item.discountType || "AMOUNT"
+      );
+      return sum + itemDiscountAmount * (item.quantity || 0);
+    }, 0);
+
+    // Subtotal dari item (total price sudah termasuk pengurangan diskon per item)
     const subtotal = formData.items.reduce(
       (sum, item) => sum + (item.totalPrice || 0),
       0
     );
 
-    // Total diskon item untuk tampilan detail saja
-    const totalItemDiscount = formData.items.reduce(
-      (sum, item) => sum + (item.discount || 0) * (item.quantity || 0),
-      0
+    // Hitung potongan order level berdasarkan subtotal setelah diskon item
+    const subtotalAfterItemDiscount = subtotal;
+    const orderLevelDiscountAmount = calculateOrderLevelDiscount(
+      subtotalAfterItemDiscount,
+      formData.orderLevelDiscount || 0,
+      formData.orderLevelDiscountType || "AMOUNT"
     );
 
-    // Total diskon hanya dari order level karena item discount sudah dipotong di subtotal
-    const totalDiscount = formData.orderLevelDiscount || 0;
+    // Total diskon keseluruhan (item + order level)
+    const totalDiscount = totalItemDiscount + orderLevelDiscountAmount;
 
+    // Taxable amount adalah subtotal dikurangi order level discount
     const taxableAmount = subtotal - totalDiscount;
-    const totalTax = (taxableAmount * (formData.taxPercentage || 0)) / 100;
-    const totalPayment =
-      subtotal - totalDiscount + totalTax + (formData.shippingCost || 0);
+    const totalTax = Math.max(
+      0,
+      (taxableAmount * (formData.taxPercentage || 0)) / 100
+    );
 
-    setFormData(prev => ({
-      ...prev,
-      totalAmount: subtotal,
+    // Total pembayaran
+    const totalPayment =
+      subtotal -
+      orderLevelDiscountAmount +
+      totalTax +
+      (formData.shippingCost || 0);
+
+    return {
+      subtotal,
+      totalItemDiscount,
+      orderLevelDiscountAmount,
       totalDiscount,
       totalTax,
       totalPayment,
-    }));
+    };
   }, [
     formData.items,
     formData.orderLevelDiscount,
+    formData.orderLevelDiscountType,
     formData.taxPercentage,
     formData.shippingCost,
+    calculateItemDiscount,
+    calculateOrderLevelDiscount,
   ]);
+
+  // Update formData when calculations change
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      totalAmount: calculations.subtotal,
+      totalDiscount: calculations.totalDiscount,
+      totalTax: calculations.totalTax,
+      totalPayment: calculations.totalPayment,
+    }));
+  }, [calculations]);
 
   const validateForm = (): boolean => {
     const errors: PurchaseOrderFormErrors = {};
@@ -244,6 +325,15 @@ export default function CreatePurchaseOrderPage() {
           itemError.quantity = "Quantity harus lebih dari 0";
         if (!item.price || item.price < 0)
           itemError.price = "Harga tidak boleh negatif";
+
+        // Validasi stok
+        if (item.productId && item.quantity > 0) {
+          const product = availableProducts.find(p => p.id === item.productId);
+          if (product && product.currentStock < item.quantity) {
+            itemError.quantity = `Stok tidak mencukupi`;
+          }
+        }
+
         if (Object.keys(itemError).length > 0) itemErrors[index] = itemError;
       });
       if (Object.keys(itemErrors).length > 0) errors.items = itemErrors;
@@ -279,6 +369,7 @@ export default function CreatePurchaseOrderPage() {
           quantity,
           price,
           discount,
+          discountType: "AMOUNT" as const,
           totalPrice,
         };
       });
@@ -291,9 +382,7 @@ export default function CreatePurchaseOrderPage() {
         items,
         orderLevelDiscount: order.discount || 0,
         shippingCost: order.shippingCost || 0,
-        paymentDeadline: order.paymentDeadline
-          ? new Date(order.paymentDeadline).toISOString().split("T")[0]
-          : null,
+        paymentDeadline: order.paymentDeadline || null,
       }));
     } else {
       setFormData(prev => ({
@@ -319,9 +408,13 @@ export default function CreatePurchaseOrderPage() {
     const newItems = [...formData.items];
     const currentItem = { ...newItems[index], [field]: value };
 
-    if (["quantity", "price", "discount"].includes(field)) {
-      const priceAfterDiscount =
-        (currentItem.price || 0) - (currentItem.discount || 0);
+    if (["quantity", "price", "discount", "discountType"].includes(field)) {
+      const itemDiscountAmount = calculateItemDiscount(
+        currentItem.price || 0,
+        currentItem.discount || 0,
+        currentItem.discountType || "AMOUNT"
+      );
+      const priceAfterDiscount = (currentItem.price || 0) - itemDiscountAmount;
       currentItem.totalPrice = priceAfterDiscount * (currentItem.quantity || 0);
     }
 
@@ -329,16 +422,57 @@ export default function CreatePurchaseOrderPage() {
       const product = availableProducts.find(p => p.id === value);
       if (product) {
         currentItem.price = product.price;
-        const priceAfterDiscount = product.price - (currentItem.discount || 0);
+        const itemDiscountAmount = calculateItemDiscount(
+          product.price,
+          currentItem.discount || 0,
+          currentItem.discountType || "AMOUNT"
+        );
+        const priceAfterDiscount = product.price - itemDiscountAmount;
         currentItem.totalPrice =
           priceAfterDiscount * (currentItem.quantity || 0);
+      }
+    }
+
+    // Validasi stok jika field quantity atau productId berubah
+    if (field === "quantity" || field === "productId") {
+      const productId = field === "productId" ? value : currentItem.productId;
+      const quantity = field === "quantity" ? value : currentItem.quantity;
+
+      if (productId && quantity) {
+        const product = availableProducts.find(p => p.id === productId);
+        if (product && product.currentStock < quantity) {
+          // Set error untuk item ini
+          const newErrors = { ...formErrors };
+          if (!newErrors.items) newErrors.items = {};
+          if (!newErrors.items[index]) newErrors.items[index] = {};
+          newErrors.items[index].quantity = `Stok tidak mencukupi.`;
+          setFormErrors(newErrors);
+        } else {
+          // Hapus error stok jika ada
+          const newErrors = { ...formErrors };
+          if (
+            newErrors.items?.[index]?.quantity?.includes("Stok tidak mencukupi")
+          ) {
+            delete newErrors.items[index].quantity;
+            if (Object.keys(newErrors.items[index]).length === 0) {
+              delete newErrors.items[index];
+              if (Object.keys(newErrors.items).length === 0) {
+                delete newErrors.items;
+              }
+            }
+            setFormErrors(newErrors);
+          }
+        }
       }
     }
 
     newItems[index] = currentItem;
     setFormData({ ...formData, items: newItems });
 
-    if (formErrors.items?.[index]?.[field]) {
+    if (
+      formErrors.items?.[index]?.[field] &&
+      !formErrors.items[index][field]?.includes("Stok tidak mencukupi")
+    ) {
       const newErrors = { ...formErrors };
       if (newErrors.items && newErrors.items[index]) {
         delete newErrors.items[index][field as keyof PurchaseOrderItemFormData];
@@ -358,7 +492,14 @@ export default function CreatePurchaseOrderPage() {
       ...formData,
       items: [
         ...formData.items,
-        { productId: "", quantity: 1, price: 0, discount: 0, totalPrice: 0 },
+        {
+          productId: "",
+          quantity: 1,
+          price: 0,
+          discount: 0,
+          discountType: "AMOUNT" as const,
+          totalPrice: 0,
+        },
       ],
     });
   };
@@ -479,29 +620,18 @@ export default function CreatePurchaseOrderPage() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Tenggat Pembayaran"
+                label="Net Pembayaran"
                 errorMessage={formErrors.paymentDeadline}
               >
                 <InputDate
-                  value={
-                    formData.paymentDeadline
-                      ? new Date(formData.paymentDeadline)
-                      : null
-                  }
-                  onChange={value =>
-                    handleInputChange(
-                      "paymentDeadline",
-                      value ? value.toISOString().split("T")[0] : null
-                    )
-                  }
-                  showNullAsText="Bayar Langsung"
-                  allowClearToNull={true}
-                  isOptional={true}
+                  value={formData.paymentDeadline}
                   showClearButton={true}
-                  placeholder="Pilih tanggal pembayaran"
+                  showNullAsText="Bayar Langsung"
+                  onChange={value =>
+                    handleInputChange("paymentDeadline", value)
+                  }
                 />
               </FormField>
-
               <FormField
                 label="Biaya Pengiriman"
                 errorMessage={formErrors.shippingCost}
@@ -544,169 +674,251 @@ export default function CreatePurchaseOrderPage() {
             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
               Item Purchase Order
             </h3>
+            <button
+              type="button"
+              onClick={addItem}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <FiPlus className="w-3 h-3" />
+              Tambah Item
+            </button>
           </div>
           {formData.items.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              Belum ada item. Klik 'Tambah Item' untuk menambah item.
+              Belum ada item. Pilih Order untuk menampilkan barang.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-1/3">
-                      Produk
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[100px]">
-                      Stok
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[100px]">
-                      Jumlah
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Harga
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Potongan Per Item
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.items.map((item, index) => {
-                    const product = availableProducts.find(
-                      p => p.id === item.productId
-                    );
+            <div className="overflow-x-auto shadow-sm">
+              <div className="min-w-[1000px]">
+                <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800">
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
+                        Produk
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
+                        Stok
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
+                        Qty
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                        Harga
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
+                        Potongan
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                        Total
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[30px]">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.items.map((item, index) => {
+                      const product = availableProducts.find(
+                        p => p.id === item.productId
+                      );
 
-                    return (
-                      <tr
-                        key={index}
-                        className="border-t border-gray-200 dark:border-gray-600"
+                      return (
+                        <tr
+                          key={index}
+                          className="border-t border-gray-200 dark:border-gray-600"
+                        >
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <select
+                              value={item.productId}
+                              onChange={e =>
+                                handleItemChange(
+                                  index,
+                                  "productId",
+                                  e.target.value
+                                )
+                              }
+                              className={`w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                formErrors.items?.[index]?.productId
+                                  ? "border-red-500"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              <option value="">Pilih Produk</option>
+                              {availableProducts
+                                .filter(
+                                  product =>
+                                    // Show current product or products not selected in other rows
+                                    product.id === item.productId ||
+                                    !formData.items.some(
+                                      (otherItem, otherIndex) =>
+                                        otherIndex !== index &&
+                                        otherItem.productId === product.id
+                                    )
+                                )
+                                .map(product => (
+                                  <option key={product.id} value={product.id}>
+                                    {product.name}
+                                  </option>
+                                ))}
+                            </select>
+                            {formErrors.items?.[index]?.productId && (
+                              <div className="text-xs text-red-500 mt-1">
+                                {formErrors.items[index].productId}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            {product && (
+                              <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                                {product.currentStock}
+                              </div>
+                            )}
+                            {formErrors.items?.[index]?.quantity && (
+                              <div className="text-xs text-red-500 mt-1">
+                                {formErrors.items[index].quantity}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <Input
+                              type="number"
+                              name={`quantity_${index}`}
+                              value={item.quantity.toString()}
+                              onChange={e =>
+                                handleItemChange(
+                                  index,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              placeholder="0"
+                              className="w-full text-m px-2 py-1"
+                            />
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-m">
+                                Rp
+                              </span>
+                              <Input
+                                type="text"
+                                name={`price_${index}`}
+                                value={item.price.toLocaleString("id-ID")}
+                                onChange={e => {
+                                  const value =
+                                    parseFloat(
+                                      e.target.value.replace(/\D/g, "")
+                                    ) || 0;
+                                  handleItemChange(index, "price", value);
+                                }}
+                                className="pl-6 pr-1 w-full text-right text-m py-1"
+                                placeholder="0"
+                                title={`Rp ${item.price.toLocaleString(
+                                  "id-ID"
+                                )}`}
+                              />
+                            </div>
+                            {formErrors.items?.[index]?.price && (
+                              <div className="text-xs text-red-500 mt-1">
+                                {formErrors.items[index].price}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="flex gap-1">
+                              <div className="relative flex-1 min-w-0">
+                                <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                                  {item.discountType === "PERCENTAGE"
+                                    ? "%"
+                                    : "Rp"}
+                                </span>
+                                <Input
+                                  type="text"
+                                  name={`discount_${index}`}
+                                  value={item.discount.toLocaleString("id-ID")}
+                                  onChange={e => {
+                                    const value =
+                                      parseFloat(
+                                        e.target.value.replace(/\D/g, "")
+                                      ) || 0;
+                                    handleItemChange(index, "discount", value);
+                                  }}
+                                  className="pl-5 pr-1 w-full text-right text-s py-1"
+                                  placeholder="0"
+                                  title={`${
+                                    item.discountType === "PERCENTAGE"
+                                      ? ""
+                                      : "Rp "
+                                  }${item.discount.toLocaleString("id-ID")}${
+                                    item.discountType === "PERCENTAGE"
+                                      ? "%"
+                                      : ""
+                                  }`}
+                                />
+                              </div>
+                              <select
+                                value={item.discountType}
+                                onChange={e =>
+                                  handleItemChange(
+                                    index,
+                                    "discountType",
+                                    e.target.value as "AMOUNT" | "PERCENTAGE"
+                                  )
+                                }
+                                className="w-11 px-1 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                              >
+                                <option value="AMOUNT">Rp</option>
+                                <option value="PERCENTAGE">%</option>
+                              </select>
+                            </div>
+                            {formErrors.items?.[index]?.discount && (
+                              <div className="text-xs text-red-500 mt-1">
+                                {formErrors.items[index].discount}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div
+                              className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate"
+                              title={formatRupiah(item.totalPrice)}
+                            >
+                              {formatRupiah(item.totalPrice)}
+                            </div>
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <button
+                              type="button"
+                              onClick={() => removeItem(index)}
+                              className=" cursor-pointer flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-red-500"
+                              title="Hapus item"
+                            >
+                              <FiTrash2 className="w-5 h-5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                      <td
+                        className="border border-gray-200 dark:border-gray-600 px-2 py-2 font-bold text-xl"
+                        colSpan={5}
                       >
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <select
-                            value={item.productId}
-                            onChange={e =>
-                              handleItemChange(
-                                index,
-                                "productId",
-                                e.target.value
-                              )
-                            }
-                            className={`w-full px-3 py-2 border rounded-md dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              formErrors.items?.[index]?.productId
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            <option value="">Pilih Produk</option>
-                            {availableProducts.map(product => (
-                              <option key={product.id} value={product.id}>
-                                {product.name}
-                              </option>
-                            ))}
-                          </select>
-                          {formErrors.items?.[index]?.productId && (
-                            <div className="text-xs text-red-500 mt-1">
-                              {formErrors.items[index].productId}
-                            </div>
-                          )}
-                        </td>
-
-                        <td>
-                          {product && (
-                            <div className="text-m text-center">
-                              {product.currentStock} {product.unit}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <Input
-                            type="number"
-                            name={`quantity_${index}`}
-                            value={item.quantity.toString()}
-                            onChange={e =>
-                              handleItemChange(
-                                index,
-                                "quantity",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder="0"
-                            className="w-full"
-                          />
-                          {formErrors.items?.[index]?.quantity && (
-                            <div className="text-xs text-red-500 mt-1">
-                              {formErrors.items[index].quantity}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                              Rp
-                            </span>
-                            <Input
-                              type="text"
-                              name={`price_${index}`}
-                              value={item.price.toLocaleString("id-ID")}
-                              onChange={e => {
-                                const value =
-                                  parseFloat(
-                                    e.target.value.replace(/\D/g, "")
-                                  ) || 0;
-                                handleItemChange(index, "price", value);
-                              }}
-                              className="pl-10 w-full"
-                              placeholder="0"
-                            />
-                          </div>
-                          {formErrors.items?.[index]?.price && (
-                            <div className="text-xs text-red-500 mt-1">
-                              {formErrors.items[index].price}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                              Rp
-                            </span>
-                            <Input
-                              type="text"
-                              name={`discount_${index}`}
-                              value={item.discount.toLocaleString("id-ID")}
-                              onChange={e => {
-                                const value =
-                                  parseFloat(
-                                    e.target.value.replace(/\D/g, "")
-                                  ) || 0;
-                                handleItemChange(index, "discount", value);
-                              }}
-                              className="pl-10 w-full"
-                              placeholder="0"
-                            />
-                          </div>
-                          {formErrors.items?.[index]?.discount && (
-                            <div className="text-xs text-red-500 mt-1">
-                              {formErrors.items[index].discount}
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                          {formatRupiah(item.totalPrice)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        Subtotal:
+                      </td>
+                      <td className="font-bold border border-gray-200 dark:border-gray-600 px-2 py-2 text-m text-right">
+                        {formatRupiah(formData.totalAmount)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
@@ -716,27 +928,44 @@ export default function CreatePurchaseOrderPage() {
                   label="Potongan Keseluruhan"
                   errorMessage={formErrors.orderLevelDiscount}
                 >
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                      Rp
-                    </span>
-                    <Input
-                      type="text"
-                      name="orderLevelDiscount"
-                      value={formData.orderLevelDiscount.toLocaleString(
-                        "id-ID"
-                      )}
-                      onChange={e => {
-                        const value =
-                          parseFloat(e.target.value.replace(/\D/g, "")) || 0;
-                        handleInputChange("orderLevelDiscount", value);
-                      }}
-                      placeholder="0"
-                      className="pl-10"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        {formData.orderLevelDiscountType === "PERCENTAGE"
+                          ? "%"
+                          : "Rp"}
+                      </span>
+                      <Input
+                        type="text"
+                        name="orderLevelDiscount"
+                        value={formData.orderLevelDiscount.toLocaleString(
+                          "id-ID"
+                        )}
+                        onChange={e => {
+                          const value =
+                            parseFloat(e.target.value.replace(/\D/g, "")) || 0;
+                          handleInputChange("orderLevelDiscount", value);
+                        }}
+                        className="pl-10"
+                        placeholder="0"
+                      />
+                    </div>
+                    <select
+                      name="orderLevelDiscountType"
+                      value={formData.orderLevelDiscountType}
+                      onChange={e =>
+                        handleInputChange(
+                          "orderLevelDiscountType",
+                          e.target.value as "AMOUNT" | "PERCENTAGE"
+                        )
+                      }
+                      className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="AMOUNT">Rp</option>
+                      <option value="PERCENTAGE">%</option>
+                    </select>
                   </div>
                 </FormField>
-
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Detail Potongan
@@ -748,13 +977,7 @@ export default function CreatePurchaseOrderPage() {
                       </span>
                       <span className="font-medium text-red-600 dark:text-red-400">
                         -Rp{" "}
-                        {formData.items
-                          .reduce(
-                            (sum, item) =>
-                              sum + (item.discount || 0) * (item.quantity || 0),
-                            0
-                          )
-                          .toLocaleString("id-ID")}
+                        {calculations.totalItemDiscount.toLocaleString("id-ID")}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -762,8 +985,7 @@ export default function CreatePurchaseOrderPage() {
                         Potongan Keseluruhan:
                       </span>
                       <span className="font-medium text-red-600 dark:text-red-400">
-                        -Rp{" "}
-                        {formData.orderLevelDiscount.toLocaleString("id-ID")}
+                        -{formatRupiah(calculations.orderLevelDiscountAmount)}
                       </span>
                     </div>
                   </div>
@@ -772,24 +994,22 @@ export default function CreatePurchaseOrderPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-700 dark:text-gray-300">
-                    Subtotal:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatRupiah(formData.totalAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700 dark:text-gray-300">
                     Total Potongan:
                   </span>
                   <span className="font-medium text-red-600 dark:text-red-400">
-                    -
+                    -{formatRupiah(calculations.totalDiscount)}
+                  </span>
+                </div>
+                {/* Sub setelah potongan */}
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Total Setelah potongan:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {formatRupiah(
-                      formData.items.reduce(
-                        (sum, item) =>
-                          sum + (item.discount || 0) * (item.quantity || 0),
-                        0
-                      ) + formData.orderLevelDiscount
+                      calculations.subtotal -
+                        (calculations.orderLevelDiscountAmount +
+                          calculations.totalItemDiscount)
                     )}
                   </span>
                 </div>
@@ -798,28 +1018,17 @@ export default function CreatePurchaseOrderPage() {
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <span>Pajak</span>
-                      <select
-                        value={
-                          formData.taxPercentage === null ||
-                          formData.taxPercentage === undefined
-                            ? ""
-                            : formData.taxPercentage
-                        }
-                        onChange={e => {
-                          const value = e.target.value;
+                      <TaxSelect
+                        value={formData.taxPercentage?.toString() || ""}
+                        onChange={value => {
                           const taxPercentage =
                             value === "" ? null : parseFloat(value);
                           handleInputChange("taxPercentage", taxPercentage);
                         }}
-                        className={`px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                          formErrors.taxPercentage ? "border-red-500" : ""
-                        }`}
-                      >
-                        <option value="">Pilih Pajak</option>
-                        <option value={0}>0%</option>
-                        <option value={11}>11%</option>
-                        <option value={12}>12%</option>
-                      </select>
+                        name="taxPercentage"
+                        returnValue="percentage"
+                        className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
                     {formErrors.taxPercentage && (
                       <div className="text-xs text-red-500">
