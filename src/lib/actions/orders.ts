@@ -388,6 +388,19 @@ export async function getOrders({
       order_items: order.orderItems,
     }));
 
+    console.log("=== GET ORDERS RESULT ===");
+    console.log("Orders found:", transformedOrders.length);
+    if (transformedOrders.length > 0) {
+      console.log("First order sample:", {
+        id: transformedOrders[0].id,
+        totalAmount: transformedOrders[0].totalAmount,
+        totalDiscount: transformedOrders[0].totalDiscount,
+        discountType: transformedOrders[0].discountType,
+        discountUnit: transformedOrders[0].discountUnit,
+      });
+    }
+    console.log("=== END GET ORDERS ===");
+
     return {
       success: true,
       data: transformedOrders,
@@ -566,6 +579,14 @@ export async function getOrderById(orderId: string) {
       order_items: order.orderItems,
     };
 
+    console.log("=== LOADED ORDER FROM DB ===");
+    console.log("Order items discounts from DB:", order.orderItems.map(item => ({
+      productName: item.products.name,
+      discount: item.discount,
+      discountType: typeof item.discount
+    })));
+    console.log("=== END DB LOAD ===");
+
     return {
       success: true,
       data: transformedOrder,
@@ -587,6 +608,11 @@ export async function updateOrder({
   notes,
   deliveryAddress,
   paymentDeadline,
+  discountType,
+  discountUnit,
+  totalDiscount,
+  shippingCost,
+  paymentType,
   items,
 }: {
   orderId: string;
@@ -596,6 +622,11 @@ export async function updateOrder({
   notes?: string;
   deliveryAddress?: string;
   paymentDeadline?: Date;
+  discountType?: "OVERALL" | "PER_CRATE";
+  discountUnit?: "AMOUNT" | "PERCENTAGE";
+  totalDiscount?: number;
+  shippingCost?: number;
+  paymentType?: "IMMEDIATE" | "DEFERRED";
   items: Array<{
     id?: string;
     productId: string;
@@ -605,6 +636,17 @@ export async function updateOrder({
   }>;
 }) {
   try {
+    console.log("=== UPDATE ORDER START ===");
+    console.log("orderId:", orderId);
+    console.log("discountType:", discountType);
+    console.log("discountUnit:", discountUnit);
+    console.log("totalDiscount received:", totalDiscount);
+    console.log("items with discounts:", items.map(item => ({
+      productId: item.productId,
+      discount: item.discount
+    })));
+    console.log("=== UPDATE ORDER DEBUG END ===");
+    
     // Check if order exists and can be edited
     const existingOrder = await db.orders.findUnique({
       where: { id: orderId },
@@ -630,12 +672,64 @@ export async function updateOrder({
     }
 
     // Calculate new total amount with discounts
-    const totalAmount = items.reduce((sum, item) => {
-      const itemSubtotal = item.quantity * item.price;
-      const discountAmount = itemSubtotal * ((item.discount || 0) / 100);
-      const itemTotal = itemSubtotal - discountAmount;
-      return sum + itemTotal;
-    }, 0);
+    let totalAmount = 0;
+    
+    if (discountType === "PER_CRATE") {
+      // For per-crate discount, apply discount to each item
+      // First, get all unique product IDs to fetch product data
+      const productIds = [...new Set(items.map(item => item.productId))];
+      const products = await db.products.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, bottlesPerCrate: true }
+      });
+      
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product.bottlesPerCrate || 24;
+        return map;
+      }, {} as Record<string, number>);
+      
+      totalAmount = items.reduce((sum, item) => {
+        const itemSubtotal = item.quantity * item.price;
+        let discountAmount = 0;
+        
+        if (discountUnit === "PERCENTAGE") {
+          discountAmount = itemSubtotal * ((item.discount || 0) / 100);
+        } else {
+          // For amount discount per crate, calculate crates properly
+          const bottlesPerCrate = productMap[item.productId] || 24;
+          const crates = item.quantity / bottlesPerCrate;
+          discountAmount = crates * (item.discount || 0);
+        }
+        
+        const itemTotal = itemSubtotal - discountAmount;
+        console.log(`Server calculation for item ${item.productId}: subtotal=${itemSubtotal}, crates=${item.quantity / (productMap[item.productId] || 24)}, discount=${discountAmount}, total=${itemTotal}`);
+        return sum + itemTotal;
+      }, 0);
+    } else {
+      // For overall discount, calculate subtotal first then apply overall discount
+      const subtotal = items.reduce((sum, item) => {
+        return sum + (item.quantity * item.price);
+      }, 0);
+      
+      let overallDiscount = 0;
+      if (discountUnit === "PERCENTAGE") {
+        overallDiscount = subtotal * ((totalDiscount || 0) / 100);
+      } else {
+        overallDiscount = totalDiscount || 0;
+      }
+      
+      totalAmount = subtotal - overallDiscount;
+    }
+    
+    // Add shipping cost
+    totalAmount += (shippingCost || 0);
+
+    console.log("=== SERVER TOTAL CALCULATION ===");
+    console.log("discountType:", discountType);
+    console.log("discountUnit:", discountUnit);
+    console.log("calculatedTotalAmount:", totalAmount);
+    console.log("shippingCost:", shippingCost);
+    console.log("=== END SERVER CALCULATION ===");
 
     // Update customer data if provided
     if (customerName || customerEmail || customerPhone) {
@@ -657,10 +751,21 @@ export async function updateOrder({
         notes: notes || undefined,
         deliveryAddress: deliveryAddress || undefined,
         paymentDeadline: paymentDeadline || undefined,
+        discountType: discountType || undefined,
+        discountUnit: discountUnit || undefined,
+        totalDiscount: totalDiscount || 0,
+        shippingCost: shippingCost || 0,
+        paymentType: paymentType || undefined,
         totalAmount,
         updatedAt: new Date(),
       },
     });
+
+    console.log("=== ORDER UPDATED IN DB ===");
+    console.log("totalDiscount saved to DB:", updatedOrder.totalDiscount);
+    console.log("discountType saved to DB:", updatedOrder.discountType);
+    console.log("discountUnit saved to DB:", updatedOrder.discountUnit);
+    console.log("=== END DB UPDATE LOG ===");
 
     // Handle order items - delete existing and create new ones
     await db.orderItems.deleteMany({
@@ -668,10 +773,14 @@ export async function updateOrder({
     });
 
     // Create new order items
+    console.log("Creating order items:", items);
     for (const item of items) {
-      const itemSubtotal = item.quantity * item.price;
-      const discountAmount = itemSubtotal * ((item.discount || 0) / 100);
-      const totalPrice = itemSubtotal - discountAmount;
+      console.log("Creating item:", {
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount
+      });
       
       await db.orderItems.create({
         data: {
@@ -680,7 +789,7 @@ export async function updateOrder({
           quantity: item.quantity,
           price: item.price,
           discount: item.discount || 0,
-          totalPrice,
+          totalPrice: item.quantity * item.price, // Store raw total, let frontend handle discount calculation
         },
       });
     }
