@@ -36,10 +36,21 @@ export default async function middleware(request: NextRequest) {
     (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up"))
   ) {
     // console.log("🔥 REDIRECT: Authenticated user to dashboard");
-    return NextResponse.redirect(new URL("/management/category", request.url));
+    // Role-based redirect after login
+    const userRole = session.user.role;
+    if (userRole === "SALES") {
+      return NextResponse.redirect(new URL("/sales", request.url));
+    } else {
+      return NextResponse.redirect(new URL("/management/category", request.url));
+    }
   }
 
-  // --- 3. Role-Based Access Control ---
+  // --- 3. Block SALES users from accessing main dashboard ---
+  if (session && pathname === "/" && session.user.role === "SALES") {
+    return NextResponse.redirect(new URL("/sales", request.url));
+  }
+
+  // --- 4. Role-Based Access Control ---
   const protectedPrefixes = [
     "/management",
     "/sales",
@@ -66,6 +77,10 @@ export default async function middleware(request: NextRequest) {
       // console.log(
       //   `🚫 BLOCKED: ${userRole} tried to access management module: ${pathname}`
       // );
+      // Redirect SALES to their dashboard, others to main dashboard
+      if (userRole === "SALES") {
+        return NextResponse.redirect(new URL("/sales", request.url));
+      }
       return NextResponse.redirect(new URL("/", request.url));
     }
 
@@ -77,6 +92,10 @@ export default async function middleware(request: NextRequest) {
       // console.log(
       //   `🚫 BLOCKED: ${userRole} tried to access settings module: ${pathname}`
       // );
+      // Redirect SALES to their dashboard, others to main dashboard
+      if (userRole === "SALES") {
+        return NextResponse.redirect(new URL("/sales", request.url));
+      }
       return NextResponse.redirect(new URL("/", request.url));
     }
 
@@ -88,6 +107,10 @@ export default async function middleware(request: NextRequest) {
       // console.log(
       //   `🚫 BLOCKED: ${userRole} tried to access inventory module: ${pathname}`
       // );
+      // Redirect SALES to their dashboard, others to main dashboard
+      if (userRole === "SALES") {
+        return NextResponse.redirect(new URL("/sales", request.url));
+      }
       return NextResponse.redirect(new URL("/", request.url));
     }
 

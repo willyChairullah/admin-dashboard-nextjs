@@ -1,7 +1,7 @@
 "use client";
 import { ManagementHeader } from "@/components/ui";
 import React, { useState } from "react";
-import { Button, Input, Select, FormField, InputDate } from "@/components/ui";
+import { Button, Input, Select, FormField, InputCheckbox } from "@/components/ui";
 import { createUser } from "@/lib/actions/user";
 import { UserRole } from "@prisma/client";
 
@@ -10,6 +10,7 @@ interface FormData {
   email: string;
   role: string;
   password: string;
+  isActive: boolean;
 }
 
 interface FormErrors {
@@ -17,6 +18,7 @@ interface FormErrors {
   email?: string;
   password?: string;
   role?: string;
+  isActive?: string;
 }
 
 export default function page() {
@@ -26,6 +28,7 @@ export default function page() {
     email: "",
     role: "",
     password: "",
+    isActive: true,
   });
 
   const [formErrors, setFormErrors] = useState<FormErrors>({
@@ -42,10 +45,12 @@ export default function page() {
     { value: "SALES", label: "SALES" },
   ];
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData({ ...formData, [field]: value });
     // Clear error when user starts typing
-    if (value.trim()) {
+    if (typeof value === 'string' && value.trim()) {
+      setFormErrors({ ...formErrors, [field]: "" });
+    } else if (typeof value === 'boolean') {
       setFormErrors({ ...formErrors, [field]: "" });
     }
   };
@@ -84,6 +89,7 @@ export default function page() {
         email: formData.email,
         role: formData.role as UserRole,
         password: formData.password,
+        isActive: formData.isActive,
       });
 
       if (result.success) {
@@ -95,6 +101,7 @@ export default function page() {
           email: "",
           role: "",
           password: "",
+          isActive: true,
         });
         setFormErrors({});
       } else {
@@ -178,6 +185,23 @@ export default function page() {
                 placeholder="— Select a Role —"
               />
             </FormField>
+
+            <FormField
+              label="Account Status"
+              htmlFor="isActive"
+              errorMessage={formErrors.isActive}
+            >
+              <InputCheckbox
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => handleInputChange("isActive", e.target.checked)}
+                label="Active Account"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Deactivated users will not be able to login
+              </p>
+            </FormField>
+
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? "Creating..." : "Buat user"}
             </Button>

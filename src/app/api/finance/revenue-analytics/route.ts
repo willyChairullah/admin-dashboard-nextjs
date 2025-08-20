@@ -92,7 +92,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
             gte: period.start,
             lte: period.end,
           },
-          status: "PAID",
+          paymentStatus: "PAID",
         },
         _sum: {
           totalAmount: true,
@@ -109,7 +109,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
               gte: prevPeriod.start,
               lte: prevPeriod.end,
             },
-            status: "PAID",
+            paymentStatus: "PAID",
           },
           _sum: {
             totalAmount: true,
@@ -132,16 +132,16 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
     })
   );
 
-  // Fetch product performance
-  const productPerformance = await db.orderItems.groupBy({
+  // Fetch product performance based on paid invoices
+  const productPerformance = await db.invoiceItems.groupBy({
     by: ["productId"],
     where: {
-      orders: {
-        createdAt: {
+      invoices: {
+        invoiceDate: {
           gte: startDate,
           lte: endDate,
         },
-        status: "COMPLETED",
+        paymentStatus: "PAID",
       },
     },
     _sum: {
@@ -158,6 +158,8 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
 
   const productPerformanceData = await Promise.all(
     productPerformance.map(async (item) => {
+      if (!item.productId) return null; // Skip if productId is null
+
       const product = await db.products.findUnique({
         where: { id: item.productId },
         include: {
@@ -173,22 +175,22 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
       // Get revenue data for this product across all periods
       const productPeriodData = await Promise.all(
         periods.map(async (period) => {
-          const revenue = await db.orderItems.aggregate({
+          const revenue = await db.invoiceItems.aggregate({
             where: {
-              productId: item.productId,
-              orders: {
-                createdAt: {
+              productId: item.productId!,
+              invoices: {
+                invoiceDate: {
                   gte: period.start,
                   lte: period.end,
                 },
-                status: "COMPLETED",
+                paymentStatus: "PAID",
               },
             },
             _sum: {
               totalPrice: true,
             },
           });
-          return revenue._sum.totalPrice || 0;
+          return revenue._sum?.totalPrice || 0;
         })
       );
 
@@ -214,37 +216,70 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
     })
   );
 
-  // Fetch sales by representative
-  const salesByRep = await db.orders.groupBy({
-    by: ["salesId"],
+  // Filter out null results
+  const filteredProductPerformanceData = productPerformanceData.filter(
+    (item) => item !== null
+  );
+
+  // Fetch sales by representative based on paid invoices through purchase orders
+  const salesByRep = await db.invoices.findMany({
     where: {
-      createdAt: {
+      invoiceDate: {
         gte: startDate,
         lte: endDate,
       },
-      status: "COMPLETED",
+      paymentStatus: "PAID",
     },
-    _sum: {
-      totalAmount: true,
-    },
-    _count: {
-      id: true,
-    },
-    orderBy: {
-      _sum: {
-        totalAmount: "desc",
+    include: {
+      purchaseOrder: {
+        include: {
+          order: {
+            select: {
+              salesId: true,
+            },
+          },
+        },
       },
     },
-    take: 5,
   });
 
+  // Group by salesId manually
+  const salesRevenue = new Map<
+    string,
+    { totalAmount: number; count: number }
+  >();
+
+  salesByRep.forEach((invoice) => {
+    const salesId = invoice.purchaseOrder?.order?.salesId;
+    if (salesId) {
+      const existing = salesRevenue.get(salesId) || {
+        totalAmount: 0,
+        count: 0,
+      };
+      salesRevenue.set(salesId, {
+        totalAmount: existing.totalAmount + invoice.totalAmount,
+        count: existing.count + 1,
+      });
+    }
+  });
+
+  // Convert to array and sort by revenue
+  const salesByRepArray = Array.from(salesRevenue.entries())
+    .map(([salesId, data]) => ({
+      salesId,
+      totalAmount: data.totalAmount,
+      count: data.count,
+    }))
+    .sort((a, b) => b.totalAmount - a.totalAmount)
+    .slice(0, 5);
+
   const salesByRepData = await Promise.all(
-    salesByRep.map(async (item) => {
+    salesByRepArray.map(async (item) => {
       const user = await db.users.findUnique({
         where: { id: item.salesId },
       });
 
-      // Calculate conversion rate
+      // For conversion calculation, use all orders as baseline
       const totalOrders = await db.orders.count({
         where: {
           salesId: item.salesId,
@@ -255,45 +290,80 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         },
       });
 
-      const completedOrders = item._count.id;
+      const completedOrders = item.count;
       const conversion =
         totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
 
       return {
         id: item.salesId,
         name: user?.name || "Unknown Sales Rep",
-        revenue: item._sum.totalAmount || 0,
+        revenue: item.totalAmount,
         deals: completedOrders,
         conversion: conversion,
       };
     })
   );
 
-  // Fetch store performance (using customers' cities as "stores")
-  const storePerformance = await db.orders.groupBy({
-    by: ["customerId"],
+  // Fetch store performance based on paid invoices through customers
+  const storePerformance = await db.invoices.findMany({
     where: {
-      createdAt: {
+      invoiceDate: {
         gte: startDate,
         lte: endDate,
       },
-      status: "COMPLETED",
+      paymentStatus: "PAID",
     },
-    _sum: {
-      totalAmount: true,
-    },
-    orderBy: {
-      _sum: {
-        totalAmount: "desc",
+    include: {
+      purchaseOrder: {
+        include: {
+          order: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  name: true,
+                  city: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
   });
 
-  const storePerformanceData = await Promise.all(
-    storePerformance.map(async (item) => {
-      const customer = await db.customers.findUnique({
-        where: { id: item.customerId },
+  // Group by customerId manually
+  const customerRevenue = new Map<
+    string,
+    { totalAmount: number; customer: any }
+  >();
+
+  storePerformance.forEach((invoice) => {
+    const customer = invoice.purchaseOrder?.order?.customer;
+    if (customer) {
+      const existing = customerRevenue.get(customer.id) || {
+        totalAmount: 0,
+        customer,
+      };
+      customerRevenue.set(customer.id, {
+        totalAmount: existing.totalAmount + invoice.totalAmount,
+        customer,
       });
+    }
+  });
+
+  // Convert to array and sort by revenue
+  const storePerformanceArray = Array.from(customerRevenue.entries())
+    .map(([customerId, data]) => ({
+      customerId,
+      totalAmount: data.totalAmount,
+      customer: data.customer,
+    }))
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+
+  const storePerformanceData = await Promise.all(
+    storePerformanceArray.map(async (item) => {
+      const customer = item.customer;
 
       // Calculate growth for this customer/store by comparing across sequential periods
       let growth = 0;
@@ -301,20 +371,24 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
       // Get revenue data for this customer across all periods
       const customerPeriodData = await Promise.all(
         periods.map(async (period) => {
-          const revenue = await db.orders.aggregate({
+          const revenue = await db.invoices.aggregate({
             where: {
-              customerId: item.customerId,
-              createdAt: {
+              invoiceDate: {
                 gte: period.start,
                 lte: period.end,
               },
-              status: "COMPLETED",
+              paymentStatus: "PAID",
+              purchaseOrder: {
+                order: {
+                  customerId: customer.id,
+                },
+              },
             },
             _sum: {
               totalAmount: true,
             },
           });
-          return revenue._sum.totalAmount || 0;
+          return revenue._sum?.totalAmount || 0;
         })
       );
 
@@ -332,23 +406,23 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
       }
 
       return {
-        id: item.customerId,
-        name: customer?.name || "Unknown Customer",
-        location: customer?.city || "Unknown Location",
-        revenue: item._sum.totalAmount || 0,
+        id: customer.id,
+        name: customer.name || "Unknown Customer",
+        location: customer.city || "Unknown Location",
+        revenue: item.totalAmount,
         growth: growth,
       };
     })
   );
 
-  // Calculate average order value
-  const currentPeriodOrders = await db.orders.aggregate({
+  // Calculate average order value from paid invoices
+  const currentPeriodInvoices = await db.invoices.aggregate({
     where: {
-      createdAt: {
+      invoiceDate: {
         gte: startDate,
         lte: endDate,
       },
-      status: "COMPLETED",
+      paymentStatus: "PAID",
     },
     _avg: {
       totalAmount: true,
@@ -358,9 +432,9 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
     },
   });
 
-  const previousPeriodOrders = await db.orders.aggregate({
+  const previousPeriodInvoices = await db.invoices.aggregate({
     where: {
-      createdAt: {
+      invoiceDate: {
         gte:
           timeRange === "month"
             ? new Date(startDate.getFullYear(), startDate.getMonth() - 6, 1)
@@ -369,28 +443,28 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
             : new Date(startDate.getFullYear() - 6, 0, 1),
         lt: startDate,
       },
-      status: "COMPLETED",
+      paymentStatus: "PAID",
     },
     _avg: {
       totalAmount: true,
     },
   });
 
-  const currentAOV = currentPeriodOrders._avg.totalAmount || 0;
-  const previousAOV = previousPeriodOrders._avg.totalAmount || 0;
+  const currentAOV = currentPeriodInvoices._avg.totalAmount || 0;
+  const previousAOV = previousPeriodInvoices._avg.totalAmount || 0;
   const aovTrend =
     previousAOV > 0 ? ((currentAOV - previousAOV) / previousAOV) * 100 : 0;
 
-  // Generate AOV breakdown by periods
+  // Generate AOV breakdown by periods using paid invoices
   const aovBreakdown = await Promise.all(
     periods.slice(-4).map(async (period) => {
-      const orders = await db.orders.aggregate({
+      const invoices = await db.invoices.aggregate({
         where: {
-          createdAt: {
+          invoiceDate: {
             gte: period.start,
             lte: period.end,
           },
-          status: "COMPLETED",
+          paymentStatus: "PAID",
         },
         _avg: {
           totalAmount: true,
@@ -399,7 +473,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
 
       return {
         period: period.label,
-        value: orders._avg.totalAmount || 0,
+        value: invoices._avg.totalAmount || 0,
       };
     })
   );
@@ -411,7 +485,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         gte: startDate,
         lte: endDate,
       },
-      status: "PAID",
+      paymentStatus: "PAID",
     },
     _sum: {
       totalAmount: true,

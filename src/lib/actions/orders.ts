@@ -149,11 +149,40 @@ export async function createOrder({
       finalCustomerId = newCustomer.id;
     }
 
+    // Generate order number with format ORD-YYYYMM-XXX
+    const now = new Date();
+    const yearMonth = `${now.getFullYear()}${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    // Get the count of orders for this month to generate sequential number
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59
+    );
+
+    const monthlyOrderCount = await db.orders.count({
+      where: {
+        createdAt: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+    });
+
+    const sequentialNumber = String(monthlyOrderCount + 1).padStart(3, "0");
+    const orderNumber = `ORD-${yearMonth}-${sequentialNumber}`;
+
     // Create the order
     const order = await db.orders.create({
       data: {
         id: `ord_${Date.now()}`, // Generate unique ID
-        orderNumber: `ORD-${Date.now()}`,
+        orderNumber: orderNumber,
         customerId: finalCustomerId,
         salesId: salesId, // Using salesId as per schema
         totalAmount,
@@ -332,6 +361,58 @@ export async function getOrders({
     };
   } catch (error) {
     console.error("Error fetching orders:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+      data: [],
+    };
+  }
+}
+
+// Function specifically for sales dashboard to get latest 5 orders
+export async function getLatestOrdersForDashboard({
+  salesId,
+  limit = 5,
+}: {
+  salesId?: string;
+  limit?: number;
+} = {}) {
+  try {
+    const where: Record<string, unknown> = {};
+
+    if (salesId) {
+      where.salesId = salesId; // Using salesId as per schema
+    }
+
+    const orders = await db.orders.findMany({
+      where,
+      include: {
+        customer: true,
+        sales: true, // This is the sales rep relation
+        orderItems: {
+          include: {
+            products: true, // Include product details for better display
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit, // Limit to latest 5 orders
+    });
+
+    // Transform the data to match the expected format
+    const transformedOrders = orders.map((order) => ({
+      ...order,
+      order_items: order.orderItems,
+    }));
+
+    return {
+      success: true,
+      data: transformedOrders,
+    };
+  } catch (error) {
+    console.error("Error fetching latest orders for dashboard:", error);
     return {
       success: false,
       error: "Internal server error",

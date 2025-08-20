@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
           // Calculate achieved amount from paid invoices in the period
           const paidInvoices = await db.invoices.findMany({
             where: {
-              status: "PAID",
+              paymentStatus: "PAID", // Use paymentStatus instead of status
               invoiceDate: {
                 gte: startDate,
                 lte: endDate,

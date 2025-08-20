@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/common";
 import { Badge } from "@/components/ui/common";
 import { Modal } from "@/components/ui/common";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getOrders } from "@/lib/actions/orders";
+import { getOrders, getLatestOrdersForDashboard } from "@/lib/actions/orders";
 import { getFieldVisits } from "@/lib/actions/field-visits";
 import { getCurrentMonthTarget } from "@/lib/actions/sales-targets";
 import Link from "next/link";
@@ -82,6 +82,7 @@ interface DashboardStats {
   achievementPercentage: number;
   totalVisits: number;
   recentVisits: number;
+  totalQuantity: number; // Total quantity in krat
 }
 
 const SalesDashboard = () => {
@@ -97,6 +98,7 @@ const SalesDashboard = () => {
     achievementPercentage: 0,
     totalVisits: 0,
     recentVisits: 0,
+    totalQuantity: 0, // Add total quantity
   });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<FieldVisit | null>(null);
@@ -118,11 +120,20 @@ const SalesDashboard = () => {
     try {
       setLoading(true);
 
-      // Load orders for this sales rep
-      const ordersResult = await getOrders({ salesId: user.id });
+      // Load latest 5 orders for this sales rep
+      const ordersResult = await getLatestOrdersForDashboard({
+        salesId: user.id,
+        limit: 5,
+      });
       if (ordersResult.success) {
         setOrders(ordersResult.data as Order[]);
       }
+
+      // Load all orders for statistics calculation
+      const allOrdersResult = await getOrders({ salesId: user.id });
+      const allOrders = allOrdersResult.success
+        ? (allOrdersResult.data as Order[])
+        : [];
 
       // Load field visits for this sales user
       const visitsResult = await getFieldVisits({ salesId: user.id });
@@ -133,14 +144,12 @@ const SalesDashboard = () => {
       // Load current month target for this user
       const userTarget = await getCurrentMonthTarget(user.id);
 
-      // Calculate dashboard statistics
-      if (ordersResult.success) {
-        await calculateDashboardStats(
-          ordersResult.data as Order[],
-          visitsResult.success ? (visitsResult.data as FieldVisit[]) : [],
-          userTarget
-        );
-      }
+      // Calculate dashboard statistics using all orders
+      await calculateDashboardStats(
+        allOrders,
+        visitsResult.success ? (visitsResult.data as FieldVisit[]) : [],
+        userTarget
+      );
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
@@ -185,6 +194,17 @@ const SalesDashboard = () => {
       (sum, order) => sum + order.totalAmount,
       0
     );
+
+    // Calculate total quantity (krat) for current month
+    const totalQuantity = currentMonthOrders.reduce((sum, order) => {
+      const orderQuantity =
+        order.orderItems?.reduce(
+          (itemSum, item) => itemSum + item.quantity,
+          0
+        ) || 0;
+      return sum + orderQuantity;
+    }, 0);
+
     const completedOrders = currentMonthOrders.filter(
       (order) => order.status === "COMPLETED" || order.status === "DELIVERED"
     ).length;
@@ -196,9 +216,9 @@ const SalesDashboard = () => {
     ).length;
 
     // Use target from database if available, otherwise use default
-    const monthlyTarget = userTarget ? userTarget.targetAmount : 0; // 50M default
+    const monthlyTarget = userTarget ? userTarget.targetAmount : 0; // Target dalam krat
     const achievementPercentage =
-      monthlyTarget > 0 ? (totalRevenue / monthlyTarget) * 100 : 0;
+      monthlyTarget > 0 ? (totalQuantity / monthlyTarget) * 100 : 0;
 
     // Round to 1 decimal place for small percentages, whole number for larger ones
     const displayPercentage =
@@ -215,6 +235,7 @@ const SalesDashboard = () => {
       achievementPercentage: displayPercentage,
       totalVisits: currentMonthVisits.length,
       recentVisits: recentVisits.length,
+      totalQuantity, // Add total quantity
     });
   };
 
@@ -265,6 +286,10 @@ const SalesDashboard = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatQuantity = (quantity: number) => {
+    return new Intl.NumberFormat("id-ID").format(quantity);
   };
 
   const formatDate = (dateString: string | Date) => {
@@ -371,17 +396,17 @@ const SalesDashboard = () => {
           <Card className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 lg:p-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg flex-shrink-0">
-                <span className="text-lg sm:text-xl lg:text-2xl">💰</span>
+                <span className="text-lg sm:text-xl lg:text-2xl">�</span>
               </div>
               <div className="ml-2 sm:ml-3 lg:ml-4 flex-1 min-w-0 overflow-hidden">
                 <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300 mb-1 ">
-                  Pencapaian
+                  Pencapaian Krat
                 </p>
                 <p className="text-sm sm:text-base lg:text-lg font-bold text-green-900 dark:text-green-100 ">
-                  {formatCurrency(dashboardStats.totalRevenue)}
+                  {formatQuantity(dashboardStats.totalQuantity)} Krat
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-400  hidden sm:block">
-                  Target: {formatCurrency(dashboardStats.monthlyTarget)}
+                  Target: {formatQuantity(dashboardStats.monthlyTarget)} Krat
                 </p>
               </div>
             </div>
@@ -531,26 +556,35 @@ const SalesDashboard = () => {
                           </div>
                         </div>
 
-                        <div className="space-y-3 mb-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                              <span className="mr-2">💰</span>
-                              Total:
-                            </span>
-                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                              {formatCurrency(order.totalAmount)}
-                            </span>
+                          <div className="space-y-3 mb-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                                <span className="mr-2">📦</span>
+                                Kuantitas:
+                              </span>
+                              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                                <span className="mr-2">�</span>
+                                Total Krat:
+                              </span>
+                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                                <span className="mr-2">📅</span>
+                                Tanggal:
+                              </span>
+                              <span className="text-sm text-gray-900 dark:text-white font-medium">
+                                {formatDate(order.orderDate)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                              <span className="mr-2">📅</span>
-                              Tanggal:
-                            </span>
-                            <span className="text-sm text-gray-900 dark:text-white font-medium">
-                              {formatDate(order.orderDate)}
-                            </span>
-                          </div>
-                        </div>
 
                         <Button
                           variant="outline"
@@ -586,8 +620,14 @@ const SalesDashboard = () => {
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[100px]">
                                 <span className="flex items-center">
-                                  <span className="mr-1">💰</span>
-                                  Total
+                                  <span className="mr-1">�</span>
+                                  Kuantitas
+                                </span>
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[100px]">
+                                <span className="flex items-center">
+                                  <span className="mr-1">�💰</span>
+                                  Total Krat
                                 </span>
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-[100px]">
@@ -640,10 +680,13 @@ const SalesDashboard = () => {
                                   </div>
                                 </td>
                                 <td className="px-4 py-4">
+                                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full block text-center">
+                                    {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4">
                                   <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full block text-center">
-                                    {formatCurrency(order.totalAmount)
-                                      .replace("Rp", "")
-                                      .trim()}
+                                    {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
                                   </span>
                                 </td>
                                 <td className="px-4 py-4">
@@ -808,11 +851,11 @@ const SalesDashboard = () => {
                 <Card className="p-4 sm:p-6 border-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 shadow-lg">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-lg">
-                      <span className="text-lg sm:text-xl">💰</span>
+                      <span className="text-lg sm:text-xl">�</span>
                     </div>
                     <div className="ml-3 sm:ml-4 min-w-0 flex-1">
                       <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                        Pencapaian Penjualan
+                        Pencapaian Target Krat
                       </h4>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         Bulan{" "}
@@ -849,10 +892,10 @@ const SalesDashboard = () => {
                     </div>
                     <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-2">
                       <span className="break-words">
-                        {formatCurrency(dashboardStats.totalRevenue)}
+                        {formatQuantity(dashboardStats.totalQuantity)} Krat
                       </span>
                       <span className="break-words text-right">
-                        {formatCurrency(dashboardStats.monthlyTarget)}
+                        {formatQuantity(dashboardStats.monthlyTarget)} Krat
                       </span>
                     </div>
                   </div>
@@ -986,13 +1029,10 @@ const SalesDashboard = () => {
                             Produk
                           </th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                            Qty
+                            Qty (Krat)
                           </th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                            Harga
-                          </th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                            Subtotal
+                            Kode Produk
                           </th>
                         </tr>
                       </thead>
@@ -1004,23 +1044,18 @@ const SalesDashboard = () => {
                                 {item.products?.name ||
                                   `Product ${item.productId}`}
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                                {item.quantity}
+                              <td className="px-4 py-2 text-sm font-bold text-blue-600 dark:text-blue-400">
+                                {item.quantity} Krat
                               </td>
-                              <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">
-                                {formatCurrency(
-                                  item.products?.price || item.price
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                                {formatCurrency(item.totalPrice)}
+                              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                                {item.products?.code || '-'}
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
                             <td
-                              colSpan={4}
+                              colSpan={3}
                               className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                             >
                               Tidak ada item dalam order ini
@@ -1036,10 +1071,10 @@ const SalesDashboard = () => {
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Total:
+                    Total Krat:
                   </span>
                   <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {formatCurrency(selectedOrder.totalAmount)}
+                    {selectedOrder.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
                   </span>
                 </div>
               </div>

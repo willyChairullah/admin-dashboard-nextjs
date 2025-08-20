@@ -14,6 +14,7 @@ export type PurchaseOrderItemFormData = {
   quantity: number;
   price: number; // Harga per unit saat PO dibuat
   discount: number; // Potongan per item
+  discountType: "AMOUNT" | "PERCENTAGE"; // Tipe diskon per item
   totalPrice: number; // Total harga untuk item ini
 };
 
@@ -26,6 +27,8 @@ export type PurchaseOrderFormData = {
   orderId: string; // Optional untuk PO yang tidak berasal dari Order
   totalAmount: number; // Total nilai PO
   orderLevelDiscount: number; // Potongan keseluruhan
+  orderLevelDiscountType: "AMOUNT" | "PERCENTAGE"; // Tipe diskon keseluruhan
+  paymentMethod?: Date | null; // Net Pembayaran sebagai date
   totalDiscount: number; // Total semua potongan
   totalTax: number; // Total pajak
   taxPercentage: number | null; // Persentase pajak
@@ -261,6 +264,7 @@ export async function getProductsWithStock() {
         unit: true,
         price: true,
         currentStock: true,
+        code: true,
       },
       orderBy: {
         name: "asc",
@@ -271,6 +275,26 @@ export async function getProductsWithStock() {
   } catch (error) {
     console.error("Error getting products with stock:", error);
     throw new Error("Failed to fetch products with stock");
+  }
+}
+
+// Get product stock by ID
+export async function getProductStock(productId: string) {
+  try {
+    const product = await db.products.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        currentStock: true,
+        unit: true,
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.error("Error getting product stock:", error);
+    throw new Error("Failed to fetch product stock");
   }
 }
 
@@ -295,8 +319,30 @@ export async function createPurchaseOrder(
       };
     }
 
+    // Validasi stok untuk semua item
+    for (const item of data.items) {
+      const product = await db.products.findUnique({
+        where: { id: item.productId },
+        select: { id: true, name: true, currentStock: true },
+      });
+
+      if (!product) {
+        return {
+          success: false,
+          error: `Produk dengan ID ${item.productId} tidak ditemukan`,
+        };
+      }
+
+      if (product.currentStock < item.quantity) {
+        return {
+          success: false,
+          error: `Stok ${product.name} tidak mencukupi. Stok tersedia: ${product.currentStock}, diminta: ${item.quantity}`,
+        };
+      }
+    }
+
     // Create purchase order with items
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async tx => {
       // Create the main purchase order
       const purchaseOrder = await tx.purchaseOrders.create({
         data: {
@@ -308,24 +354,28 @@ export async function createPurchaseOrder(
           orderId: data.orderId,
           totalAmount: data.totalAmount,
           orderLevelDiscount: data.orderLevelDiscount,
+          orderLevelDiscountType: data.orderLevelDiscountType,
+          paymentMethod:
+            data.paymentMethod?.toISOString().split("T")[0] || null,
           totalDiscount: data.totalDiscount,
           totalTax: data.totalTax,
           taxPercentage: data.taxPercentage || 0,
           shippingCost: data.shippingCost,
           totalPayment: data.totalPayment,
           paymentDeadline: data.paymentDeadline,
-          status: "PENDING",
+          status: "PROCESSING",
         },
       });
 
       // Create purchase order items
       const items = await tx.purchaseOrderItems.createMany({
-        data: data.items.map((item) => ({
+        data: data.items.map(item => ({
           purchaseOrderId: purchaseOrder.id,
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
           discount: item.discount,
+          discountType: item.discountType,
           totalPrice: item.totalPrice,
         })),
       });
@@ -366,7 +416,29 @@ export async function updatePurchaseOrder(
       };
     }
 
-    const result = await db.$transaction(async (tx) => {
+    // Validasi stok untuk semua item
+    for (const item of data.items) {
+      const product = await db.products.findUnique({
+        where: { id: item.productId },
+        select: { id: true, name: true, currentStock: true },
+      });
+
+      if (!product) {
+        return {
+          success: false,
+          error: `Produk dengan ID ${item.productId} tidak ditemukan`,
+        };
+      }
+
+      if (product.currentStock < item.quantity) {
+        return {
+          success: false,
+          error: `Stok ${product.name} tidak mencukupi. Stok tersedia: ${product.currentStock}, diminta: ${item.quantity}`,
+        };
+      }
+    }
+
+    const result = await db.$transaction(async tx => {
       // Update the main purchase order
       const purchaseOrder = await tx.purchaseOrders.update({
         where: { id },
@@ -379,6 +451,9 @@ export async function updatePurchaseOrder(
           orderId: data.orderId,
           totalAmount: data.totalAmount,
           orderLevelDiscount: data.orderLevelDiscount,
+          orderLevelDiscountType: data.orderLevelDiscountType,
+          paymentMethod:
+            data.paymentMethod?.toISOString().split("T")[0] || null,
           totalDiscount: data.totalDiscount,
           totalTax: data.totalTax,
           taxPercentage: data.taxPercentage || 0,
@@ -395,12 +470,13 @@ export async function updatePurchaseOrder(
 
       // Create new items
       const items = await tx.purchaseOrderItems.createMany({
-        data: data.items.map((item) => ({
+        data: data.items.map(item => ({
           purchaseOrderId: id,
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
           discount: item.discount,
+          discountType: item.discountType,
           totalPrice: item.totalPrice,
         })),
       });
@@ -424,7 +500,7 @@ export async function deletePurchaseOrder(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async tx => {
       // Delete items first (cascade should handle this, but being explicit)
       await tx.purchaseOrderItems.deleteMany({
         where: { purchaseOrderId: id },

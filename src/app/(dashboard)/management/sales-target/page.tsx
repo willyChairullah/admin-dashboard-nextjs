@@ -2,7 +2,6 @@
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
 import React, { useState, useEffect } from "react";
-import { formatRupiah } from "@/utils/formatRupiah";
 import {
   getSalesTargets,
   SalesTargetWithUser,
@@ -19,19 +18,19 @@ const columns = [
     },
   },
   {
-    header: "Target Amount",
+    header: "Target Krat",
     accessor: "targetAmount",
     cell: (info: { getValue: () => number }) => {
       const value = info.getValue();
-      return formatRupiah(value);
+      return `${new Intl.NumberFormat("id-ID").format(value)} Krat`;
     },
   },
   {
-    header: "Achieved Amount",
+    header: "Achieved Krat",
     accessor: "achievedAmount",
     cell: (info: { getValue: () => number }) => {
       const value = info.getValue();
-      return formatRupiah(value);
+      return `${new Intl.NumberFormat("id-ID").format(value)} Krat`;
     },
   },
   {
@@ -119,38 +118,52 @@ export default function SalesTargetPage() {
       try {
         setIsLoading(true);
         setError(null);
+        
         const targets = await getSalesTargets();
 
+        // Get all unique user IDs
+        const userIds = [...new Set(targets.map(target => target.userId))];
+        
+        // Fetch all orders for all users at once
+        const allOrdersPromises = userIds.map(userId => getOrders({ salesId: userId }));
+        const allOrdersResults = await Promise.all(allOrdersPromises);
+        
+        // Create a map of userId to orders for faster lookup
+        const userOrdersMap = new Map();
+        userIds.forEach((userId, index) => {
+          const ordersResult = allOrdersResults[index];
+          if (ordersResult.success) {
+            userOrdersMap.set(userId, ordersResult.data as any[]);
+          } else {
+            userOrdersMap.set(userId, []);
+          }
+        });
+
         // Calculate real achieved amounts for each target
-        const targetsWithRealAchievedAmount = await Promise.all(
-          targets.map(async (target) => {
-            const realAchievedAmount = await calculateAchievedAmount(
-              target.userId,
-              target.targetPeriod,
-              target.targetType
-            );
+        const targetsWithRealAchievedAmount = targets.map((target) => {
+          const userOrders = userOrdersMap.get(target.userId) || [];
+          const realAchievedAmount = calculateAchievedAmountFromOrders(
+            userOrders,
+            target.targetPeriod,
+            target.targetType
+          );
 
-            const percentage =
-              target.targetAmount > 0
-                ? Number(
-                    ((realAchievedAmount / target.targetAmount) * 100).toFixed(
-                      1
-                    )
+          const percentage =
+            target.targetAmount > 0
+              ? Number(
+                  ((realAchievedAmount / target.targetAmount) * 100).toFixed(
+                    1
                   )
-                : 0;
+                )
+              : 0;
 
-            console.log(
-              `User: ${target.user?.name}, Target: ${target.targetAmount}, Achieved: ${realAchievedAmount}, Percentage: ${percentage}%`
-            );
-
-            return {
-              ...target,
-              userName: target.user?.name || "N/A",
-              achievedAmount: realAchievedAmount, // Override with real data
-              achievementPercentage: percentage,
-            };
-          })
-        );
+          return {
+            ...target,
+            userName: target.user?.name || "N/A",
+            achievedAmount: realAchievedAmount, // Override with real data
+            achievementPercentage: percentage,
+          };
+        });
 
         setSalesTargets(targetsWithRealAchievedAmount);
       } catch (error) {
@@ -165,7 +178,7 @@ export default function SalesTargetPage() {
     loadSalesTargets();
   }, []);
 
-  // Function to calculate real achieved amount from orders
+  // Function to calculate real achieved quantity from orders
   const calculateAchievedAmount = async (
     userId: string,
     targetPeriod: string,
@@ -175,16 +188,19 @@ export default function SalesTargetPage() {
       // Get all orders for this sales user
       const ordersResult = await getOrders({ salesId: userId });
       if (!ordersResult.success) {
-        console.log(`No orders found for user ${userId}`);
         return 0;
       }
 
       const orders = ordersResult.data as any[];
-      console.log(`Found ${orders.length} orders for user ${userId}`);
 
       // Filter orders based on target period and type
       const filteredOrders = orders.filter((order) => {
         const orderDate = new Date(order.orderDate);
+
+        // Only count completed or delivered orders
+        if (order.status !== "COMPLETED" && order.status !== "DELIVERED") {
+          return false;
+        }
 
         if (targetType === "MONTHLY") {
           // Format: YYYY-MM
@@ -207,31 +223,73 @@ export default function SalesTargetPage() {
         return false;
       });
 
-      console.log(
-        `Filtered orders for period ${targetPeriod}:`,
-        filteredOrders.length
-      );
+      // Calculate total quantity from completed orders
+      const achievedQuantity = filteredOrders.reduce((total, order) => {
+        const orderQuantity =
+          order.orderItems?.reduce(
+            (itemSum: number, item: any) => itemSum + (item.quantity || 0),
+            0
+          ) || 0;
+        return total + orderQuantity;
+      }, 0);
 
-      // Calculate total amount from completed/delivered orders
-      const completedOrders = filteredOrders.filter(
-        (order) => order.status === "COMPLETED" || order.status === "DELIVERED"
-      );
-
-      console.log(`Completed orders:`, completedOrders.length);
-
-      const achievedAmount = completedOrders.reduce(
-        (total, order) => total + (order.totalAmount || 0),
-        0
-      );
-
-      console.log(
-        `Calculated achieved amount for user ${userId}, period ${targetPeriod}:`,
-        achievedAmount
-      );
-
-      return achievedAmount;
+      return achievedQuantity;
     } catch (error) {
-      console.error("Error calculating achieved amount:", error);
+      console.error("Error calculating achieved quantity:", error);
+      return 0;
+    }
+  };
+
+  // Helper function to calculate achieved amount from orders array
+  const calculateAchievedAmountFromOrders = (
+    orders: any[],
+    targetPeriod: string,
+    targetType: string
+  ): number => {
+    try {
+      // Filter orders based on target period and type
+      const filteredOrders = orders.filter((order) => {
+        const orderDate = new Date(order.orderDate);
+
+        // Only count completed or delivered orders
+        if (order.status !== "COMPLETED" && order.status !== "DELIVERED") {
+          return false;
+        }
+
+        if (targetType === "MONTHLY") {
+          // Format: YYYY-MM
+          const orderPeriod = `${orderDate.getFullYear()}-${String(
+            orderDate.getMonth() + 1
+          ).padStart(2, "0")}`;
+          return orderPeriod === targetPeriod;
+        } else if (targetType === "QUARTERLY") {
+          // Format: YYYY-Q1, YYYY-Q2, etc.
+          const year = orderDate.getFullYear();
+          const quarter = Math.ceil((orderDate.getMonth() + 1) / 3);
+          const orderPeriod = `${year}-Q${quarter}`;
+          return orderPeriod === targetPeriod;
+        } else if (targetType === "YEARLY") {
+          // Format: YYYY
+          const orderPeriod = orderDate.getFullYear().toString();
+          return orderPeriod === targetPeriod;
+        }
+
+        return false;
+      });
+
+      // Calculate total quantity from completed orders
+      const achievedQuantity = filteredOrders.reduce((total, order) => {
+        const orderQuantity =
+          order.orderItems?.reduce(
+            (itemSum: number, item: any) => itemSum + (item.quantity || 0),
+            0
+          ) || 0;
+        return total + orderQuantity;
+      }, 0);
+
+      return achievedQuantity;
+    } catch (error) {
+      console.error("Error calculating achieved quantity from orders:", error);
       return 0;
     }
   };
@@ -250,9 +308,12 @@ export default function SalesTargetPage() {
             target.targetType
           );
 
-          const percentage = target.targetAmount > 0
-            ? Number(((realAchievedAmount / target.targetAmount) * 100).toFixed(1))
-            : 0;
+          const percentage =
+            target.targetAmount > 0
+              ? Number(
+                  ((realAchievedAmount / target.targetAmount) * 100).toFixed(1)
+                )
+              : 0;
 
           return {
             ...target,
@@ -298,6 +359,15 @@ export default function SalesTargetPage() {
         mainPageName={`/${staticData.module}/${staticData.subModule}`}
         allowedRoles={staticData.allowedRole}
       />
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={refreshData}
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Memuat..." : "Refresh Data"}
+        </button>
+      </div>
       <ManagementContent
         sampleData={salesTargets}
         columns={columns}
@@ -305,8 +375,8 @@ export default function SalesTargetPage() {
         dateAccessor="createdAt"
         emptyMessage={
           isLoading
-            ? "Loading sales targets and calculating achievements..."
-            : "No sales targets found"
+            ? "Memuat sales targets dan menghitung pencapaian..."
+            : "Tidak ada sales target yang ditemukan"
         }
         linkPath={`/${staticData.module}/${staticData.subModule}`}
       />

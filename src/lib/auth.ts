@@ -27,6 +27,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Invalid credentials.");
         }
 
+        // Check if user account is active
+        if (!user.isActive) {
+          throw new Error("Account has been deactivated. Please contact your administrator.");
+        }
+
         console.log(user);
 
         // User object from Prisma query

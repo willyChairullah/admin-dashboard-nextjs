@@ -8,7 +8,6 @@ import {
   InvoiceStatus,
   InvoiceType,
   PurchaseOrderStatus,
-  StockConfirmationStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -224,10 +223,7 @@ export async function getAvailablePurchaseOrders() {
         },
         // PO status should be PROCESSING
         status: PurchaseOrderStatus.PROCESSING,
-        // Stock confirmation should NOT be WAITING_CONFIRMATION
-        statusStockConfirmation: {
-          not: StockConfirmationStatus.WAITING_CONFIRMATION,
-        },
+        // Stock confirmation field removed - stock validation now done at PO creation
       },
       include: {
         // creator: {

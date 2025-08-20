@@ -30,10 +30,6 @@ export async function seedPurchaseOrderItems(
           price,
           totalPrice: quantity * price - discount,
           discount,
-          notesStockConfirmation:
-            purchaseOrder.statusStockConfirmation === "STOCK_AVAILABLE"
-              ? `Stok ${product.name} tersedia`
-              : null,
         },
       });
       itemsCreated++;

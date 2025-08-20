@@ -129,7 +129,7 @@ export default function EditSalesTargetPage() {
     }
 
     if (formData.targetAmount <= 0) {
-      errors.targetAmount = "Target amount harus lebih besar dari 0";
+      errors.targetAmount = "Target krat harus lebih besar dari 0";
     }
 
     setFormErrors(errors);
@@ -338,7 +338,7 @@ export default function EditSalesTargetPage() {
           </FormField>
 
           <FormField
-            label="Target Amount"
+            label="Target Krat"
             htmlFor="targetAmount"
             required
             errorMessage={formErrors.targetAmount}
@@ -346,7 +346,7 @@ export default function EditSalesTargetPage() {
             <Input
               type="number"
               name="targetAmount"
-              placeholder="0"
+              placeholder="Masukkan target dalam krat"
               value={formData.targetAmount.toString()}
               onChange={(e) =>
                 handleInputChange(
@@ -355,8 +355,11 @@ export default function EditSalesTargetPage() {
                 )
               }
               min="0"
-              step="0.01"
+              step="1"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Target dalam satuan krat (bukan rupiah)
+            </p>
           </FormField>
         </div>
 

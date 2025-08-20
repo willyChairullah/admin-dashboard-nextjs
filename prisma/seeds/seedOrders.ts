@@ -22,7 +22,7 @@ export async function seedOrders(
     const orderItemsToCreate = [];
 
     for (const item of items) {
-      const product = products.find(p => p.id === item.productId);
+      const product = products.find((p) => p.id === item.productId);
       if (!product) continue;
 
       const itemDiscount = item.discount || 0;
@@ -91,7 +91,7 @@ export async function seedOrders(
       salesId: salesUser.id,
       deliveryAddress: customers[1].address,
       discount: 10000,
-      discountType: "TOTAL",
+      discountType: "OVERALL",
       shippingCost: 25000,
       paymentDeadline: null, // Bayar segera
     },
@@ -169,7 +169,7 @@ export async function seedOrders(
       salesId: salesUser.id,
       deliveryAddress: customers[2].address,
       discount: 25000,
-      discountType: "TOTAL",
+      discountType: "OVERALL",
       shippingCost: 40000,
       paymentDeadline: new Date("2025-08-24T09:30:00Z"),
     },
@@ -191,7 +191,7 @@ export async function seedOrders(
       salesId: salesUser.id,
       deliveryAddress: customers[1].address,
       discount: 5000,
-      discountType: "TOTAL",
+      discountType: "OVERALL",
       shippingCost: 18000,
       paymentDeadline: new Date("2025-08-25T11:00:00Z"),
     },
