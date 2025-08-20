@@ -8,6 +8,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   discount?: number; // Diskon per item
+  crates?: number; // Jumlah krat
 }
 
 export async function createOrder({
@@ -22,6 +23,7 @@ export async function createOrder({
   notes,
   deliveryAddress,
   discountType,
+  discountUnit,
   discount,
   shippingCost,
   paymentType,
@@ -39,9 +41,10 @@ export async function createOrder({
   notes?: string;
   deliveryAddress?: string;
   discountType?: string;
+  discountUnit?: string;
   discount?: number;
   shippingCost?: number;
-  paymentType?: "IMMEDIATE" | "DEADLINE";
+  paymentType?: "IMMEDIATE" | "DEFERRED";
   paymentDeadline?: Date;
   requiresConfirmation?: boolean;
 }) {
@@ -83,13 +86,46 @@ export async function createOrder({
     // Calculate total amount with discounts
     let subtotal = items.reduce((sum: number, item: OrderItem) => {
       const itemTotal = item.quantity * item.price;
-      const itemDiscount =
-        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
+      let itemDiscount = 0;
+
+      if (discountType === "PER_CRATE") {
+        // For per-crate discount, calculate based on crates
+        const crates = item.crates || item.quantity / 24; // Default 24 bottles per crate if crates not provided
+        if (discountUnit === "PERCENTAGE") {
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          itemDiscount = crates * (item.discount || 0);
+        }
+      }
+
       return sum + (itemTotal - itemDiscount);
     }, 0);
 
-    // Apply total discount if applicable
-    const totalDiscount = discountType === "TOTAL" ? discount || 0 : 0;
+    // Calculate total discount
+    let totalDiscount = 0;
+    if (discountType === "OVERALL") {
+      if (discountUnit === "PERCENTAGE") {
+        totalDiscount = (subtotal * (discount || 0)) / 100;
+      } else {
+        totalDiscount = discount || 0;
+      }
+    } else if (discountType === "PER_CRATE") {
+      // Calculate total discount from all items
+      totalDiscount = items.reduce((total, item) => {
+        const crates = item.crates || item.quantity / 24;
+        let itemDiscount = 0;
+
+        if (discountUnit === "PERCENTAGE") {
+          const itemTotal = item.quantity * item.price;
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          itemDiscount = crates * (item.discount || 0);
+        }
+
+        return total + itemDiscount;
+      }, 0);
+    }
+
     const totalAmount = subtotal - totalDiscount + (shippingCost || 0);
 
     let finalStoreId: string = storeId || "";
@@ -196,11 +232,15 @@ export async function createOrder({
             : paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Immediate or deadline/7 days default
         deliveryAddress:
           deliveryAddress || storeAddress || "Alamat belum ditentukan",
-        discount: discountType === "TOTAL" ? discount || 0 : 0,
-        discountType: (discountType as any) || "TOTAL",
+        discount: discountType === "OVERALL" ? discount || 0 : 0,
+        discountType: (discountType as any) || "OVERALL",
+        discountUnit: (discountUnit as any) || "AMOUNT",
         shippingCost: shippingCost || 0,
+        paymentType: (paymentType as any) || "IMMEDIATE",
         paymentDeadline:
           paymentType === "IMMEDIATE" ? null : paymentDeadline || null,
+        subtotal: subtotal,
+        totalDiscount: totalDiscount,
         updatedAt: new Date(),
       },
     });

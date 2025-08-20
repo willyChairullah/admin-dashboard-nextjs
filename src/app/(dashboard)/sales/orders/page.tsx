@@ -25,6 +25,7 @@ interface Product {
   unit: string;
   currentStock: number;
   isActive: boolean;
+  bottlesPerCrate: number;
 }
 
 interface OrderItem {
@@ -78,7 +79,7 @@ export default function OrdersPage() {
     "AMOUNT"
   );
   const [shippingCost, setShippingCost] = useState<number>(0);
-  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEADLINE">(
+  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEFERRED">(
     "IMMEDIATE"
   );
   const [paymentDeadline, setPaymentDeadline] = useState("");
@@ -87,29 +88,10 @@ export default function OrdersPage() {
     { productName: "", quantity: 1, price: 0, discount: 0, crates: 0 },
   ]);
 
-  // Helper function to get bottles per crate based on volume
+  // Helper function to get bottles per crate from product data
   const getBottlesPerCrate = (productName: string): number => {
     const product = products.find((p) => p.name === productName);
-    if (!product) return 24; // default
-
-    // Extract volume from product name or unit
-    const mlMatch =
-      product.unit.match(/(\d+)\s*ml/i) || product.name.match(/(\d+)\s*ml/i);
-    const literMatch =
-      product.unit.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i) ||
-      product.name.match(/(\d+(?:\.\d+)?)\s*(?:liter|litre|L)\b/i);
-
-    if (literMatch) {
-      // Convert liters to ml (1 liter = 1000ml)
-      const volume = parseFloat(literMatch[1]) * 1000;
-      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
-      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
-    } else if (mlMatch) {
-      const volume = parseInt(mlMatch[1]);
-      if (volume > 800) return 12; // Above 800ml = 12 bottles per crate
-      if (volume >= 250 && volume <= 800) return 24; // 250-800ml = 24 bottles per crate
-    }
-    return 24; // default for smaller volumes
+    return product?.bottlesPerCrate || 24; // default to 24 if product not found
   };
 
   // Helper function to calculate crates from quantity
@@ -306,6 +288,21 @@ export default function OrdersPage() {
       } else {
         discount = totalDiscount;
       }
+    } else if (discountType === "PER_CRATE") {
+      // Calculate total discount from all items
+      discount = items.reduce((totalDiscount, item) => {
+        const crates = calculateCrates(item.quantity, item.productName);
+        let itemDiscount = 0;
+        
+        if (discountUnit === "PERCENTAGE") {
+          const itemTotal = item.quantity * item.price;
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          itemDiscount = crates * (item.discount || 0);
+        }
+        
+        return totalDiscount + itemDiscount;
+      }, 0);
     }
 
     return subtotal - discount + shippingCost;
@@ -321,6 +318,21 @@ export default function OrdersPage() {
       } else {
         discount = totalDiscount;
       }
+    } else if (discountType === "PER_CRATE") {
+      // Calculate total discount from all items
+      discount = items.reduce((totalDiscount, item) => {
+        const crates = calculateCrates(item.quantity, item.productName);
+        let itemDiscount = 0;
+        
+        if (discountUnit === "PERCENTAGE") {
+          const itemTotal = item.quantity * item.price;
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          itemDiscount = crates * (item.discount || 0);
+        }
+        
+        return totalDiscount + itemDiscount;
+      }, 0);
     }
 
     return discount;
@@ -358,12 +370,22 @@ export default function OrdersPage() {
       return;
     }
 
+    if (!customerPhone) {
+      toast.error("Masukkan nomor telepon customer.");
+      return;
+    }
+
+    if (customerPhone.length < 10) {
+      toast.error("Nomor telepon customer minimal 10 digit.");
+      return;
+    }
+
     if (!deliveryAddress) {
       toast.error("Masukkan alamat pengiriman.");
       return;
     }
 
-    if (paymentType === "DEADLINE" && !paymentDeadline) {
+    if (paymentType === "DEFERRED" && !paymentDeadline) {
       toast.error("Masukkan tenggat pembayaran.");
       return;
     }
@@ -382,6 +404,9 @@ export default function OrdersPage() {
 
       startTransition(async () => {
         try {
+          // Send the correct discount value based on discount type
+          const discountValue = discountType === "OVERALL" ? totalDiscount : 0;
+          
           const result = await createOrder({
             salesId: user.id, // Use current user ID
             storeId: useExistingStore ? selectedStore : undefined,
@@ -394,11 +419,12 @@ export default function OrdersPage() {
             notes: notes || undefined,
             deliveryAddress: deliveryAddress || undefined,
             discountType,
-            discount: totalDiscount,
+            discountUnit,
+            discount: discountValue, // Send the correct discount value
             shippingCost,
             paymentType,
             paymentDeadline:
-              paymentType === "DEADLINE" && paymentDeadline
+              paymentType === "DEFERRED" && paymentDeadline
                 ? new Date(paymentDeadline)
                 : undefined,
             requiresConfirmation: true, // Always require confirmation
@@ -752,13 +778,13 @@ export default function OrdersPage() {
                       </div>
                       <div className="min-w-0">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                          Telepon Customer
+                          Telepon Customer *
                         </label>
                         <input
                           type="tel"
                           value={customerPhone}
                           onChange={(e) => setCustomerPhone(e.target.value)}
-                          placeholder="08xxxxxxxxxx"
+                          placeholder="Contoh: 081234567890"
                           className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
                       </div>
@@ -846,7 +872,7 @@ export default function OrdersPage() {
                           </label>
                           <label
                             className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
-                              paymentType === "DEADLINE"
+                              paymentType === "DEFERRED"
                                 ? "bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg transform scale-105"
                                 : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
                             }`}
@@ -854,8 +880,8 @@ export default function OrdersPage() {
                             <input
                               type="radio"
                               name="paymentType"
-                              checked={paymentType === "DEADLINE"}
-                              onChange={() => setPaymentType("DEADLINE")}
+                              checked={paymentType === "DEFERRED"}
+                              onChange={() => setPaymentType("DEFERRED")}
                               className="sr-only"
                             />
                             <span className="text-sm font-medium">
@@ -864,7 +890,7 @@ export default function OrdersPage() {
                           </label>
                         </div>
 
-                        {paymentType === "DEADLINE" && (
+                        {paymentType === "DEFERRED" && (
                           <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                               Tenggat Pembayaran *
@@ -1353,6 +1379,19 @@ export default function OrdersPage() {
                                 ? `(${totalDiscount}%)`
                                 : ""}
                               :
+                            </span>
+                            <span className="font-bold text-red-600">
+                              -Rp{" "}
+                              {calculateActualDiscount().toLocaleString(
+                                "id-ID"
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        {discountType === "PER_CRATE" && calculateActualDiscount() > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-300 font-medium">
+                              Diskon Per Krat:
                             </span>
                             <span className="font-bold text-red-600">
                               -Rp{" "}
