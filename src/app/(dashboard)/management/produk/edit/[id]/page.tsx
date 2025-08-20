@@ -33,6 +33,7 @@ interface ProductFormData {
   currentStock: number;
   isActive: boolean;
   categoryId: string;
+  bottlesPerCrate: number | null;
 }
 
 interface ProductFormErrors {
@@ -45,6 +46,7 @@ interface ProductFormErrors {
   currentStock?: string;
   categoryId?: string;
   isActive?: string;
+  bottlesPerCrate?: string;
 }
 
 interface Category {
@@ -74,6 +76,7 @@ export default function EditProductPage() {
     currentStock: 0,
     isActive: true,
     categoryId: "",
+    bottlesPerCrate: null,
   });
 
   const data = useSharedData();
@@ -105,6 +108,7 @@ export default function EditProductPage() {
             currentStock: productData.currentStock,
             isActive: productData.isActive,
             categoryId: productData.categoryId,
+            bottlesPerCrate: productData.bottlesPerCrate,
           });
         } else {
           toast.error("Produk tidak ditemukan.");
@@ -165,7 +169,7 @@ export default function EditProductPage() {
 
   const handleInputChange = (
     field: keyof ProductFormData,
-    value: string | boolean | number
+    value: string | boolean | number | null
   ) => {
     setFormData({ ...formData, [field]: value });
 
@@ -196,6 +200,7 @@ export default function EditProductPage() {
         currentStock: formData.currentStock,
         isActive: formData.isActive,
         categoryId: formData.categoryId,
+        bottlesPerCrate: formData.bottlesPerCrate,
       });
 
       if (result.success) {
@@ -357,6 +362,24 @@ export default function EditProductPage() {
               maxLength={20}
             />
           </FormField>
+          <FormField
+            label="Botol per Krat"
+            htmlFor="bottlesPerCrate"
+            errorMessage={formErrors.bottlesPerCrate}
+          >
+            <Input
+              type="number"
+              name="bottlesPerCrate"
+              placeholder="Jumlah botol per krat (opsional)"
+              value={formData.bottlesPerCrate?.toString() || ""}
+              onChange={e =>
+                handleInputChange("bottlesPerCrate", parseInt(e.target.value) || null)
+              }
+              min="1"
+            />
+          </FormField>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           <FormField
             label="Kategori"
             htmlFor="categoryId"
