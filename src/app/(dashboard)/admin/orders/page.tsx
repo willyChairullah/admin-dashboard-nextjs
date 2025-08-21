@@ -187,12 +187,12 @@ export default function AdminOrdersPage() {
     // Filter out current status and restrict transitions
     return allStatuses.filter((status) => {
       if (status.value === currentStatus) return false;
-      
+
       // Restrict certain transitions
       if (currentStatus === "COMPLETED" || currentStatus === "CANCELED") {
         return false; // Cannot change from completed or canceled
       }
-      
+
       return true;
     });
   };
@@ -224,8 +224,8 @@ export default function AdminOrdersPage() {
       order.orderNumber.toLowerCase().includes(searchLower) ||
       order.customer.name.toLowerCase().includes(searchLower) ||
       order.customer.address.toLowerCase().includes(searchLower) ||
-      (order.sales?.name.toLowerCase().includes(searchLower)) ||
-      (order.sales?.email.toLowerCase().includes(searchLower))
+      order.sales?.name.toLowerCase().includes(searchLower) ||
+      order.sales?.email.toLowerCase().includes(searchLower)
     );
   });
 
@@ -290,7 +290,9 @@ export default function AdminOrdersPage() {
                 disabled={loading}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
                 <span>Refresh</span>
               </button>
             </div>
@@ -311,9 +313,7 @@ export default function AdminOrdersPage() {
             <div className="text-2xl font-bold text-blue-900 dark:text-blue-300">
               {stats.new}
             </div>
-            <div className="text-sm text-blue-600 dark:text-blue-400">
-              Baru
-            </div>
+            <div className="text-sm text-blue-600 dark:text-blue-400">Baru</div>
           </div>
           <div className="bg-yellow-50/80 dark:bg-yellow-900/30 backdrop-blur-xl rounded-xl p-4 border border-yellow-200/50 dark:border-yellow-700/30">
             <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">
@@ -443,14 +443,14 @@ export default function AdminOrdersPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div className="text-left sm:text-right">
                           <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
                             {formatCurrency(order.totalAmount)}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => toggleOrderExpansion(order.id)}
@@ -461,28 +461,41 @@ export default function AdminOrdersPage() {
                           >
                             <Eye className="w-5 h-5" />
                           </button>
-                          
+
                           {/* Status Update Dropdown */}
-                          {!["COMPLETED", "CANCELED"].includes(order.status) && (
+                          {!["COMPLETED", "CANCELED"].includes(
+                            order.status
+                          ) && (
                             <div className="relative">
                               <select
                                 value=""
                                 onChange={(e) => {
                                   if (e.target.value) {
-                                    handleStatusUpdate(order.id, e.target.value);
+                                    handleStatusUpdate(
+                                      order.id,
+                                      e.target.value
+                                    );
                                   }
                                 }}
                                 disabled={updatingStatus === order.id}
                                 className="appearance-none bg-gradient-to-r from-purple-500 to-blue-600 text-white px-4 py-3 pr-8 rounded-xl text-sm font-medium hover:from-purple-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 cursor-pointer"
                               >
                                 <option value="" disabled>
-                                  {updatingStatus === order.id ? "Updating..." : "Ubah Status"}
+                                  {updatingStatus === order.id
+                                    ? "Updating..."
+                                    : "Ubah Status"}
                                 </option>
-                                {getStatusOptions(order.status).map((status) => (
-                                  <option key={status.value} value={status.value} className="bg-white text-gray-900">
-                                    {status.label}
-                                  </option>
-                                ))}
+                                {getStatusOptions(order.status).map(
+                                  (status) => (
+                                    <option
+                                      key={status.value}
+                                      value={status.value}
+                                      className="bg-white text-gray-900"
+                                    >
+                                      {status.label}
+                                    </option>
+                                  )
+                                )}
                               </select>
                               <Edit3 className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white pointer-events-none" />
                             </div>
@@ -505,7 +518,7 @@ export default function AdminOrdersPage() {
                           {order.customer.address}
                         </p>
                       </div>
-                      
+
                       <div className="bg-gradient-to-r from-green-50/50 to-emerald-50/30 dark:from-green-900/20 dark:to-emerald-900/10 rounded-xl p-4">
                         <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
                           <ShoppingCart className="w-4 h-4 mr-2 text-green-500" />

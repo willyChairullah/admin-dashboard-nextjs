@@ -83,7 +83,11 @@ interface Order {
   }[];
 }
 
-export default function EditOrderPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditOrderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const resolvedParams = use(params);
   const router = useRouter();
   const { user, loading: userLoading } = useCurrentUser();
@@ -101,11 +105,17 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
   const [customerCity, setCustomerCity] = useState("");
   const [notes, setNotes] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [discountType, setDiscountType] = useState<"OVERALL" | "PER_CRATE">("OVERALL");
+  const [discountType, setDiscountType] = useState<"OVERALL" | "PER_CRATE">(
+    "OVERALL"
+  );
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
-  const [discountUnit, setDiscountUnit] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
+  const [discountUnit, setDiscountUnit] = useState<"AMOUNT" | "PERCENTAGE">(
+    "AMOUNT"
+  );
   const [shippingCost, setShippingCost] = useState<number>(0);
-  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEFERRED">("IMMEDIATE");
+  const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEFERRED">(
+    "IMMEDIATE"
+  );
   const [paymentDeadline, setPaymentDeadline] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
 
@@ -118,7 +128,11 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
   // Helper function to calculate crates from quantity
   const calculateCrates = (quantity: number, productName: string): number => {
     const bottlesPerCrate = getBottlesPerCrate(productName);
-    console.log(`calculateCrates: ${productName} - quantity: ${quantity}, bottlesPerCrate: ${bottlesPerCrate}, result: ${quantity / bottlesPerCrate}`);
+    console.log(
+      `calculateCrates: ${productName} - quantity: ${quantity}, bottlesPerCrate: ${bottlesPerCrate}, result: ${
+        quantity / bottlesPerCrate
+      }`
+    );
     return quantity / bottlesPerCrate;
   };
 
@@ -130,10 +144,17 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
 
   // Update crates when products are loaded and items exist
   useEffect(() => {
-    if (products.length > 0 && items.length > 0 && items.some(item => item.crates === 0 || item.crates === undefined)) {
+    if (
+      products.length > 0 &&
+      items.length > 0 &&
+      items.some((item) => item.crates === 0 || item.crates === undefined)
+    ) {
       const updatedItems = items.map((item) => ({
         ...item,
-        crates: item.crates === 0 || item.crates === undefined ? calculateCrates(item.quantity, item.productName) : item.crates,
+        crates:
+          item.crates === 0 || item.crates === undefined
+            ? calculateCrates(item.quantity, item.productName)
+            : item.crates,
       }));
       setItems(updatedItems);
     }
@@ -143,11 +164,11 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
     try {
       setLoading(true);
       const result = await getOrderById(resolvedParams.id);
-      
+
       if (result.success && result.data) {
         const orderData = result.data as Order;
         setOrder(orderData);
-        
+
         // Populate form fields
         setCustomerName(orderData.customer.name);
         setCustomerEmail(orderData.customer.email || "");
@@ -155,11 +176,15 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
         setCustomerCity(""); // Customer city is not available in customer data
         setNotes(orderData.notes || "");
         setDeliveryAddress(orderData.deliveryAddress || "");
-        
+
         // Handle payment deadline - use paymentDeadline field
         const deadline = orderData.paymentDeadline || orderData.dueDate;
-        setPaymentDeadline(deadline instanceof Date ? deadline.toISOString().split('T')[0] : deadline || "");
-        
+        setPaymentDeadline(
+          deadline instanceof Date
+            ? deadline.toISOString().split("T")[0]
+            : deadline || ""
+        );
+
         // Populate discount and payment fields with existing data
         setDiscountType(orderData.discountType || "OVERALL");
         setDiscountUnit(orderData.discountUnit || "AMOUNT");
@@ -167,7 +192,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
         setTotalDiscount(orderData.totalDiscount || orderData.discount || 0);
         setShippingCost(orderData.shippingCost || 0);
         setPaymentType(orderData.paymentType || "IMMEDIATE");
-        
+
         // Convert order items to form items
         const formItems: OrderItem[] = orderData.orderItems.map((item) => ({
           productId: item.productId,
@@ -177,17 +202,22 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
           discount: item.discount || 0, // Use existing discount from database
           crates: 0, // Will be calculated after products are loaded
         }));
-        
-        console.log("Loaded order items with discounts:", formItems.map(item => ({
-          productName: item.productName,
-          discount: item.discount,
-          discountType: typeof item.discount,
-          discountDisplayValue: item.discount || 0,
-          rawDatabaseValue: orderData.orderItems.find(dbItem => dbItem.productId === item.productId)?.discount
-        })));
-        
+
+        console.log(
+          "Loaded order items with discounts:",
+          formItems.map((item) => ({
+            productName: item.productName,
+            discount: item.discount,
+            discountType: typeof item.discount,
+            discountDisplayValue: item.discount || 0,
+            rawDatabaseValue: orderData.orderItems.find(
+              (dbItem) => dbItem.productId === item.productId
+            )?.discount,
+          }))
+        );
+
         setItems(formItems);
-        
+
         // Debug calculations after items are set
         setTimeout(() => {
           console.log("=== FRONTEND CALCULATION DEBUG ===");
@@ -226,13 +256,13 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
   const addItem = () => {
     setItems([
       ...items,
-      { 
+      {
         productId: "",
-        productName: "", 
-        quantity: 1, 
-        price: 0, 
-        discount: 0, 
-        crates: 0 
+        productName: "",
+        quantity: 1,
+        price: 0,
+        discount: 0,
+        crates: 0,
       },
     ]);
   };
@@ -260,7 +290,12 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
         updatedItems[index].crates = 0;
         updatedItems[index].quantity = 1;
       }
-    } else if (field === "quantity" || field === "price" || field === "discount" || field === "crates") {
+    } else if (
+      field === "quantity" ||
+      field === "price" ||
+      field === "discount" ||
+      field === "crates"
+    ) {
       // Handle numeric fields properly
       let numValue: number;
       if (typeof value === "string") {
@@ -269,9 +304,11 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
       } else {
         numValue = value;
       }
-      
+
       if (field === "discount") {
-        console.log(`Updating discount for item ${index}: input="${value}", parsed=${numValue}`);
+        console.log(
+          `Updating discount for item ${index}: input="${value}", parsed=${numValue}`
+        );
       }
       updatedItems[index][field] = numValue;
     } else {
@@ -303,7 +340,13 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
         } else {
           // For amount discount per crate, calculate crates and multiply
           const crates = calculateCrates(item.quantity, item.productName);
-          console.log(`Calculating discount for ${item.productName}: quantity=${item.quantity}, crates=${crates}, discountPerCrate=${item.discount}, totalDiscountAmount=${crates * (item.discount || 0)}`);
+          console.log(
+            `Calculating discount for ${item.productName}: quantity=${
+              item.quantity
+            }, crates=${crates}, discountPerCrate=${
+              item.discount
+            }, totalDiscountAmount=${crates * (item.discount || 0)}`
+          );
           itemDiscountAmount = crates * (item.discount || 0);
         }
         const itemTotal = itemSubtotal - itemDiscountAmount;
@@ -317,25 +360,25 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
 
   // Calculate raw subtotal (before any discounts)
   const calculateRawSubtotal = () => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    return items.reduce((sum, item) => sum + item.quantity * item.price, 0);
   };
 
   // Calculate final total after overall discount and shipping
   const calculateTotal = () => {
     const itemsSubtotal = calculateItemsSubtotal();
-    
+
     let finalTotal = itemsSubtotal;
-    
+
     if (discountType === "OVERALL") {
       if (discountUnit === "PERCENTAGE") {
-        finalTotal = itemsSubtotal - (itemsSubtotal * (totalDiscount / 100));
+        finalTotal = itemsSubtotal - itemsSubtotal * (totalDiscount / 100);
       } else {
         finalTotal = itemsSubtotal - totalDiscount;
       }
     }
-    
+
     finalTotal += shippingCost;
-    
+
     return Math.max(0, finalTotal); // Ensure total is never negative
   };
 
@@ -376,7 +419,11 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
       return;
     }
 
-    if (items.some((item) => !item.productName || item.quantity <= 0 || item.price <= 0)) {
+    if (
+      items.some(
+        (item) => !item.productName || item.quantity <= 0 || item.price <= 0
+      )
+    ) {
       toast.error("Lengkapi semua item produk dengan benar.");
       return;
     }
@@ -390,7 +437,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
           console.log("discountType:", discountType);
           console.log("discountUnit:", discountUnit);
           console.log("totalDiscount (frontend state):", totalDiscount);
-          
+
           // Calculate the actual total discount based on discount type
           let calculatedTotalDiscount = 0;
           if (discountType === "PER_CRATE") {
@@ -398,36 +445,39 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
             calculatedTotalDiscount = items.reduce((sum, item) => {
               if (discountUnit === "PERCENTAGE") {
                 const itemSubtotal = item.quantity * item.price;
-                return sum + (itemSubtotal * ((item.discount || 0) / 100));
+                return sum + itemSubtotal * ((item.discount || 0) / 100);
               } else {
                 const crates = calculateCrates(item.quantity, item.productName);
-                return sum + (crates * (item.discount || 0));
+                return sum + crates * (item.discount || 0);
               }
             }, 0);
           } else {
             // For overall discount, use the totalDiscount value
             calculatedTotalDiscount = totalDiscount;
           }
-          
+
           console.log("calculatedTotalDiscount:", calculatedTotalDiscount);
           console.log("Frontend calculated total amount:", calculateTotal());
           console.log("Frontend raw subtotal:", calculateRawSubtotal());
           console.log("Frontend items subtotal:", calculateItemsSubtotal());
-          console.log("Submitting order with items:", items.map(item => ({
-            productId: item.productId,
-            productName: item.productName,
-            quantity: item.quantity,
-            price: item.price,
-            discount: item.discount,
-          })));
+          console.log(
+            "Submitting order with items:",
+            items.map((item) => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              discount: item.discount,
+            }))
+          );
           console.log("=== END SUBMIT DEBUG ===");
-          
+
           const result = await updateOrder({
             orderId: resolvedParams.id,
             customerName,
             customerEmail: customerEmail || undefined,
             customerPhone: customerPhone || undefined,
-            items: items.map(item => ({
+            items: items.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
               price: item.price,
@@ -435,7 +485,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
             })),
             notes: notes || undefined,
             deliveryAddress: deliveryAddress || undefined,
-            paymentDeadline: paymentDeadline ? new Date(paymentDeadline) : undefined,
+            paymentDeadline: paymentDeadline
+              ? new Date(paymentDeadline)
+              : undefined,
             // Include all discount and payment fields
             discountType,
             discountUnit,
@@ -449,7 +501,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
             // Force refresh data before redirecting
             window.location.href = "/sales/order-history";
           } else {
-            toast.error("Gagal mengupdate order: " + (result.error || "Unknown error"));
+            toast.error(
+              "Gagal mengupdate order: " + (result.error || "Unknown error")
+            );
           }
         } catch (error) {
           console.error("Error updating order:", error);
@@ -516,7 +570,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                   Edit Order
                 </h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                  Edit order {order.orderNumber} - {" "}
+                  Edit order {order.orderNumber} -{" "}
                   <span className="font-semibold text-blue-600 dark:text-blue-400">
                     {user.name}
                   </span>
@@ -578,7 +632,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                       Tidak dapat diedit
                     </span>
                   </div>
-                  
+
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
                     <div className="grid grid-cols-1 gap-3">
                       <div>
@@ -586,7 +640,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                           Nama Toko
                         </label>
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {order?.customer?.name || '-'}
+                          {order?.customer?.name || "-"}
                         </div>
                       </div>
                       <div>
@@ -594,7 +648,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                           Alamat Toko
                         </label>
                         <div className="text-sm text-gray-800 dark:text-gray-200">
-                          {order?.customer?.address || '-'}
+                          {order?.customer?.address || "-"}
                         </div>
                       </div>
                       {order?.customer?.phone && (
@@ -610,7 +664,8 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        💡 Informasi toko tidak dapat diubah pada halaman edit. Data ini diambil dari order yang sudah dibuat.
+                        💡 Informasi toko tidak dapat diubah pada halaman edit.
+                        Data ini diambil dari order yang sudah dibuat.
                       </p>
                     </div>
                   </div>
@@ -750,7 +805,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                               onChange={() => setPaymentType("IMMEDIATE")}
                               className="sr-only"
                             />
-                            <span className="text-sm font-medium">Langsung Bayar</span>
+                            <span className="text-sm font-medium">
+                              Langsung Bayar
+                            </span>
                           </label>
                           <label
                             className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
@@ -766,7 +823,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                               onChange={() => setPaymentType("DEFERRED")}
                               className="sr-only"
                             />
-                            <span className="text-sm font-medium">Dengan Tenggat</span>
+                            <span className="text-sm font-medium">
+                              Dengan Tenggat
+                            </span>
                           </label>
                         </div>
 
@@ -778,7 +837,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                             <input
                               type="date"
                               value={paymentDeadline}
-                              onChange={(e) => setPaymentDeadline(e.target.value)}
+                              onChange={(e) =>
+                                setPaymentDeadline(e.target.value)
+                              }
                               min={new Date().toISOString().split("T")[0]}
                               className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                             />
@@ -851,7 +912,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                   onChange={() => setDiscountUnit("AMOUNT")}
                                   className="sr-only"
                                 />
-                                <span className="text-xs font-medium">Nominal (Rp)</span>
+                                <span className="text-xs font-medium">
+                                  Nominal (Rp)
+                                </span>
                               </label>
                               <label
                                 className={`flex items-center justify-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
@@ -867,7 +930,9 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                   onChange={() => setDiscountUnit("PERCENTAGE")}
                                   className="sr-only"
                                 />
-                                <span className="text-xs font-medium">Persen (%)</span>
+                                <span className="text-xs font-medium">
+                                  Persen (%)
+                                </span>
                               </label>
                             </div>
                           </div>
@@ -949,9 +1014,17 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                   const selectedProduct = products.find(
                                     (p) => p.name === e.target.value
                                   );
-                                  updateItem(index, "productName", e.target.value);
+                                  updateItem(
+                                    index,
+                                    "productName",
+                                    e.target.value
+                                  );
                                   if (selectedProduct) {
-                                    updateItem(index, "price", selectedProduct.price);
+                                    updateItem(
+                                      index,
+                                      "price",
+                                      selectedProduct.price
+                                    );
                                   }
                                   // Reset crates and quantity when product changes
                                   updateItem(index, "crates", 0);
@@ -967,7 +1040,10 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                       product.currentStock > 0
                                   )
                                   .map((product) => (
-                                    <option key={product.id} value={product.name}>
+                                    <option
+                                      key={product.id}
+                                      value={product.name}
+                                    >
                                       {product.name} - Rp{" "}
                                       {product.price.toLocaleString("id-ID")} (
                                       {product.unit}) - Stock:{" "}
@@ -1059,7 +1135,15 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                     type="number"
                                     value={item.discount || ""}
                                     onChange={(e) => {
-                                      console.log(`Discount input change: raw="${e.target.value}", will be parsed to=${e.target.value === "" ? 0 : parseFloat(e.target.value)}`);
+                                      console.log(
+                                        `Discount input change: raw="${
+                                          e.target.value
+                                        }", will be parsed to=${
+                                          e.target.value === ""
+                                            ? 0
+                                            : parseFloat(e.target.value)
+                                        }`
+                                      );
                                       updateItem(
                                         index,
                                         "discount",
@@ -1069,13 +1153,17 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                     placeholder="0"
                                     min="0"
                                     step={
-                                      discountUnit === "PERCENTAGE" ? "0.1" : "1000"
+                                      discountUnit === "PERCENTAGE"
+                                        ? "0.1"
+                                        : "1000"
                                     }
                                     className="block w-full pl-8 pr-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-right"
                                   />
                                   <div className="absolute inset-y-0 left-0 flex items-center pl-3">
                                     <span className="text-gray-400 text-xs">
-                                      {discountUnit === "PERCENTAGE" ? "%" : "Rp"}
+                                      {discountUnit === "PERCENTAGE"
+                                        ? "%"
+                                        : "Rp"}
                                     </span>
                                   </div>
                                 </div>
@@ -1091,17 +1179,22 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                                 {(() => {
                                   const subtotal = item.quantity * item.price;
                                   let discountAmount = 0;
-                                  
+
                                   if (discountType === "PER_CRATE") {
                                     if (discountUnit === "PERCENTAGE") {
-                                      discountAmount = subtotal * ((item.discount || 0) / 100);
+                                      discountAmount =
+                                        subtotal * ((item.discount || 0) / 100);
                                     } else {
                                       // For amount discount per crate, calculate crates and multiply
-                                      const crates = calculateCrates(item.quantity, item.productName);
-                                      discountAmount = crates * (item.discount || 0);
+                                      const crates = calculateCrates(
+                                        item.quantity,
+                                        item.productName
+                                      );
+                                      discountAmount =
+                                        crates * (item.discount || 0);
                                     }
                                   }
-                                  
+
                                   const total = subtotal - discountAmount;
                                   return total.toLocaleString("id-ID");
                                 })()}
@@ -1144,67 +1237,99 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                             Rp {calculateRawSubtotal().toLocaleString("id-ID")}
                           </span>
                         </div>
-                        
-                        {discountType === "PER_CRATE" && items.some(item => (item.discount || 0) > 0) && (
-                          <div className="space-y-2">
+
+                        {discountType === "PER_CRATE" &&
+                          items.some((item) => (item.discount || 0) > 0) && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Detail Diskon Per Item:
+                                </span>
+                              </div>
+                              {items
+                                .filter((item) => (item.discount || 0) > 0)
+                                .map((item, index) => {
+                                  const crates = calculateCrates(
+                                    item.quantity,
+                                    item.productName
+                                  );
+                                  const totalDiscountForItem =
+                                    crates * (item.discount || 0);
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="flex justify-between items-center text-sm pl-4"
+                                    >
+                                      <span className="text-gray-500 dark:text-gray-400">
+                                        {item.productName}: {crates.toFixed(1)}{" "}
+                                        krat × Rp{" "}
+                                        {(item.discount || 0).toLocaleString(
+                                          "id-ID"
+                                        )}
+                                      </span>
+                                      <span className="font-medium text-red-500 dark:text-red-400">
+                                        -Rp{" "}
+                                        {totalDiscountForItem.toLocaleString(
+                                          "id-ID"
+                                        )}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+
+                        {discountType === "PER_CRATE" &&
+                          items.some((item) => (item.discount || 0) > 0) && (
                             <div className="flex justify-between items-center">
                               <span className="text-gray-600 dark:text-gray-400">
-                                Detail Diskon Per Item:
+                                Total Diskon Per Krat:
+                              </span>
+                              <span className="font-medium text-red-600 dark:text-red-400">
+                                -Rp{" "}
+                                {(
+                                  calculateRawSubtotal() -
+                                  calculateItemsSubtotal()
+                                ).toLocaleString("id-ID")}
                               </span>
                             </div>
-                            {items.filter(item => (item.discount || 0) > 0).map((item, index) => {
-                              const crates = calculateCrates(item.quantity, item.productName);
-                              const totalDiscountForItem = crates * (item.discount || 0);
-                              return (
-                                <div key={index} className="flex justify-between items-center text-sm pl-4">
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    {item.productName}: {crates.toFixed(1)} krat × Rp {(item.discount || 0).toLocaleString("id-ID")}
-                                  </span>
-                                  <span className="font-medium text-red-500 dark:text-red-400">
-                                    -Rp {totalDiscountForItem.toLocaleString("id-ID")}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                          )}
 
-                        {discountType === "PER_CRATE" && items.some(item => (item.discount || 0) > 0) && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Total Diskon Per Krat:
-                            </span>
-                            <span className="font-medium text-red-600 dark:text-red-400">
-                              -Rp {(calculateRawSubtotal() - calculateItemsSubtotal()).toLocaleString("id-ID")}
-                            </span>
-                          </div>
-                        )}
+                        {discountType === "PER_CRATE" &&
+                          items.some((item) => (item.discount || 0) > 0) && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Subtotal Setelah Diskon:
+                              </span>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                Rp{" "}
+                                {calculateItemsSubtotal().toLocaleString(
+                                  "id-ID"
+                                )}
+                              </span>
+                            </div>
+                          )}
 
-                        {discountType === "PER_CRATE" && items.some(item => (item.discount || 0) > 0) && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Subtotal Setelah Diskon:
-                            </span>
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              Rp {calculateItemsSubtotal().toLocaleString("id-ID")}
-                            </span>
-                          </div>
-                        )}
-                        
                         {discountType === "OVERALL" && totalDiscount > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 dark:text-gray-400">
-                              Diskon {discountUnit === "PERCENTAGE" ? `(${totalDiscount}%)` : ""}:
+                              Diskon{" "}
+                              {discountUnit === "PERCENTAGE"
+                                ? `(${totalDiscount}%)`
+                                : ""}
+                              :
                             </span>
                             <span className="font-medium text-red-600 dark:text-red-400">
-                              -Rp {(discountUnit === "PERCENTAGE" 
-                                ? calculateItemsSubtotal() * (totalDiscount / 100)
+                              -Rp{" "}
+                              {(discountUnit === "PERCENTAGE"
+                                ? calculateItemsSubtotal() *
+                                  (totalDiscount / 100)
                                 : totalDiscount
                               ).toLocaleString("id-ID")}
                             </span>
                           </div>
                         )}
-                        
+
                         {shippingCost > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 dark:text-gray-400">
@@ -1215,7 +1340,7 @@ export default function EditOrderPage({ params }: { params: Promise<{ id: string
                             </span>
                           </div>
                         )}
-                        
+
                         <div className="border-t pt-3">
                           <div className="flex justify-between items-center">
                             <span className="text-xl font-bold text-gray-900 dark:text-white">

@@ -59,7 +59,7 @@ export function CancelOrderDialog({
               Tindakan ini tidak dapat dibatalkan. Jika order sudah diproses,
               stock produk akan dikembalikan.
             </p>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Alasan pembatalan (opsional)

@@ -99,6 +99,7 @@ model Users {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   customerVisits        CustomerVisits[]
+  ConfirmedDeliveries   DeliveryNotes[]     @relation("WarehouseConfirmDelivery")
   deliveryNotes         DeliveryNotes[]
   fieldVisits           FieldVisit[]
   InvoicesCreated       Invoices[]          @relation("InvoiceCreator")
@@ -108,6 +109,7 @@ model Users {
   Payments              Payments[]
   Productions           Productions[]
   PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
+  ConfirmedStocks       PurchaseOrders[]    @relation("StockConfirmationUser")
   processedSalesReturns SalesReturns[]      @relation("AdminProcessor")
   requestedSalesReturns SalesReturns[]      @relation("SalesRequester")
   salesTargets          SalesTargets[]
@@ -182,16 +184,16 @@ model PurchaseOrders {
 }
 
 model PurchaseOrderItems {
-  id              String            @id @default(cuid())
-  quantity        Float
-  purchaseOrderId String
-  productId       String
-  price           Float             @default(0)
-  totalPrice      Float             @default(0)
-  discount        Float             @default(0)
-  discountType    DiscountValueType @default(AMOUNT)
-  product         Products          @relation(fields: [productId], references: [id])
-  purchaseOrder   PurchaseOrders    @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  id                     String         @id @default(cuid())
+  quantity               Float
+  purchaseOrderId        String
+  productId              String
+  price                  Float          @default(0)
+  totalPrice             Float          @default(0)
+  notesStockConfirmation String?
+  discount               Float          @default(0)
+  product                Products       @relation(fields: [productId], references: [id])
+  purchaseOrder          PurchaseOrders @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
 
   @@map("purchase_order_items")
 }
@@ -270,6 +272,9 @@ model DeliveryNotes {
   updatedAt           DateTime              @updatedAt
   customerId          String
   warehouseUserId     String
+  datePreparation     DateTime?
+  notesPreparation    String?
+  userPreparationId   String?
   deliveryAddress     String?
   deliveryCity        String?
   deliveryPostalCode  String?
@@ -277,6 +282,7 @@ model DeliveryNotes {
   delivery_note_items delivery_note_items[]
   customers           Customers             @relation(fields: [customerId], references: [id])
   invoices            Invoices              @relation(fields: [invoiceId], references: [id])
+  userPreparation     Users?                @relation("WarehouseConfirmDelivery", fields: [userPreparationId], references: [id])
   users               Users                 @relation(fields: [warehouseUserId], references: [id])
   stock_movements     StockMovements[]
 
@@ -624,16 +630,6 @@ model delivery_note_items {
   stock_movements StockMovements[]
 }
 
-model Taxs {
-  id        String   @id @default(cuid())
-  nominal   String
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("taxes")
-}
-
 enum DeliveryStatus {
   PENDING
   IN_TRANSIT
@@ -736,6 +732,19 @@ enum PurchaseOrderStatus {
   READY_FOR_DELIVERY
   COMPLETED
   CANCELLED
+}
+
+enum StockConfirmationStatus {
+  WAITING_CONFIRMATION
+  STOCK_AVAILABLE
+  INSUFFICIENT_STOCK
+}
+
+enum PreparationStatus {
+  WAITING_PREPARATION
+  PREPARING
+  READY_FOR_DELIVERY
+  CANCELLED_PREPARATION
 }
 
 enum DiscountType {
