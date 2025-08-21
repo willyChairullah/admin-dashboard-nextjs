@@ -522,7 +522,6 @@ export default function CreatePurchaseOrderPage() {
       const result = await createPurchaseOrder({
         ...formData,
         poDate: new Date(formData.poDate),
-        dateline: new Date(formData.dateline),
         paymentDeadline: formData.paymentDeadline
           ? new Date(formData.paymentDeadline)
           : null,
@@ -620,7 +619,7 @@ export default function CreatePurchaseOrderPage() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Net Pembayaran"
+                label="Net"
                 errorMessage={formErrors.paymentDeadline}
               >
                 <InputDate

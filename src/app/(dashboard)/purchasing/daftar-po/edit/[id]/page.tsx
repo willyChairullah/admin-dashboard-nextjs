@@ -719,7 +719,7 @@ export default function EditPurchaseOrderPage() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Net Pembayaran"
+                label="Net"
                 errorMessage={formErrors.paymentDeadline}
               >
                 <InputDate

@@ -523,7 +523,7 @@ export default function CreateInvoicePage() {
           </FormField>
 
           {/* Tenggat Pembayaran */}
-          <FormField label="Net Pembayaran" errorMessage={formErrors.dueDate}>
+          <FormField label="Net" errorMessage={formErrors.dueDate}>
             <InputDate
               value={formData.dueDate ? new Date(formData.dueDate) : null}
               onChange={value =>
@@ -1026,7 +1026,6 @@ export default function CreateInvoicePage() {
                       placeholder="Pilih Pajak"
                       returnValue="percentage"
                       className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      errorMessage={formErrors.taxPercentage}
                     />
                   </div>
                   {formErrors.taxPercentage && (

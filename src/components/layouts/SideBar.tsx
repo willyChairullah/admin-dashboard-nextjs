@@ -177,7 +177,7 @@ export default function SideBar({
       },
       {
         id: "sales",
-        label: "Sales",
+        label: "Penjualan",
         icon: "🛒",
         href: "#",
         roles: ["SALES", "ADMIN", "OWNER"], // Added roles
@@ -242,7 +242,7 @@ export default function SideBar({
       },
       {
         id: "inventory",
-        label: "Inventory",
+        label: "Gudang",
         icon: "📦",
         href: "#",
         roles: ["WAREHOUSE", "ADMIN", "OWNER"], // Added roles
@@ -301,14 +301,14 @@ export default function SideBar({
       },
       {
         id: "purchasing",
-        label: "Purchasing",
+        label: "Pembelian",
         icon: "🛍️",
         href: "#",
         roles: ["ADMIN", "OWNER"], // Added roles
         children: [
           {
             id: "daftar-po",
-            label: "Daftar PO",
+            label: "Pesanan Pembelian",
             icon: "📋",
             href: "/purchasing/daftar-po",
             children: [],
@@ -326,7 +326,7 @@ export default function SideBar({
       },
       {
         id: "finance",
-        label: "Finance",
+        label: "Keuangan",
         icon: "💰",
         href: "#",
         roles: ["ADMIN", "OWNER"], // Added roles
@@ -366,42 +366,42 @@ export default function SideBar({
           },
         ],
       },
-      {
-        id: "settings",
-        label: "Settings",
-        icon: "⚙️",
-        href: "#",
-        roles: ["ADMIN", "OWNER"], // Added roles
-        children: [
-          {
-            id: "user-management",
-            label: "User Management",
-            icon: "👤",
-            href: "/settings/users",
-            children: [],
-            roles: ["ADMIN", "OWNER"],
-          },
-          {
-            id: "roles",
-            label: "Roles",
-            icon: "🔑",
-            href: "/settings/roles",
-            children: [],
-            roles: ["ADMIN", "OWNER"],
-          },
-          {
-            id: "permissions",
-            label: "Permissions",
-            icon: "🔒",
-            href: "/settings/permissions",
-            children: [],
-            roles: ["ADMIN", "OWNER"],
-          },
-        ],
-      },
+      // {
+      //   id: "settings",
+      //   label: "Settings",
+      //   icon: "⚙️",
+      //   href: "#",
+      //   roles: ["ADMIN", "OWNER"], // Added roles
+      //   children: [
+      //     {
+      //       id: "user-management",
+      //       label: "User Management",
+      //       icon: "👤",
+      //       href: "/settings/users",
+      //       children: [],
+      //       roles: ["ADMIN", "OWNER"],
+      //     },
+      //     {
+      //       id: "roles",
+      //       label: "Roles",
+      //       icon: "🔑",
+      //       href: "/settings/roles",
+      //       children: [],
+      //       roles: ["ADMIN", "OWNER"],
+      //     },
+      //     {
+      //       id: "permissions",
+      //       label: "Permissions",
+      //       icon: "🔒",
+      //       href: "/settings/permissions",
+      //       children: [],
+      //       roles: ["ADMIN", "OWNER"],
+      //     },
+      //   ],
+      // },
       {
         id: "management",
-        label: "Management",
+        label: "Manajemen App",
         icon: "📊",
         href: "/management",
         roles: ["ADMIN", "OWNER"],
