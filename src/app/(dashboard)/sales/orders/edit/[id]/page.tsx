@@ -31,8 +31,8 @@ interface Product {
   price: number;
   unit: string;
   currentStock: number;
-  isActive: boolean;
   bottlesPerCrate: number;
+  isActive: boolean;
 }
 
 interface OrderItem {

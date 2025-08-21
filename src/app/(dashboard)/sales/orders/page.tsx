@@ -809,13 +809,13 @@ export default function OrdersPage() {
                           value={customerCity}
                           onChange={(e) => setCustomerCity(e.target.value)}
                           placeholder="Kota toko akan terisi otomatis"
-                          disabled={useExistingStore && selectedStore}
+                          disabled={useExistingStore && !!selectedStore}
                           className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
                             useExistingStore && selectedStore
                               ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed"
                               : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                           }`}
-                          readOnly={useExistingStore && selectedStore}
+                          readOnly={useExistingStore && !!selectedStore}
                         />
                       </div>
                     </div>
