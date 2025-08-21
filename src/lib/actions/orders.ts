@@ -8,6 +8,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   discount?: number; // Diskon per item
+  crates?: number; // Jumlah krat
 }
 
 export async function createOrder({
@@ -15,6 +16,7 @@ export async function createOrder({
   storeId,
   storeName,
   storeAddress,
+  storeCity,
   customerName,
   customerEmail,
   customerPhone,
@@ -22,6 +24,7 @@ export async function createOrder({
   notes,
   deliveryAddress,
   discountType,
+  discountUnit,
   discount,
   shippingCost,
   paymentType,
@@ -32,6 +35,7 @@ export async function createOrder({
   storeId?: string;
   storeName?: string;
   storeAddress?: string;
+  storeCity?: string;
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -39,9 +43,10 @@ export async function createOrder({
   notes?: string;
   deliveryAddress?: string;
   discountType?: string;
+  discountUnit?: string;
   discount?: number;
   shippingCost?: number;
-  paymentType?: "IMMEDIATE" | "DEADLINE";
+  paymentType?: "IMMEDIATE" | "DEFERRED";
   paymentDeadline?: Date;
   requiresConfirmation?: boolean;
 }) {
@@ -83,13 +88,35 @@ export async function createOrder({
     // Calculate total amount with discounts
     let subtotal = items.reduce((sum: number, item: OrderItem) => {
       const itemTotal = item.quantity * item.price;
-      const itemDiscount =
-        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
-      return sum + (itemTotal - itemDiscount);
+      // Don't subtract itemDiscount here for PER_CRATE, it will be calculated in totalDiscount
+      return sum + itemTotal;
     }, 0);
 
-    // Apply total discount if applicable
-    const totalDiscount = discountType === "TOTAL" ? discount || 0 : 0;
+    // Calculate total discount
+    let totalDiscount = 0;
+    if (discountType === "OVERALL") {
+      if (discountUnit === "PERCENTAGE") {
+        totalDiscount = (subtotal * (discount || 0)) / 100;
+      } else {
+        totalDiscount = discount || 0;
+      }
+    } else if (discountType === "PER_CRATE") {
+      // Calculate total discount from all items
+      totalDiscount = items.reduce((total, item) => {
+        const crates = item.crates || item.quantity / 24;
+        let itemDiscount = 0;
+
+        if (discountUnit === "PERCENTAGE") {
+          const itemTotal = item.quantity * item.price;
+          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        } else {
+          itemDiscount = crates * (item.discount || 0);
+        }
+
+        return total + itemDiscount;
+      }, 0);
+    }
+
     const totalAmount = subtotal - totalDiscount + (shippingCost || 0);
 
     let finalStoreId: string = storeId || "";
@@ -115,6 +142,8 @@ export async function createOrder({
               storeAddress && storeAddress.trim()
                 ? storeAddress.trim()
                 : `Alamat belum diverifikasi (${new Date().toLocaleDateString()})`,
+            city: storeCity || null,
+            phone: customerPhone || null, // Use customer phone as store phone for new stores
           },
         });
         finalStoreId = newStore.id;
@@ -142,7 +171,7 @@ export async function createOrder({
           phone: customerPhone || null,
           address:
             deliveryAddress || storeAddress || "Alamat belum diverifikasi",
-          city: "Unknown", // Default city since it's required
+          city: storeCity || "Unknown", // Use store city or default
           updatedAt: new Date(),
         },
       });
@@ -196,11 +225,15 @@ export async function createOrder({
             : paymentDeadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Immediate or deadline/7 days default
         deliveryAddress:
           deliveryAddress || storeAddress || "Alamat belum ditentukan",
-        discount: discountType === "TOTAL" ? discount || 0 : 0,
-        discountType: (discountType as any) || "TOTAL",
+        discount: discountType === "OVERALL" ? discount || 0 : 0,
+        discountType: (discountType as any) || "OVERALL",
+        discountUnit: (discountUnit as any) || "AMOUNT",
         shippingCost: shippingCost || 0,
+        paymentType: (paymentType as any) || "IMMEDIATE",
         paymentDeadline:
           paymentType === "IMMEDIATE" ? null : paymentDeadline || null,
+        subtotal: subtotal,
+        totalDiscount: totalDiscount,
         updatedAt: new Date(),
       },
     });
@@ -354,6 +387,19 @@ export async function getOrders({
       ...order,
       order_items: order.orderItems,
     }));
+
+    console.log("=== GET ORDERS RESULT ===");
+    console.log("Orders found:", transformedOrders.length);
+    if (transformedOrders.length > 0) {
+      console.log("First order sample:", {
+        id: transformedOrders[0].id,
+        totalAmount: transformedOrders[0].totalAmount,
+        totalDiscount: transformedOrders[0].totalDiscount,
+        discountType: transformedOrders[0].discountType,
+        discountUnit: transformedOrders[0].discountUnit,
+      });
+    }
+    console.log("=== END GET ORDERS ===");
 
     return {
       success: true,
@@ -533,6 +579,17 @@ export async function getOrderById(orderId: string) {
       order_items: order.orderItems,
     };
 
+    console.log("=== LOADED ORDER FROM DB ===");
+    console.log(
+      "Order items discounts from DB:",
+      order.orderItems.map((item) => ({
+        productName: item.products.name,
+        discount: item.discount,
+        discountType: typeof item.discount,
+      }))
+    );
+    console.log("=== END DB LOAD ===");
+
     return {
       success: true,
       data: transformedOrder,
@@ -548,27 +605,59 @@ export async function getOrderById(orderId: string) {
 
 export async function updateOrder({
   orderId,
+  customerName,
+  customerEmail,
+  customerPhone,
   notes,
   deliveryAddress,
   paymentDeadline,
+  discountType,
+  discountUnit,
+  totalDiscount,
+  shippingCost,
+  paymentType,
   items,
 }: {
   orderId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   notes?: string;
   deliveryAddress?: string;
   paymentDeadline?: Date;
+  discountType?: "OVERALL" | "PER_CRATE";
+  discountUnit?: "AMOUNT" | "PERCENTAGE";
+  totalDiscount?: number;
+  shippingCost?: number;
+  paymentType?: "IMMEDIATE" | "DEFERRED";
   items: Array<{
     id?: string;
     productId: string;
     quantity: number;
     price: number;
+    discount?: number;
   }>;
 }) {
   try {
+    console.log("=== UPDATE ORDER START ===");
+    console.log("orderId:", orderId);
+    console.log("discountType:", discountType);
+    console.log("discountUnit:", discountUnit);
+    console.log("totalDiscount received:", totalDiscount);
+    console.log(
+      "items with discounts:",
+      items.map((item) => ({
+        productId: item.productId,
+        discount: item.discount,
+      }))
+    );
+    console.log("=== UPDATE ORDER DEBUG END ===");
+
     // Check if order exists and can be edited
     const existingOrder = await db.orders.findUnique({
       where: { id: orderId },
       include: {
+        customer: true,
         orderItems: true,
       },
     });
@@ -588,11 +677,84 @@ export async function updateOrder({
       };
     }
 
-    // Calculate new total amount
-    const totalAmount = items.reduce(
-      (sum, item) => sum + item.quantity * item.price,
-      0
-    );
+    // Calculate new total amount with discounts
+    let totalAmount = 0;
+
+    if (discountType === "PER_CRATE") {
+      // For per-crate discount, apply discount to each item
+      // First, get all unique product IDs to fetch product data
+      const productIds = [...new Set(items.map((item) => item.productId))];
+      const products = await db.products.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, bottlesPerCrate: true },
+      });
+
+      const productMap = products.reduce((map, product) => {
+        map[product.id] = product.bottlesPerCrate || 24;
+        return map;
+      }, {} as Record<string, number>);
+
+      totalAmount = items.reduce((sum, item) => {
+        const itemSubtotal = item.quantity * item.price;
+        let discountAmount = 0;
+
+        if (discountUnit === "PERCENTAGE") {
+          discountAmount = itemSubtotal * ((item.discount || 0) / 100);
+        } else {
+          // For amount discount per crate, calculate crates properly
+          const bottlesPerCrate = productMap[item.productId] || 24;
+          const crates = item.quantity / bottlesPerCrate;
+          discountAmount = crates * (item.discount || 0);
+        }
+
+        const itemTotal = itemSubtotal - discountAmount;
+        console.log(
+          `Server calculation for item ${
+            item.productId
+          }: subtotal=${itemSubtotal}, crates=${
+            item.quantity / (productMap[item.productId] || 24)
+          }, discount=${discountAmount}, total=${itemTotal}`
+        );
+        return sum + itemTotal;
+      }, 0);
+    } else {
+      // For overall discount, calculate subtotal first then apply overall discount
+      const subtotal = items.reduce((sum, item) => {
+        return sum + item.quantity * item.price;
+      }, 0);
+
+      let overallDiscount = 0;
+      if (discountUnit === "PERCENTAGE") {
+        overallDiscount = subtotal * ((totalDiscount || 0) / 100);
+      } else {
+        overallDiscount = totalDiscount || 0;
+      }
+
+      totalAmount = subtotal - overallDiscount;
+    }
+
+    // Add shipping cost
+    totalAmount += shippingCost || 0;
+
+    console.log("=== SERVER TOTAL CALCULATION ===");
+    console.log("discountType:", discountType);
+    console.log("discountUnit:", discountUnit);
+    console.log("calculatedTotalAmount:", totalAmount);
+    console.log("shippingCost:", shippingCost);
+    console.log("=== END SERVER CALCULATION ===");
+
+    // Update customer data if provided
+    if (customerName || customerEmail || customerPhone) {
+      await db.customers.update({
+        where: { id: existingOrder.customerId },
+        data: {
+          ...(customerName && { name: customerName }),
+          ...(customerEmail !== undefined && { email: customerEmail || null }),
+          ...(customerPhone !== undefined && { phone: customerPhone || null }),
+          ...(deliveryAddress && { address: deliveryAddress }),
+        },
+      });
+    }
 
     // Update order
     const updatedOrder = await db.orders.update({
@@ -601,10 +763,21 @@ export async function updateOrder({
         notes: notes || undefined,
         deliveryAddress: deliveryAddress || undefined,
         paymentDeadline: paymentDeadline || undefined,
+        discountType: discountType || undefined,
+        discountUnit: discountUnit || undefined,
+        totalDiscount: totalDiscount || 0,
+        shippingCost: shippingCost || 0,
+        paymentType: paymentType || undefined,
         totalAmount,
         updatedAt: new Date(),
       },
     });
+
+    console.log("=== ORDER UPDATED IN DB ===");
+    console.log("totalDiscount saved to DB:", updatedOrder.totalDiscount);
+    console.log("discountType saved to DB:", updatedOrder.discountType);
+    console.log("discountUnit saved to DB:", updatedOrder.discountUnit);
+    console.log("=== END DB UPDATE LOG ===");
 
     // Handle order items - delete existing and create new ones
     await db.orderItems.deleteMany({
@@ -612,14 +785,23 @@ export async function updateOrder({
     });
 
     // Create new order items
+    console.log("Creating order items:", items);
     for (const item of items) {
+      console.log("Creating item:", {
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+      });
+
       await db.orderItems.create({
         data: {
           orderId,
           productId: item.productId,
           quantity: item.quantity,
           price: item.price,
-          totalPrice: item.quantity * item.price,
+          discount: item.discount || 0,
+          totalPrice: item.quantity * item.price, // Store raw total, let frontend handle discount calculation
         },
       });
     }
@@ -648,6 +830,201 @@ export async function updateOrder({
     };
   } catch (error) {
     console.error("Error updating order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function cancelOrder(orderId: string, reason?: string) {
+  try {
+    const existingOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!existingOrder) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Only allow cancellation for certain statuses
+    if (
+      !["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"].includes(
+        existingOrder.status
+      )
+    ) {
+      return {
+        success: false,
+        error: "Order cannot be cancelled in current status",
+      };
+    }
+
+    // If order was confirmed and stock was reduced, restore the stock
+    if (existingOrder.status === "IN_PROCESS") {
+      for (const item of existingOrder.orderItems) {
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // Update order status to CANCELED
+    const cancelledOrder = await db.orders.update({
+      where: { id: orderId },
+      data: {
+        status: "CANCELED",
+        notes: reason ? `CANCELLED: ${reason}` : "CANCELLED",
+        updatedAt: new Date(),
+      },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    revalidatePath("/sales/order-history");
+    revalidatePath("/admin/orders");
+
+    return {
+      success: true,
+      data: cancelledOrder,
+      message: "Order berhasil dibatalkan!",
+    };
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    return {
+      success: false,
+      error: "Internal server error",
+    };
+  }
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  newStatus: string,
+  notes?: string
+) {
+  try {
+    const existingOrder = await db.orders.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!existingOrder) {
+      return {
+        success: false,
+        error: "Order not found",
+      };
+    }
+
+    // Handle stock changes based on status transitions
+    const oldStatus = existingOrder.status;
+
+    // If moving from PENDING_CONFIRMATION to IN_PROCESS, reduce stock
+    if (oldStatus === "PENDING_CONFIRMATION" && newStatus === "IN_PROCESS") {
+      for (const item of existingOrder.orderItems) {
+        const product = await db.products.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product) {
+          return {
+            success: false,
+            error: `Product with ID ${item.productId} not found`,
+          };
+        }
+
+        if (product.currentStock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for product ${product.name}. Available: ${product.currentStock}, Required: ${item.quantity}`,
+          };
+        }
+
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // If moving from IN_PROCESS back to PENDING_CONFIRMATION, restore stock
+    if (oldStatus === "IN_PROCESS" && newStatus === "PENDING_CONFIRMATION") {
+      for (const item of existingOrder.orderItems) {
+        await db.products.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // Update order status
+    const updatedOrder = await db.orders.update({
+      where: { id: orderId },
+      data: {
+        status: newStatus as any,
+        notes: notes || existingOrder.notes,
+        updatedAt: new Date(),
+      },
+      include: {
+        customer: true,
+        sales: true,
+        orderItems: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    revalidatePath("/sales/order-history");
+    revalidatePath("/admin/orders");
+
+    return {
+      success: true,
+      data: updatedOrder,
+      message: `Order status berhasil diubah ke ${newStatus}!`,
+    };
+  } catch (error) {
+    console.error("Error updating order status:", error);
     return {
       success: false,
       error: "Internal server error",

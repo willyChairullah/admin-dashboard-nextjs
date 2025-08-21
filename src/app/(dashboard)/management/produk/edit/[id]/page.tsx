@@ -86,8 +86,8 @@ export default function EditProductPage() {
         // Fetch categories
         const categoriesData = await getCategories();
         const activeCategories = categoriesData
-          .filter(cat => cat.isActive)
-          .map(cat => ({ id: cat.id, name: cat.name }));
+          .filter((cat) => cat.isActive)
+          .map((cat) => ({ id: cat.id, name: cat.name }));
         setCategories(activeCategories);
 
         // Fetch product data
@@ -235,7 +235,7 @@ export default function EditProductPage() {
     }
   };
 
-  const categoryOptions = categories.map(cat => ({
+  const categoryOptions = categories.map((cat) => ({
     value: cat.id,
     label: cat.name,
   }));
@@ -320,7 +320,7 @@ export default function EditProductPage() {
             name="name"
             placeholder="Masukkan nama produk"
             value={formData.name}
-            onChange={e => handleInputChange("name", e.target.value)}
+            onChange={(e) => handleInputChange("name", e.target.value)}
             maxLength={100}
           />
         </FormField>
@@ -333,7 +333,7 @@ export default function EditProductPage() {
             name="description"
             value={formData.description}
             placeholder="Masukkan deskripsi produk (opsional)"
-            onChange={e => handleInputChange("description", e.target.value)}
+            onChange={(e) => handleInputChange("description", e.target.value)}
             maxLength={500}
             rows={4}
           />
@@ -353,7 +353,7 @@ export default function EditProductPage() {
               name="unit"
               placeholder="contoh: pcs, kg, liter"
               value={formData.unit}
-              onChange={e => handleInputChange("unit", e.target.value)}
+              onChange={(e) => handleInputChange("unit", e.target.value)}
               maxLength={20}
             />
           </FormField>
@@ -366,7 +366,7 @@ export default function EditProductPage() {
             <Select
               options={categoryOptions}
               value={formData.categoryId}
-              onChange={value => handleInputChange("categoryId", value)}
+              onChange={(value) => handleInputChange("categoryId", value)}
               placeholder="— Pilih Kategori —"
               errorMessage={formErrors.categoryId}
             />
@@ -384,7 +384,7 @@ export default function EditProductPage() {
               type="number"
               name="price"
               value={formData.price.toString()}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("price", parseFloat(e.target.value) || 0)
               }
               min="0"
@@ -402,7 +402,7 @@ export default function EditProductPage() {
               type="text"
               name="cost"
               value={formData.cost.toString()}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("cost", parseFloat(e.target.value) || 0)
               }
               min="0"
@@ -422,7 +422,7 @@ export default function EditProductPage() {
               name="minStock"
               placeholder="0"
               value={formData.minStock.toString()}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("minStock", parseInt(e.target.value) || 0)
               }
               min="0"
@@ -440,7 +440,7 @@ export default function EditProductPage() {
               readOnly
               placeholder="0"
               value={formData.currentStock.toString()}
-              onChange={e =>
+              onChange={(e) =>
                 handleInputChange("currentStock", parseInt(e.target.value) || 0)
               }
               min="0"
@@ -454,7 +454,7 @@ export default function EditProductPage() {
         >
           <InputCheckbox
             checked={formData.isActive}
-            onChange={e => handleInputChange("isActive", e.target.checked)}
+            onChange={(e) => handleInputChange("isActive", e.target.checked)}
             label="Aktif (produk akan tersedia untuk digunakan)"
           />
         </FormField>

@@ -556,35 +556,43 @@ const SalesDashboard = () => {
                           </div>
                         </div>
 
-                          <div className="space-y-3 mb-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                                <span className="mr-2">📦</span>
-                                Kuantitas:
-                              </span>
-                              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                                <span className="mr-2">�</span>
-                                Total Krat:
-                              </span>
-                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                                {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
-                                <span className="mr-2">📅</span>
-                                Tanggal:
-                              </span>
-                              <span className="text-sm text-gray-900 dark:text-white font-medium">
-                                {formatDate(order.orderDate)}
-                              </span>
-                            </div>
+                        <div className="space-y-3 mb-4 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                              <span className="mr-2">📦</span>
+                              Kuantitas:
+                            </span>
+                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                              {order.orderItems?.reduce(
+                                (sum, item) => sum + item.quantity,
+                                0
+                              ) || 0}{" "}
+                              Krat
+                            </span>
                           </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                              <span className="mr-2">�</span>
+                              Total Krat:
+                            </span>
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                              {order.orderItems?.reduce(
+                                (sum, item) => sum + item.quantity,
+                                0
+                              ) || 0}{" "}
+                              Krat
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                              <span className="mr-2">📅</span>
+                              Tanggal:
+                            </span>
+                            <span className="text-sm text-gray-900 dark:text-white font-medium">
+                              {formatDate(order.orderDate)}
+                            </span>
+                          </div>
+                        </div>
 
                         <Button
                           variant="outline"
@@ -681,12 +689,20 @@ const SalesDashboard = () => {
                                 </td>
                                 <td className="px-4 py-4">
                                   <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full block text-center">
-                                    {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                                    {order.orderItems?.reduce(
+                                      (sum, item) => sum + item.quantity,
+                                      0
+                                    ) || 0}{" "}
+                                    Krat
                                   </span>
                                 </td>
                                 <td className="px-4 py-4">
                                   <span className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full block text-center">
-                                    {order.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                                    {order.orderItems?.reduce(
+                                      (sum, item) => sum + item.quantity,
+                                      0
+                                    ) || 0}{" "}
+                                    Krat
                                   </span>
                                 </td>
                                 <td className="px-4 py-4">
@@ -1048,7 +1064,7 @@ const SalesDashboard = () => {
                                 {item.quantity} Krat
                               </td>
                               <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                                {item.products?.code || '-'}
+                                {item.products?.code || "-"}
                               </td>
                             </tr>
                           ))
@@ -1074,7 +1090,11 @@ const SalesDashboard = () => {
                     Total Krat:
                   </span>
                   <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {selectedOrder.orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0} Krat
+                    {selectedOrder.orderItems?.reduce(
+                      (sum, item) => sum + item.quantity,
+                      0
+                    ) || 0}{" "}
+                    Krat
                   </span>
                 </div>
               </div>

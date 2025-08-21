@@ -15,6 +15,7 @@ export type ProductFormData = {
   currentStock: number;
   isActive: boolean;
   categoryId: string;
+  bottlesPerCrate?: number | null;
 };
 
 export type ProductWithCategory = Products & {
@@ -80,6 +81,7 @@ export async function createProduct(data: ProductFormData) {
         currentStock: data.currentStock,
         isActive: data.isActive,
         categoryId: data.categoryId,
+        bottlesPerCrate: data.bottlesPerCrate || undefined,
       },
     });
 
@@ -112,6 +114,7 @@ export async function updateProduct(id: string, data: ProductFormData) {
         currentStock: data.currentStock,
         isActive: data.isActive,
         categoryId: data.categoryId,
+        bottlesPerCrate: data.bottlesPerCrate || undefined,
       },
     });
 

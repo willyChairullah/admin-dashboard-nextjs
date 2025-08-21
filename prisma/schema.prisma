@@ -24,12 +24,14 @@ model Store {
   id          String       @id @default(cuid())
   name        String
   address     String
+  city        String?
   phone       String?
   latitude    Float?
   longitude   Float?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   fieldVisits FieldVisit[]
+  orders      Orders[]
 
   @@map("stores")
 }
@@ -65,6 +67,7 @@ model Products {
   cost                 Float
   minStock             Int                    @default(0)
   currentStock         Int                    @default(0)
+  bottlesPerCrate      Int                    @default(24) // Jumlah botol per krat
   isActive             Boolean                @default(true)
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -105,6 +108,7 @@ model Users {
   Payments              Payments[]
   Productions           Productions[]
   PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
+  stockConfirmations    PurchaseOrders[]    @relation("StockConfirmationUser")
   processedSalesReturns SalesReturns[]      @relation("AdminProcessor")
   requestedSalesReturns SalesReturns[]      @relation("SalesRequester")
   salesTargets          SalesTargets[]
@@ -154,14 +158,18 @@ model PurchaseOrders {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   creatorId               String
-  // dateline                DateTime                @default(now())
+  dateline                DateTime                @default(now())
   code                    String                  @unique
   totalAmount             Float                   @default(0)
+  dateStockConfirmation   DateTime?
+  notesStockConfirmation  String?
+  statusStockConfirmation StockConfirmationStatus @default(WAITING_CONFIRMATION)
+  userStockConfirmationId String?
   orderId                 String
   orderLevelDiscount      Float                   @default(0)
   orderLevelDiscountType  DiscountValueType       @default(AMOUNT)
   paymentDeadline         DateTime?
-  paymentMethod           String?                 // Net Pembayaran sebagai text
+  paymentMethod           String? // Net Pembayaran sebagai text
   shippingCost            Float                   @default(0)
   taxPercentage           Float                   @default(0)
   totalDiscount           Float                   @default(0)
@@ -171,6 +179,7 @@ model PurchaseOrders {
   items                   PurchaseOrderItems[]
   creator                 Users                   @relation("CreatedPurchaseOrders", fields: [creatorId], references: [id])
   order                   Orders                  @relation(fields: [orderId], references: [id])
+  stockConfirmationUser   Users?                  @relation("StockConfirmationUser", fields: [userStockConfirmationId], references: [id])
 
   @@map("purchase_orders")
 }
@@ -191,15 +200,15 @@ model PurchaseOrderItems {
 }
 
 model Orders {
-  id                   String           @id @default(cuid())
-  orderNumber          String           @unique
-  orderDate            DateTime         @default(now())
+  id                   String        @id @default(cuid())
+  orderNumber          String        @unique
+  orderDate            DateTime      @default(now())
   deliveryDate         DateTime?
-  status               OrderStatus      @default(NEW)
-  totalAmount          Float            @default(0)
+  status               OrderStatus   @default(NEW)
+  totalAmount          Float         @default(0)
   notes                String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
   customerId           String
   salesId              String
   adminNotes           String?
@@ -207,22 +216,31 @@ model Orders {
   completedAt          DateTime?
   confirmedAt          DateTime?
   confirmedBy          String?
-  requiresConfirmation Boolean          @default(false)
+  requiresConfirmation Boolean       @default(false)
   deliveryAddress      String
   deliveryCity         String?
   deliveryNotesOrder   String?
   deliveryPostalCode   String?
-  discount             Float            @default(0)
-  shippingCost         Float            @default(0)
+  discount             Float         @default(0)
+  shippingCost         Float         @default(0)
   dueDate              DateTime
-  discountType         DiscountType?    @default(OVERALL)
+  discountType         DiscountType? @default(OVERALL)
   paymentDeadline      DateTime?
-  orderItems           OrderItems[]
-  customer             Customers        @relation(fields: [customerId], references: [id])
-  sales                Users            @relation(fields: [salesId], references: [id])
-  purchaseOrders       PurchaseOrders[]
-  salesReturns         SalesReturns[]
-  StockMovements       StockMovements[]
+
+  // Fields yang diperlukan untuk form order
+  storeId       String?
+  paymentType   PaymentType  @default(IMMEDIATE)
+  discountUnit  DiscountUnit @default(AMOUNT)
+  totalDiscount Float        @default(0)
+  subtotal      Float        @default(0)
+
+  orderItems     OrderItems[]
+  customer       Customers        @relation(fields: [customerId], references: [id])
+  sales          Users            @relation(fields: [salesId], references: [id])
+  store          Store?           @relation(fields: [storeId], references: [id])
+  purchaseOrders PurchaseOrders[]
+  salesReturns   SalesReturns[]
+  StockMovements StockMovements[]
 
   @@map("orders")
 }
@@ -292,6 +310,7 @@ model Invoices {
   shippingCost      Float             @default(0)
   taxPercentage     Float             @default(0)
   type              InvoiceType       @default(PRODUCT)
+  statusPreparation PreparationStatus @default(WAITING_PREPARATION)
   delivery_notes    DeliveryNotes?
   invoiceItems      InvoiceItems[]
   creator           Users?            @relation("InvoiceCreator", fields: [createdBy], references: [id])
@@ -616,6 +635,31 @@ model Taxs {
   updatedAt DateTime @updatedAt
 
   @@map("taxes")
+}
+
+enum PreparationStatus {
+  WAITING_PREPARATION
+  PREPARING
+  CANCELLED_PREPARATION
+  READY_FOR_DELIVERY
+}
+
+enum StockConfirmationStatus {
+  WAITING_CONFIRMATION
+  STOCK_AVAILABLE
+  INSUFFICIENT_STOCK
+  CONFIRMED
+  REJECTED
+}
+
+enum PaymentType {
+  IMMEDIATE
+  DEFERRED
+}
+
+enum DiscountUnit {
+  AMOUNT
+  PERCENTAGE
 }
 
 enum DeliveryStatus {

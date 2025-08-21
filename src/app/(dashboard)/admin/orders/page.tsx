@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import {
   Package,
@@ -18,13 +17,11 @@ import {
   Mail,
   Phone,
   FileText,
-  Edit,
-  ExternalLink,
-  Ban,
+  Edit3,
+  RefreshCw,
 } from "lucide-react";
-import { getOrders, cancelOrder } from "@/lib/actions/orders";
+import { getOrders, updateOrderStatus } from "@/lib/actions/orders";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { OrderTracking, CancelOrderDialog } from "@/components/sales";
 import Loading from "@/components/ui/common/Loading";
 
 interface OrderItem {
@@ -57,46 +54,32 @@ interface Order {
   status: string;
   notes?: string;
   customer: Customer;
+  sales?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   orderItems?: OrderItem[];
   order_items?: OrderItem[]; // Support both formats
 }
 
-export default function OrderHistoryPage() {
+export default function AdminOrdersPage() {
   const { user, loading: userLoading } = useCurrentUser();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<string>(
-    "PENDING_CONFIRMATION"
-  );
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<string>("30");
-  
-  // Cancel order dialog state
-  const [cancelDialog, setCancelDialog] = useState<{
-    isOpen: boolean;
-    orderId: string | null;
-    orderNumber: string;
-  }>({
-    isOpen: false,
-    orderId: null,
-    orderNumber: "",
-  });
-  const [isCanelling, setIsCanelling] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
-    if (!user?.id) return;
-
     try {
       setLoading(true);
 
       const params: {
-        salesId?: string;
         status?: string;
-        requiresConfirmation?: boolean;
-      } = {
-        salesId: user.id,
-      };
+      } = {};
 
       if (selectedStatus !== "ALL") {
         params.status = selectedStatus;
@@ -122,45 +105,28 @@ export default function OrderHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, selectedStatus, dateRange]);
+  }, [selectedStatus, dateRange]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
 
-  const handleCancelOrder = async (reason: string) => {
-    if (!cancelDialog.orderId) return;
-
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      setIsCanelling(true);
-      const result = await cancelOrder(cancelDialog.orderId, reason);
+      setUpdatingStatus(orderId);
+      const result = await updateOrderStatus(orderId, newStatus);
 
       if (result.success) {
         toast.success(result.message);
         loadOrders(); // Refresh orders list
       } else {
-        toast.error(result.error || "Gagal membatalkan order");
+        toast.error(result.error || "Gagal mengubah status order");
       }
     } catch (error) {
-      console.error("Error cancelling order:", error);
-      toast.error("Terjadi kesalahan saat membatalkan order");
+      console.error("Error updating order status:", error);
+      toast.error("Terjadi kesalahan saat mengubah status order");
     } finally {
-      setIsCanelling(false);
-      setCancelDialog({ isOpen: false, orderId: null, orderNumber: "" });
-    }
-  };
-
-  const openCancelDialog = (orderId: string, orderNumber: string) => {
-    setCancelDialog({
-      isOpen: true,
-      orderId,
-      orderNumber,
-    });
-  };
-
-  const closeCancelDialog = () => {
-    if (!isCanelling) {
-      setCancelDialog({ isOpen: false, orderId: null, orderNumber: "" });
+      setUpdatingStatus(null);
     }
   };
 
@@ -209,6 +175,28 @@ export default function OrderHistoryPage() {
     );
   };
 
+  const getStatusOptions = (currentStatus: string) => {
+    const allStatuses = [
+      { value: "NEW", label: "Baru" },
+      { value: "PENDING_CONFIRMATION", label: "Menunggu Konfirmasi" },
+      { value: "IN_PROCESS", label: "Dalam Proses" },
+      { value: "COMPLETED", label: "Selesai" },
+      { value: "CANCELED", label: "Dibatal" },
+    ];
+
+    // Filter out current status and restrict transitions
+    return allStatuses.filter((status) => {
+      if (status.value === currentStatus) return false;
+
+      // Restrict certain transitions
+      if (currentStatus === "COMPLETED" || currentStatus === "CANCELED") {
+        return false; // Cannot change from completed or canceled
+      }
+
+      return true;
+    });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -235,27 +223,14 @@ export default function OrderHistoryPage() {
       order.id.toLowerCase().includes(searchLower) ||
       order.orderNumber.toLowerCase().includes(searchLower) ||
       order.customer.name.toLowerCase().includes(searchLower) ||
-      order.customer.address.toLowerCase().includes(searchLower)
+      order.customer.address.toLowerCase().includes(searchLower) ||
+      order.sales?.name.toLowerCase().includes(searchLower) ||
+      order.sales?.email.toLowerCase().includes(searchLower)
     );
   });
 
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
-  };
-
-  const getOrderProgress = (status: string) => {
-    if (status === "CANCELED") return { percent: 0, color: "bg-red-500" };
-    if (status === "COMPLETED") return { percent: 100, color: "bg-green-500" };
-
-    const steps = ["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"];
-    const currentStep = steps.indexOf(status);
-
-    if (currentStep === -1) return { percent: 0, color: "bg-gray-500" };
-
-    const percent = ((currentStep + 1) / steps.length) * 75;
-    const color = "bg-blue-500";
-
-    return { percent, color };
   };
 
   const stats = {
@@ -280,7 +255,7 @@ export default function OrderHistoryPage() {
     return <Loading />;
   }
 
-  if (!user || user.role !== "SALES") {
+  if (!user || !["ADMIN", "OWNER"].includes(user.role || "")) {
     return (
       <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
         <div className="text-center">
@@ -288,7 +263,7 @@ export default function OrderHistoryPage() {
             Akses Ditolak
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Halaman ini hanya dapat diakses oleh sales representative.
+            Halaman ini hanya dapat diakses oleh admin atau owner.
           </p>
         </div>
       </div>
@@ -297,36 +272,83 @@ export default function OrderHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-blue-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 overflow-x-hidden">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-800 bg-clip-text text-transparent">
-                Riwayat Order Saya
+                Manajemen Orders
               </h1>
               <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                Pantau semua order yang telah Anda buat dan status progressnya
+                Kelola semua orders dan ubah status proses orders
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-left sm:text-right">
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  Sales Representative
-                </p>
-                <p className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent truncate max-w-[200px]">
-                  {user?.name || user?.email}
-                </p>
-              </div>
-              <div className="relative">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
-                  <User className="h-6 w-6 text-white" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
-              </div>
+              <button
+                onClick={loadOrders}
+                disabled={loading}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl p-4 border border-white/20 dark:border-gray-700/30">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {stats.total}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              Total Orders
+            </div>
+          </div>
+          <div className="bg-blue-50/80 dark:bg-blue-900/30 backdrop-blur-xl rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-300">
+              {stats.new}
+            </div>
+            <div className="text-sm text-blue-600 dark:text-blue-400">Baru</div>
+          </div>
+          <div className="bg-yellow-50/80 dark:bg-yellow-900/30 backdrop-blur-xl rounded-xl p-4 border border-yellow-200/50 dark:border-yellow-700/30">
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">
+              {stats.pending}
+            </div>
+            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+              Pending
+            </div>
+          </div>
+          <div className="bg-orange-50/80 dark:bg-orange-900/30 backdrop-blur-xl rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/30">
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-300">
+              {stats.inProcess}
+            </div>
+            <div className="text-sm text-orange-600 dark:text-orange-400">
+              Proses
+            </div>
+          </div>
+          <div className="bg-green-50/80 dark:bg-green-900/30 backdrop-blur-xl rounded-xl p-4 border border-green-200/50 dark:border-green-700/30">
+            <div className="text-2xl font-bold text-green-900 dark:text-green-300">
+              {stats.completed}
+            </div>
+            <div className="text-sm text-green-600 dark:text-green-400">
+              Selesai
+            </div>
+          </div>
+          <div className="bg-red-50/80 dark:bg-red-900/30 backdrop-blur-xl rounded-xl p-4 border border-red-200/50 dark:border-red-700/30">
+            <div className="text-2xl font-bold text-red-900 dark:text-red-300">
+              {stats.canceled}
+            </div>
+            <div className="text-sm text-red-600 dark:text-red-400">
+              Dibatal
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="mb-6 sm:mb-8">
           <div className="bg-gradient-to-br from-white/80 via-purple-50/60 to-blue-50/40 dark:from-gray-800/80 dark:via-purple-900/60 dark:to-blue-900/40 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 p-6 sm:p-8">
@@ -335,7 +357,7 @@ export default function OrderHistoryPage() {
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5" />
                 <input
                   type="text"
-                  placeholder="Cari order, customer, atau nomor order..."
+                  placeholder="Cari order, customer, atau sales..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-white/80 dark:bg-gray-800/80 border border-purple-200/50 dark:border-purple-700/50 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 backdrop-blur-sm transition-all shadow-lg"
@@ -388,128 +410,132 @@ export default function OrderHistoryPage() {
                 Tidak ada orders
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-                {searchTerm ||
-                selectedStatus !== "PENDING_CONFIRMATION" ||
-                dateRange !== "30"
-                  ? "Tidak ada orders yang cocok dengan filter yang dipilih."
-                  : "Anda belum memiliki order yang menunggu konfirmasi."}
+                Tidak ada orders yang cocok dengan filter yang dipilih.
               </p>
             </div>
           ) : (
             filteredOrders.map((order) => {
-              const progress = getOrderProgress(order.status);
               const isExpanded = expandedOrder === order.id;
 
               return (
                 <div
                   key={order.id}
-                  className="bg-gradient-to-br from-white/80 via-blue-50/20 to-purple-50/30 dark:from-gray-800/90 dark:via-gray-700/50 dark:to-gray-600/30 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden hover:shadow-3xl hover:scale-[1.02] transition-all duration-300 group"
+                  className="bg-gradient-to-br from-white/80 via-blue-50/20 to-purple-50/30 dark:from-gray-800/90 dark:via-gray-700/50 dark:to-gray-600/30 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 overflow-hidden hover:shadow-3xl hover:scale-[1.01] transition-all duration-300"
                 >
-                  <div className="p-6 bg-gradient-to-br from-white/90 via-blue-50/40 to-indigo-50/20 dark:from-gray-800/90 dark:via-gray-700/40 dark:to-gray-600/20 backdrop-blur-sm">
+                  <div className="p-6">
                     {/* Order Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                      <div className="flex items-center space-x-4">
-                        <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
-                          {order.orderNumber}
-                        </h3>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end space-x-4">
-                        <div className="text-left sm:text-right">
-                          <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                            {formatCurrency(order.totalAmount)}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            {order.orderNumber}
+                          </h3>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center mb-1">
+                            <User className="w-4 h-4 mr-2" />
+                            Sales: {order.sales?.name || "N/A"}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                          <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-2" />
                             {formatDate(order.orderDate)}
                           </div>
                         </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="text-left sm:text-right">
+                          <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                            {formatCurrency(order.totalAmount)}
+                          </div>
+                        </div>
+
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => toggleOrderExpansion(order.id)}
-                            className="p-3 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
+                            className="p-3 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-300"
                             aria-label={
                               isExpanded ? "Tutup detail" : "Lihat detail"
                             }
                           >
                             <Eye className="w-5 h-5" />
                           </button>
-                          {/* Edit button - only show for editable statuses */}
-                          {["NEW", "PENDING_CONFIRMATION"].includes(order.status) && (
-                            <Link
-                              href={`/sales/orders/edit/${order.id}`}
-                              className="p-3 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
-                              aria-label="Edit order"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </Link>
-                          )}
-                          {/* Cancel button - only show for cancellable statuses */}
-                          {["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"].includes(order.status) && (
-                            <button
-                              onClick={() => openCancelDialog(order.id, order.orderNumber)}
-                              className="p-3 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-300 group-hover:scale-110"
-                              aria-label="Cancel order"
-                            >
-                              <Ban className="w-5 h-5" />
-                            </button>
+
+                          {/* Status Update Dropdown */}
+                          {!["COMPLETED", "CANCELED"].includes(
+                            order.status
+                          ) && (
+                            <div className="relative">
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleStatusUpdate(
+                                      order.id,
+                                      e.target.value
+                                    );
+                                  }
+                                }}
+                                disabled={updatingStatus === order.id}
+                                className="appearance-none bg-gradient-to-r from-purple-500 to-blue-600 text-white px-4 py-3 pr-8 rounded-xl text-sm font-medium hover:from-purple-600 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 cursor-pointer"
+                              >
+                                <option value="" disabled>
+                                  {updatingStatus === order.id
+                                    ? "Updating..."
+                                    : "Ubah Status"}
+                                </option>
+                                {getStatusOptions(order.status).map(
+                                  (status) => (
+                                    <option
+                                      key={status.value}
+                                      value={status.value}
+                                      className="bg-white text-gray-900"
+                                    >
+                                      {status.label}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                              <Edit3 className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white pointer-events-none" />
+                            </div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="mb-6">
-                      <div className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        <span>Progress Order</span>
-                        <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                          {progress.percent.toFixed(0)}%
-                        </span>
+                    {/* Customer & Sales Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-900/20 dark:to-indigo-900/10 rounded-xl p-4">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+                          <User className="w-4 h-4 mr-2 text-blue-500" />
+                          Customer
+                        </h4>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                          {order.customer.name}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
+                          {order.customer.address}
+                        </p>
                       </div>
-                      <div className="w-full bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full h-3 overflow-hidden shadow-inner">
-                        <div
-                          className={`h-3 rounded-full transition-all duration-500 shadow-lg ${progress.color}`}
-                          style={{ width: `${progress.percent}%` }}
-                        ></div>
-                      </div>
-                    </div>
 
-                    {/* Order Summary */}
-                    <div className="grid grid-cols-1 gap-4 text-sm">
-                      <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-900/20 dark:to-indigo-900/10 rounded-xl">
-                        <User className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">
-                            Customer
-                          </p>
-                          <p className="font-semibold text-gray-900 dark:text-white text-base break-words">
-                            {order.customer.name}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-green-50/50 to-emerald-50/30 dark:from-green-900/20 dark:to-emerald-900/10 rounded-xl">
-                        <MapPin className="w-5 h-5 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">
-                            Alamat
-                          </p>
-                          <p className="font-semibold text-gray-900 dark:text-white text-base break-words">
-                            {order.customer.address}
-                          </p>
-                        </div>
+                      <div className="bg-gradient-to-r from-green-50/50 to-emerald-50/30 dark:from-green-900/20 dark:to-emerald-900/10 rounded-xl p-4">
+                        <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+                          <ShoppingCart className="w-4 h-4 mr-2 text-green-500" />
+                          Sales Representative
+                        </h4>
+                        <p className="text-sm text-gray-900 dark:text-white font-medium">
+                          {order.sales?.name || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
+                          {order.sales?.email || "N/A"}
+                        </p>
                       </div>
                     </div>
 
                     {/* Expanded Details */}
                     {isExpanded && (
-                      <div className="mt-6 pt-6 border-t border-white/20 dark:border-gray-700/30">
-                        {/* Order Tracking */}
-                        <div className="mb-6">
-                          <OrderTracking
-                            status={order.status}
-                            orderDate={new Date(order.orderDate)}
-                          />
-                        </div>
+                      <div className="pt-6 border-t border-white/20 dark:border-gray-700/30">
                         {/* Order Items */}
                         <div className="mb-6">
                           <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -556,68 +582,6 @@ export default function OrderHistoryPage() {
                                   Tidak ada item order
                                 </div>
                               )}
-                              <div className="pt-4 border-t border-purple-200 dark:border-purple-700">
-                                <div className="flex justify-between items-center font-bold text-lg">
-                                  <span className="text-gray-900 dark:text-white">
-                                    Total:
-                                  </span>
-                                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                                    {formatCurrency(order.totalAmount)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Customer Details */}
-                        <div className="grid grid-cols-1 gap-6 mb-6">
-                          <div>
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                              <User className="w-5 h-5 mr-2 text-blue-500" />
-                              Detail Customer
-                            </h4>
-                            <div className="bg-gradient-to-br from-blue-50/50 to-cyan-50/30 dark:from-blue-900/20 dark:to-cyan-900/10 backdrop-blur-sm rounded-xl p-4 border border-blue-100/50 dark:border-blue-800/30 space-y-3">
-                              <div className="flex items-center space-x-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                <User className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                                <p className="text-gray-900 dark:text-white break-words font-medium">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    Nama:
-                                  </span>{" "}
-                                  {order.customer.name}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                <MapPin className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                <p className="text-gray-900 dark:text-white break-words font-medium">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    Alamat:
-                                  </span>{" "}
-                                  {order.customer.address}
-                                </p>
-                              </div>
-                              {order.customer.email && (
-                                <div className="flex items-center space-x-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                  <Mail className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                                  <p className="text-gray-900 dark:text-white break-all font-medium">
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      Email:
-                                    </span>{" "}
-                                    {order.customer.email}
-                                  </p>
-                                </div>
-                              )}
-                              {order.customer.phone && (
-                                <div className="flex items-center space-x-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                                  <Phone className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                                  <p className="text-gray-900 dark:text-white break-all font-medium">
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      Telepon:
-                                    </span>{" "}
-                                    {order.customer.phone}
-                                  </p>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -630,10 +594,7 @@ export default function OrderHistoryPage() {
                               Catatan
                             </h4>
                             <div className="bg-gradient-to-br from-orange-50/50 to-amber-50/30 dark:from-orange-900/20 dark:to-amber-900/10 backdrop-blur-sm rounded-xl p-4 border border-orange-100/50 dark:border-orange-800/30">
-                              <p className="text-gray-900 dark:text-white break-words font-medium">
-                                <span className="text-orange-600 dark:text-orange-400 font-semibold">
-                                  Catatan Sales:
-                                </span>{" "}
+                              <p className="text-gray-900 dark:text-white break-words">
                                 {order.notes}
                               </p>
                             </div>
@@ -648,15 +609,6 @@ export default function OrderHistoryPage() {
           )}
         </div>
       </div>
-
-      {/* Cancel Order Dialog */}
-      <CancelOrderDialog
-        isOpen={cancelDialog.isOpen}
-        onClose={closeCancelDialog}
-        onConfirm={handleCancelOrder}
-        orderNumber={cancelDialog.orderNumber}
-        isLoading={isCanelling}
-      />
     </div>
   );
 }

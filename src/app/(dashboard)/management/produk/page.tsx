@@ -18,6 +18,14 @@ const columns = [
   { header: "Min Stok", accessor: "minStock" },
   { header: "Stok", accessor: "currentStock" },
   {
+    header: "Krat",
+    accessor: "bottlesPerCrate",
+    cell: (info: { getValue: () => number | null }) => {
+      const value = info.getValue();
+      return value ? `${value} botol/krat` : "-";
+    },
+  },
+  {
     header: "Kategori",
     accessor: "category.name", // Tetap bisa mempertahankan accessor untuk keperluan lain (misal: sorting/filtering di luar DataTable)
     // Gunakan properti 'render' untuk menampilkan nama kategori
