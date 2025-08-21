@@ -47,7 +47,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some((child) => pathname.startsWith(child.href))
+      item.children.some(child => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -66,7 +66,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some((child) => pathname.startsWith(child.href))
+      item.children.some(child => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -101,11 +101,11 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
             </div>
             {shouldShowExpanded && hasChildren && (
               <span
-                className={`transform transition-transform ${
+                className={`font-bold text-xl transform transition-transform ${
                   isSubMenuOpen ? "rotate-90" : ""
                 }`}
               >
-                ▶
+                {">"}
               </span>
             )}
           </button>
@@ -134,7 +134,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map((child) => {
+          {item.children?.map(child => {
             const isChildActive =
               pathname === child.href || pathname.startsWith(child.href + "/");
             return (
@@ -255,22 +255,24 @@ export default function SideBar({
           //   children: [],
           //   roles: ["WAREHOUSE", "ADMIN", "OWNER"],
           // },
-          {
-            id: "konfirmasi-stok",
-            label: "Konfirmasi Stok",
-            icon: "📋",
-            href: "/inventory/konfirmasi-stok",
-            children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
-          },
-          {
-            id: "konfirmasi-kesiapan",
-            label: "Konfirmasi Kesiapan",
-            icon: "📦",
-            href: "/inventory/konfirmasi-kesiapan",
-            children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
-          },
+          // Konfirmasi Stok dihapus karena tidak diperlukan lagi
+          // {
+          //   id: "konfirmasi-stok",
+          //   label: "Konfirmasi Stok",
+          //   icon: "📋",
+          //   href: "/inventory/konfirmasi-stok",
+          //   children: [],
+          //   roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+          // },
+          // Konfirmasi Kesiapan dihapus karena tidak diperlukan lagi
+          // {
+          //   id: "konfirmasi-kesiapan",
+          //   label: "Konfirmasi Kesiapan",
+          //   icon: "📦",
+          //   href: "/inventory/konfirmasi-kesiapan",
+          //   children: [],
+          //   roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+          // },
           {
             id: "Produksi",
             label: "Produksi",
@@ -409,6 +411,14 @@ export default function SideBar({
             label: "Kategori",
             icon: "🏷️",
             href: "/management/kategori",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
+            id: "pajak",
+            label: "Pajak",
+            icon: "💰",
+            href: "/management/pajak",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },

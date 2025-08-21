@@ -8,7 +8,6 @@ import {
   InvoiceStatus,
   InvoiceType,
   PurchaseOrderStatus,
-  StockConfirmationStatus,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -224,10 +223,7 @@ export async function getAvailablePurchaseOrders() {
         },
         // PO status should be PROCESSING
         status: PurchaseOrderStatus.PROCESSING,
-        // Stock confirmation should NOT be WAITING_CONFIRMATION
-        statusStockConfirmation: {
-          not: StockConfirmationStatus.WAITING_CONFIRMATION,
-        },
+        // Stock confirmation field removed - stock validation now done at PO creation
       },
       include: {
         // creator: {
@@ -331,7 +327,7 @@ export async function createInvoice(data: InvoiceFormData) {
     const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
     const remainingAmount = totalAmount - 0; // paidAmount starts at 0
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async tx => {
       // Create invoice
       const invoice = await tx.invoices.create({
         data: {
@@ -357,7 +353,7 @@ export async function createInvoice(data: InvoiceFormData) {
 
       // Create invoice items
       const invoiceItems = await Promise.all(
-        data.items.map((item) =>
+        data.items.map(item =>
           tx.invoiceItems.create({
             data: {
               description: item.description,
@@ -394,7 +390,7 @@ export async function updateInvoice(
     const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async tx => {
       // Get current invoice to preserve paidAmount
       const currentInvoice = await tx.invoices.findUnique({
         where: { id },
@@ -437,7 +433,7 @@ export async function updateInvoice(
 
       // Create new invoice items
       const invoiceItems = await Promise.all(
-        data.items.map((item) =>
+        data.items.map(item =>
           tx.invoiceItems.create({
             data: {
               description: item.description,
@@ -467,7 +463,7 @@ export async function updateInvoice(
 // Delete invoice
 export async function deleteInvoice(id: string) {
   try {
-    await db.$transaction(async (tx) => {
+    await db.$transaction(async tx => {
       // Check if there are any payments for this invoice
       const existingPayments = await tx.payments.findMany({
         where: { invoiceId: id },
