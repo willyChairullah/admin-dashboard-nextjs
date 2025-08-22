@@ -98,7 +98,14 @@ export default function ManajemenStokPage() {
   const processDataForPDF = (productions: any[]) => {
     const processedData: any[] = [];
 
-    productions.forEach((production) => {
+    // First, sort productions by date from oldest to newest
+    const sortedProductions = [...productions].sort((a, b) => {
+      const dateA = new Date(a.productionDate);
+      const dateB = new Date(b.productionDate);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    sortedProductions.forEach((production) => {
       const productionDate = formatDate(new Date(production.productionDate));
       const productionCode = production.code || "-";
 
@@ -114,6 +121,7 @@ export default function ManajemenStokPage() {
           processedData.push({
             kodeProduksi: productionCode,
             tanggal: productionDate,
+            tanggalRaw: production.productionDate, // Keep raw date for sorting
             kodeBarang: item?.product?.code || "-",
             namaBarang: item?.product?.name || "-",
             totalKrat: totalCrates,
@@ -127,6 +135,7 @@ export default function ManajemenStokPage() {
         processedData.push({
           kodeProduksi: productionCode,
           tanggal: productionDate,
+          tanggalRaw: production.productionDate,
           kodeBarang: "-",
           namaBarang: "-",
           totalKrat: 0,
@@ -145,7 +154,13 @@ export default function ManajemenStokPage() {
     try {
       setIsGeneratingPDF(true);
 
-      const doc = new jsPDF();
+      // Create A4 PDF with better margins
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
       // Use filtered data from ManagementContent
       const dataToProcess =
         filteredDataForPDF.length > 0 ? filteredDataForPDF : data.data || [];
@@ -167,19 +182,49 @@ export default function ManajemenStokPage() {
         }
       }
 
-      // Add title
-      doc.setFontSize(16);
+      // Add company header with professional styling
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Company header background
+      doc.setFillColor(41, 98, 255); // Professional blue
+      doc.rect(0, 0, pageWidth, 35, 'F');
+      
+      // Company name
+      doc.setTextColor(255, 255, 255); // White text
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text("Laporan Produksi", 14, 20);
-
-      // Add generation date
+      doc.text("CV HM JAYA BERKAH", pageWidth / 2, 15, { align: 'center' });
+      
+      // Company subtitle
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Digenerate pada: ${formatDate(new Date())}`, 14, 30);
-      doc.text(`Periode: ${periodText}`, 14, 40);
+      doc.text("Laporan Produksi", pageWidth / 2, 25, { align: 'center' });
+      
+      // Reset text color for content
+      doc.setTextColor(0, 0, 0);
+      
+      // Add report details with better spacing
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("LAPORAN PRODUKSI", pageWidth / 2, 50, { align: 'center' });
+      
+      // Add divider line
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(200, 200, 200);
+      doc.line(15, 55, pageWidth - 15, 55);
+      
+      // Report information
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Tanggal Cetak: ${formatDate(new Date())}`, 15, 65);
+      doc.text(`Periode: ${periodText}`, 15, 72);
+      
+      // Add another divider
+      doc.line(15, 80, pageWidth - 15, 80);
 
-      // Prepare table data
-      const tableData = processedData.map((item) => [
+      // Prepare table data with row numbers
+      const tableData = processedData.map((item, index) => [
+        (index + 1).toString(), // Add row number starting from 1
         item.kodeProduksi,
         item.tanggal,
         item.kodeBarang,
@@ -189,10 +234,11 @@ export default function ManajemenStokPage() {
         `Rp ${item.gajiPerBotol.toLocaleString()}`,
       ]);
 
-      // Add table
+      // Add professional table
       autoTable(doc, {
         head: [
           [
+            "No",
             "Kode Produksi",
             "Tanggal",
             "Kode Barang",
@@ -203,24 +249,43 @@ export default function ManajemenStokPage() {
           ],
         ],
         body: tableData,
-        startY: 50,
-        theme: "grid",
+        startY: 88,
+        theme: "striped",
         styles: {
-          fontSize: 8,
-          cellPadding: 3,
+          fontSize: 9,
+          cellPadding: 4,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1,
+          textColor: [50, 50, 50],
+          fontStyle: 'normal',
         },
         headStyles: {
-          fillColor: [63, 131, 248], // Blue color
-          textColor: 255,
-          fontStyle: "bold",
+          fillColor: [41, 98, 255], // Company blue
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 10,
+          halign: 'center',
+          valign: 'middle',
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252], // Light gray
         },
-        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 12, halign: 'center' }, // No
+          1: { cellWidth: 25, halign: 'center' }, // Kode Produksi
+          2: { cellWidth: 20, halign: 'center' }, // Tanggal
+          3: { cellWidth: 18, halign: 'center' }, // Kode Barang
+          4: { cellWidth: 35, halign: 'left' },   // Nama Barang
+          5: { cellWidth: 18, halign: 'right' },  // Total Krat
+          6: { cellWidth: 18, halign: 'right' },  // Total Botol
+          7: { cellWidth: 25, halign: 'right' },  // Gaji per Botol
+        },
+        margin: { left: 15, right: 15 },
+        tableWidth: 'auto',
+        showHead: 'everyPage',
       });
 
-      // Add summary
+      // Add professional summary section
       const totalKrat = processedData.reduce(
         (sum, item) => sum + item.totalKrat,
         0
@@ -234,22 +299,63 @@ export default function ManajemenStokPage() {
         0
       );
 
-      const finalY = (doc as any).lastAutoTable.finalY || 40;
-
-      doc.setFontSize(10);
+      const finalY = (doc as any).lastAutoTable.finalY || 88;
+      
+      // Summary section with professional styling
+      const summaryStartY = finalY + 15;
+      
+      // Summary header background
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, summaryStartY - 5, pageWidth - 30, 8, 'F');
+      
+      // Summary header
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Total Keseluruhan:", 14, finalY + 15);
+      doc.setTextColor(41, 98, 255);
+      doc.text("RINGKASAN PRODUKSI", 20, summaryStartY);
+      
+      // Reset text color
+      doc.setTextColor(0, 0, 0);
+      
+      // Summary data with better formatting
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total Krat: ${totalKrat.toLocaleString()}`, 14, finalY + 25);
-      doc.text(`Total Botol: ${totalBotol.toLocaleString()}`, 14, finalY + 35);
+      
+      const summaryY = summaryStartY + 10;
+      doc.text(`• Total Krat Diproduksi:`, 20, summaryY);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${totalKrat.toLocaleString()} krat`, 70, summaryY);
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(`• Total Botol Diproduksi:`, 20, summaryY + 7);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${totalBotol.toLocaleString()} botol`, 70, summaryY + 7);
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(`• Total Gaji Karyawan:`, 20, summaryY + 14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 150, 0); // Green for money
+      doc.text(`Rp ${totalGajiKaryawan.toLocaleString()}`, 70, summaryY + 14);
+      
+      // Add footer
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
       doc.text(
-        `Total Gaji Karyawan: Rp ${totalGajiKaryawan.toLocaleString()}`,
-        14,
-        finalY + 45
+        `Dokumen ini digenerate secara otomatis oleh sistem CV HM JAYA BERKAH pada ${formatDate(new Date())}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
       );
+      
+      // Add page border
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
 
-      // Save the PDF
-      const fileName = `laporan-produksi-${
+      // Save the PDF with better filename
+      const fileName = `Laporan-Produksi-CV-HM-JAYA-BERKAH-${
         new Date().toISOString().split("T")[0]
       }.pdf`;
       doc.save(fileName);
