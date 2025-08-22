@@ -14,6 +14,11 @@ import { useRouter } from "next/navigation";
 
 const columns = [
   {
+    header: "Kode Produksi",
+    accessor: "code",
+    render: (value: string) => value || "-",
+  },
+  {
     header: "Tanggal",
     accessor: "productionDate",
     render: (value: Date) => formatDate(value),
@@ -91,28 +96,37 @@ export default function ManajemenStokPage() {
     
     productions.forEach(production => {
       const productionDate = formatDate(new Date(production.productionDate));
+      const productionCode = production.code || "-";
       
       if (production.items && production.items.length > 0) {
         production.items.forEach((item: any) => {
           const bottlesPerCrate = item?.product?.bottlesPerCrate || 24;
           const totalCrates = Math.floor((item.quantity || 0) / bottlesPerCrate);
+          const salaryPerBottle = item.salaryPerBottle || 0;
+          const totalSalary = (item.quantity || 0) * salaryPerBottle;
           
           processedData.push({
+            kodeProduksi: productionCode,
             tanggal: productionDate,
             kodeBarang: item?.product?.code || "-",
             namaBarang: item?.product?.name || "-",
             totalKrat: totalCrates,
-            totalBotol: item.quantity || 0
+            totalBotol: item.quantity || 0,
+            gajiPerBotol: salaryPerBottle,
+            totalGaji: totalSalary
           });
         });
       } else {
         // If no items, add a row with empty data
         processedData.push({
+          kodeProduksi: productionCode,
           tanggal: productionDate,
           kodeBarang: "-",
           namaBarang: "-",
           totalKrat: 0,
-          totalBotol: 0
+          totalBotol: 0,
+          gajiPerBotol: 0,
+          totalGaji: 0
         });
       }
     });
@@ -140,16 +154,18 @@ export default function ManajemenStokPage() {
       
       // Prepare table data
       const tableData = processedData.map(item => [
+        item.kodeProduksi,
         item.tanggal,
         item.kodeBarang,
         item.namaBarang,
         item.totalKrat.toLocaleString(),
-        item.totalBotol.toLocaleString()
+        item.totalBotol.toLocaleString(),
+        `Rp ${item.gajiPerBotol.toLocaleString()}`
       ]);
       
       // Add table
       autoTable(doc, {
-        head: [['Tanggal', 'Kode Barang', 'Nama Barang', 'Total Krat', 'Total Botol']],
+        head: [['Kode Produksi', 'Tanggal', 'Kode Barang', 'Nama Barang', 'Total Krat', 'Total Botol', 'Gaji per Botol']],
         body: tableData,
         startY: 40,
         theme: 'grid',
@@ -171,6 +187,7 @@ export default function ManajemenStokPage() {
       // Add summary
       const totalKrat = processedData.reduce((sum, item) => sum + item.totalKrat, 0);
       const totalBotol = processedData.reduce((sum, item) => sum + item.totalBotol, 0);
+      const totalGajiKaryawan = processedData.reduce((sum, item) => sum + item.totalGaji, 0);
       
       const finalY = (doc as any).lastAutoTable.finalY || 40;
       
@@ -180,6 +197,7 @@ export default function ManajemenStokPage() {
       doc.setFont("helvetica", "normal");
       doc.text(`Total Krat: ${totalKrat.toLocaleString()}`, 14, finalY + 25);
       doc.text(`Total Botol: ${totalBotol.toLocaleString()}`, 14, finalY + 35);
+      doc.text(`Total Gaji Karyawan: Rp ${totalGajiKaryawan.toLocaleString()}`, 14, finalY + 45);
       
       // Save the PDF
       const fileName = `laporan-produksi-${new Date().toISOString().split('T')[0]}.pdf`;
