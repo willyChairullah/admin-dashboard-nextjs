@@ -41,6 +41,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   discount?: number;
+  discountType?: "AMOUNT" | "PERCENTAGE";
   crates?: number;
 }
 
@@ -74,6 +75,7 @@ interface Order {
     price: number;
     totalPrice: number;
     discount?: number;
+    discountType?: "AMOUNT" | "PERCENTAGE";
     productId: string;
     products: {
       id: string;
@@ -105,13 +107,10 @@ export default function EditOrderPage({
   const [customerCity, setCustomerCity] = useState("");
   const [notes, setNotes] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [discountType, setDiscountType] = useState<"OVERALL" | "PER_CRATE">(
-    "OVERALL"
-  );
-  const [totalDiscount, setTotalDiscount] = useState<number>(0);
-  const [discountUnit, setDiscountUnit] = useState<"AMOUNT" | "PERCENTAGE">(
-    "AMOUNT"
-  );
+  const [orderDiscount, setOrderDiscount] = useState<number>(0);
+  const [orderDiscountUnit, setOrderDiscountUnit] = useState<
+    "AMOUNT" | "PERCENTAGE"
+  >("AMOUNT");
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [paymentType, setPaymentType] = useState<"IMMEDIATE" | "DEFERRED">(
     "IMMEDIATE"
@@ -121,7 +120,7 @@ export default function EditOrderPage({
 
   // Helper function to get bottles per crate from product data
   const getBottlesPerCrate = (productName: string): number => {
-    const product = products.find((p) => p.name === productName);
+    const product = products.find(p => p.name === productName);
     return product?.bottlesPerCrate || 24;
   };
 
@@ -147,9 +146,9 @@ export default function EditOrderPage({
     if (
       products.length > 0 &&
       items.length > 0 &&
-      items.some((item) => item.crates === 0 || item.crates === undefined)
+      items.some(item => item.crates === 0 || item.crates === undefined)
     ) {
-      const updatedItems = items.map((item) => ({
+      const updatedItems = items.map(item => ({
         ...item,
         crates:
           item.crates === 0 || item.crates === undefined
@@ -186,33 +185,32 @@ export default function EditOrderPage({
         );
 
         // Populate discount and payment fields with existing data
-        setDiscountType(orderData.discountType || "OVERALL");
-        setDiscountUnit(orderData.discountUnit || "AMOUNT");
+        setOrderDiscountUnit(orderData.discountUnit || "AMOUNT");
         // Use totalDiscount first, fallback to discount field
-        setTotalDiscount(orderData.totalDiscount || orderData.discount || 0);
+        setOrderDiscount(orderData.totalDiscount || orderData.discount || 0);
         setShippingCost(orderData.shippingCost || 0);
         setPaymentType(orderData.paymentType || "IMMEDIATE");
 
         // Convert order items to form items
-        const formItems: OrderItem[] = orderData.orderItems.map((item) => ({
+        const formItems: OrderItem[] = orderData.orderItems.map(item => ({
           productId: item.productId,
           productName: item.products.name,
           quantity: item.quantity,
           price: item.price,
           discount: item.discount || 0, // Use existing discount from database
+          discountType: item.discountType || "AMOUNT", // Load discountType from database
           crates: 0, // Will be calculated after products are loaded
         }));
 
         console.log(
           "Loaded order items with discounts:",
-          formItems.map((item) => ({
+          formItems.map(item => ({
             productName: item.productName,
             discount: item.discount,
-            discountType: typeof item.discount,
-            discountDisplayValue: item.discount || 0,
-            rawDatabaseValue: orderData.orderItems.find(
-              (dbItem) => dbItem.productId === item.productId
-            )?.discount,
+            discountType: item.discountType, // Show actual discountType value
+            rawDatabaseItem: orderData.orderItems.find(
+              dbItem => dbItem.productId === item.productId
+            ),
           }))
         );
 
@@ -221,10 +219,10 @@ export default function EditOrderPage({
         // Debug calculations after items are set
         setTimeout(() => {
           console.log("=== FRONTEND CALCULATION DEBUG ===");
-          console.log("discountType:", discountType);
-          console.log("discountUnit:", discountUnit);
-          console.log("Raw subtotal:", calculateRawSubtotal());
-          console.log("Items subtotal:", calculateItemsSubtotal());
+          console.log("orderDiscount:", orderDiscount);
+          console.log("orderDiscountUnit:", orderDiscountUnit);
+          console.log("Subtotal:", calculateSubtotal());
+          console.log("Item discounts:", calculateItemDiscounts());
           console.log("Final total:", calculateTotal());
           console.log("=== END FRONTEND DEBUG ===");
         }, 100);
@@ -281,7 +279,7 @@ export default function EditOrderPage({
     const updatedItems = [...items];
     if (field === "productName") {
       // Find product and update related fields
-      const product = products.find((p) => p.name === value);
+      const product = products.find(p => p.name === value);
       if (product) {
         updatedItems[index].productId = product.id;
         updatedItems[index].productName = value as string;
@@ -328,63 +326,54 @@ export default function EditOrderPage({
     setItems(updatedItems);
   };
 
-  // Calculate subtotal before overall discount
-  const calculateItemsSubtotal = () => {
+  // Calculate subtotal before any discounts
+  const calculateSubtotal = () => {
     return items.reduce((sum, item) => {
-      const itemSubtotal = item.quantity * item.price;
-      if (discountType === "PER_CRATE") {
-        // For per-crate discount, apply discount to each item
-        let itemDiscountAmount = 0;
-        if (discountUnit === "PERCENTAGE") {
-          itemDiscountAmount = itemSubtotal * ((item.discount || 0) / 100);
-        } else {
-          // For amount discount per crate, calculate crates and multiply
-          const crates = calculateCrates(item.quantity, item.productName);
-          console.log(
-            `Calculating discount for ${item.productName}: quantity=${
-              item.quantity
-            }, crates=${crates}, discountPerCrate=${
-              item.discount
-            }, totalDiscountAmount=${crates * (item.discount || 0)}`
-          );
-          itemDiscountAmount = crates * (item.discount || 0);
-        }
-        const itemTotal = itemSubtotal - itemDiscountAmount;
-        return sum + itemTotal;
-      } else {
-        // For overall discount, don't apply item discounts yet
-        return sum + itemSubtotal;
-      }
+      return sum + item.quantity * item.price;
     }, 0);
   };
 
-  // Calculate raw subtotal (before any discounts)
-  const calculateRawSubtotal = () => {
-    return items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-  };
+  // Calculate total item-level discounts
+  const calculateItemDiscounts = () => {
+    return items.reduce((totalDiscount, item) => {
+      if (!item.discount || item.discount <= 0) return totalDiscount;
 
-  // Calculate final total after overall discount and shipping
-  const calculateTotal = () => {
-    const itemsSubtotal = calculateItemsSubtotal();
+      const itemSubtotal = item.quantity * item.price;
+      let itemDiscount = 0;
 
-    let finalTotal = itemsSubtotal;
-
-    if (discountType === "OVERALL") {
-      if (discountUnit === "PERCENTAGE") {
-        finalTotal = itemsSubtotal - itemsSubtotal * (totalDiscount / 100);
+      if (item.discountType === "PERCENTAGE") {
+        itemDiscount = (itemSubtotal * item.discount) / 100;
       } else {
-        finalTotal = itemsSubtotal - totalDiscount;
+        itemDiscount = item.discount;
       }
-    }
 
-    finalTotal += shippingCost;
-
-    return Math.max(0, finalTotal); // Ensure total is never negative
+      return totalDiscount + itemDiscount;
+    }, 0);
   };
 
-  // Legacy function for compatibility - now calls calculateTotal
-  const calculateSubtotal = () => {
-    return calculateTotal();
+  // Calculate order-level discount
+  const calculateOrderDiscount = () => {
+    if (!orderDiscount || orderDiscount <= 0) return 0;
+
+    const subtotal = calculateSubtotal();
+    const itemDiscounts = calculateItemDiscounts();
+    const subtotalAfterItemDiscounts = subtotal - itemDiscounts;
+
+    if (orderDiscountUnit === "PERCENTAGE") {
+      return (subtotalAfterItemDiscounts * orderDiscount) / 100;
+    } else {
+      return orderDiscount;
+    }
+  };
+
+  // Calculate final total
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const itemDiscounts = calculateItemDiscounts();
+    const orderDiscountAmount = calculateOrderDiscount();
+    const totalDiscounts = itemDiscounts + orderDiscountAmount;
+
+    return subtotal - totalDiscounts + shippingCost;
   };
 
   const handleSubmitOrder = async () => {
@@ -421,7 +410,7 @@ export default function EditOrderPage({
 
     if (
       items.some(
-        (item) => !item.productName || item.quantity <= 0 || item.price <= 0
+        item => !item.productName || item.quantity <= 0 || item.price <= 0
       )
     ) {
       toast.error("Lengkapi semua item produk dengan benar.");
@@ -434,40 +423,22 @@ export default function EditOrderPage({
       startTransition(async () => {
         try {
           console.log("=== SUBMITTING ORDER EDIT ===");
-          console.log("discountType:", discountType);
-          console.log("discountUnit:", discountUnit);
-          console.log("totalDiscount (frontend state):", totalDiscount);
+          console.log("orderDiscount:", orderDiscount);
+          console.log("orderDiscountUnit:", orderDiscountUnit);
 
-          // Calculate the actual total discount based on discount type
-          let calculatedTotalDiscount = 0;
-          if (discountType === "PER_CRATE") {
-            // For per-crate, calculate total discount from all items
-            calculatedTotalDiscount = items.reduce((sum, item) => {
-              if (discountUnit === "PERCENTAGE") {
-                const itemSubtotal = item.quantity * item.price;
-                return sum + itemSubtotal * ((item.discount || 0) / 100);
-              } else {
-                const crates = calculateCrates(item.quantity, item.productName);
-                return sum + crates * (item.discount || 0);
-              }
-            }, 0);
-          } else {
-            // For overall discount, use the totalDiscount value
-            calculatedTotalDiscount = totalDiscount;
-          }
-
-          console.log("calculatedTotalDiscount:", calculatedTotalDiscount);
+          console.log("calculatedSubtotal:", calculateSubtotal());
+          console.log("calculatedItemDiscounts:", calculateItemDiscounts());
+          console.log("calculatedOrderDiscount:", calculateOrderDiscount());
           console.log("Frontend calculated total amount:", calculateTotal());
-          console.log("Frontend raw subtotal:", calculateRawSubtotal());
-          console.log("Frontend items subtotal:", calculateItemsSubtotal());
           console.log(
             "Submitting order with items:",
-            items.map((item) => ({
+            items.map(item => ({
               productId: item.productId,
               productName: item.productName,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
+              discountType: item.discountType,
             }))
           );
           console.log("=== END SUBMIT DEBUG ===");
@@ -477,11 +448,12 @@ export default function EditOrderPage({
             customerName,
             customerEmail: customerEmail || undefined,
             customerPhone: customerPhone || undefined,
-            items: items.map((item) => ({
+            items: items.map(item => ({
               productId: item.productId,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount || 0,
+              discountType: item.discountType || "AMOUNT",
             })),
             notes: notes || undefined,
             deliveryAddress: deliveryAddress || undefined,
@@ -489,9 +461,9 @@ export default function EditOrderPage({
               ? new Date(paymentDeadline)
               : undefined,
             // Include all discount and payment fields
-            discountType,
-            discountUnit,
-            totalDiscount: calculatedTotalDiscount,
+            discountType: "OVERALL", // Always use OVERALL for order-level discounts
+            discountUnit: orderDiscountUnit,
+            totalDiscount: orderDiscount,
             shippingCost,
             paymentType,
           });
@@ -690,7 +662,7 @@ export default function EditOrderPage({
                       <input
                         type="text"
                         value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        onChange={e => setCustomerName(e.target.value)}
                         placeholder="Masukkan nama customer"
                         className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                       />
@@ -703,7 +675,7 @@ export default function EditOrderPage({
                         <input
                           type="email"
                           value={customerEmail}
-                          onChange={(e) => setCustomerEmail(e.target.value)}
+                          onChange={e => setCustomerEmail(e.target.value)}
                           placeholder="email@customer.com"
                           className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
@@ -715,7 +687,7 @@ export default function EditOrderPage({
                         <input
                           type="tel"
                           value={customerPhone}
-                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          onChange={e => setCustomerPhone(e.target.value)}
                           placeholder="Contoh: 081234567890"
                           className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
@@ -727,7 +699,7 @@ export default function EditOrderPage({
                         <input
                           type="text"
                           value={customerCity}
-                          onChange={(e) => setCustomerCity(e.target.value)}
+                          onChange={e => setCustomerCity(e.target.value)}
                           placeholder="Masukkan nama kota"
                           className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                         />
@@ -754,7 +726,7 @@ export default function EditOrderPage({
                       </label>
                       <textarea
                         value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        onChange={e => setDeliveryAddress(e.target.value)}
                         placeholder="Masukkan alamat lengkap pengiriman"
                         rows={3}
                         className="block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 resize-none bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-purple-500 focus:border-transparent hover:shadow-xl"
@@ -770,7 +742,7 @@ export default function EditOrderPage({
                           <input
                             type="number"
                             value={shippingCost}
-                            onChange={(e) =>
+                            onChange={e =>
                               setShippingCost(Number(e.target.value))
                             }
                             placeholder="0"
@@ -837,9 +809,7 @@ export default function EditOrderPage({
                             <input
                               type="date"
                               value={paymentDeadline}
-                              onChange={(e) =>
-                                setPaymentDeadline(e.target.value)
-                              }
+                              onChange={e => setPaymentDeadline(e.target.value)}
                               min={new Date().toISOString().split("T")[0]}
                               className="block w-full px-4 py-4 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                             />
@@ -850,127 +820,56 @@ export default function EditOrderPage({
 
                     <div className="min-w-0">
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                        Jenis Diskon
+                        Diskon Order (Keseluruhan)
                       </label>
-                      <div className="grid grid-cols-2 gap-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4">
-                        <label
-                          className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
-                            discountType === "OVERALL"
-                              ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg transform scale-105"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
-                          }`}
-                        >
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
                           <input
-                            type="radio"
-                            name="discountType"
-                            checked={discountType === "OVERALL"}
-                            onChange={() => setDiscountType("OVERALL")}
-                            className="sr-only"
+                            type="number"
+                            value={orderDiscount}
+                            onChange={e =>
+                              setOrderDiscount(Number(e.target.value))
+                            }
+                            placeholder={`Masukkan diskon order ${
+                              orderDiscountUnit === "PERCENTAGE"
+                                ? "(%)"
+                                : "(Rp)"
+                            }`}
+                            min="0"
+                            max={
+                              orderDiscountUnit === "PERCENTAGE"
+                                ? "100"
+                                : undefined
+                            }
+                            step={
+                              orderDiscountUnit === "PERCENTAGE" ? "1" : "1000"
+                            }
+                            className="block w-full pl-12 pr-4 py-4 text-sm sm:text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
                           />
-                          <span className="text-sm font-medium">
-                            Diskon Keseluruhan
-                          </span>
-                        </label>
-                        <label
-                          className={`flex items-center justify-center px-4 py-3 rounded-md cursor-pointer transition-all duration-200 ${
-                            discountType === "PER_CRATE"
-                              ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg transform scale-105"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="discountType"
-                            checked={discountType === "PER_CRATE"}
-                            onChange={() => setDiscountType("PER_CRATE")}
-                            className="sr-only"
-                          />
-                          <span className="text-sm font-medium">
-                            Diskon Per Krat
-                          </span>
-                        </label>
-                      </div>
-
-                      {discountType === "OVERALL" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Unit Diskon
-                            </label>
-                            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                              <label
-                                className={`flex items-center justify-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                                  discountUnit === "AMOUNT"
-                                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md transform scale-105"
-                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="discountUnit"
-                                  checked={discountUnit === "AMOUNT"}
-                                  onChange={() => setDiscountUnit("AMOUNT")}
-                                  className="sr-only"
-                                />
-                                <span className="text-xs font-medium">
-                                  Nominal (Rp)
-                                </span>
-                              </label>
-                              <label
-                                className={`flex items-center justify-center px-3 py-2 rounded-md cursor-pointer transition-all duration-200 ${
-                                  discountUnit === "PERCENTAGE"
-                                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md transform scale-105"
-                                    : "text-gray-700 dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-600"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="discountUnit"
-                                  checked={discountUnit === "PERCENTAGE"}
-                                  onChange={() => setDiscountUnit("PERCENTAGE")}
-                                  className="sr-only"
-                                />
-                                <span className="text-xs font-medium">
-                                  Persen (%)
-                                </span>
-                              </label>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Nilai Diskon
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                value={totalDiscount}
-                                onChange={(e) =>
-                                  setTotalDiscount(Number(e.target.value))
-                                }
-                                placeholder="0"
-                                min="0"
-                                className="block w-full pl-12 pr-4 py-3 text-base border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl"
-                              />
-                              <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-                                <span className="text-gray-500 dark:text-gray-400 text-sm">
-                                  {discountUnit === "AMOUNT" ? "Rp" : "%"}
-                                </span>
-                              </div>
-                            </div>
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-4">
+                            <span className="text-gray-500 text-sm font-medium">
+                              {orderDiscountUnit === "PERCENTAGE" ? "%" : "Rp"}
+                            </span>
                           </div>
                         </div>
-                      )}
+                        <select
+                          value={orderDiscountUnit}
+                          onChange={e =>
+                            setOrderDiscountUnit(e.target.value as any)
+                          }
+                          className="w-32 py-4 px-3 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white border-0 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 hover:shadow-xl"
+                        >
+                          <option value="AMOUNT">Nominal</option>
+                          <option value="PERCENTAGE">Persen</option>
+                        </select>
+                      </div>
 
-                      <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                        <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                          <strong>
-                            {discountType === "OVERALL"
-                              ? "Diskon Keseluruhan:"
-                              : "Diskon Per Krat:"}{" "}
-                          </strong>
-                          {discountType === "OVERALL"
-                            ? "Diskon akan diterapkan pada total keseluruhan order"
-                            : "Diskon dapat diatur per item produk"}
+                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <strong>Diskon Order:</strong> Diskon ini akan
+                          diterapkan pada total order setelah diskon item
+                          dihitung. Anda juga dapat mengatur diskon per item di
+                          bagian item order.
                         </p>
                       </div>
                     </div>
@@ -1010,9 +909,9 @@ export default function EditOrderPage({
                             <div className="relative">
                               <select
                                 value={item.productName}
-                                onChange={(e) => {
+                                onChange={e => {
                                   const selectedProduct = products.find(
-                                    (p) => p.name === e.target.value
+                                    p => p.name === e.target.value
                                   );
                                   updateItem(
                                     index,
@@ -1035,11 +934,11 @@ export default function EditOrderPage({
                                 <option value="">Pilih Produk</option>
                                 {products
                                   .filter(
-                                    (product) =>
+                                    product =>
                                       product.isActive &&
                                       product.currentStock > 0
                                   )
-                                  .map((product) => (
+                                  .map(product => (
                                     <option
                                       key={product.id}
                                       value={product.name}
@@ -1065,7 +964,7 @@ export default function EditOrderPage({
                               <input
                                 type="number"
                                 value={item.crates || ""}
-                                onChange={(e) =>
+                                onChange={e =>
                                   updateCrateAndQuantity(
                                     index,
                                     parseFloat(e.target.value) || 0
@@ -1088,7 +987,7 @@ export default function EditOrderPage({
                               <input
                                 type="number"
                                 value={item.quantity}
-                                onChange={(e) =>
+                                onChange={e =>
                                   updateItem(index, "quantity", e.target.value)
                                 }
                                 placeholder="1"
@@ -1106,7 +1005,7 @@ export default function EditOrderPage({
                                 <input
                                   type="number"
                                   value={item.price || ""}
-                                  onChange={(e) =>
+                                  onChange={e =>
                                     updateItem(index, "price", e.target.value)
                                   }
                                   placeholder="0"
@@ -1123,27 +1022,17 @@ export default function EditOrderPage({
                               </div>
                             </div>
 
-                            {discountType === "PER_CRATE" && (
-                              <div className="w-24 sm:w-28 md:w-32 flex-shrink-0">
-                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                                  {discountUnit === "PERCENTAGE"
-                                    ? "Diskon %"
-                                    : "Diskon/krat"}
-                                </label>
-                                <div className="relative">
+                            {/* Item Level Discount Section */}
+                            <div className="w-36 sm:w-40 md:w-44 flex-shrink-0">
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                                Diskon Item
+                              </label>
+                              <div className="flex gap-1">
+                                <div className="relative flex-1">
                                   <input
                                     type="number"
                                     value={item.discount || ""}
-                                    onChange={(e) => {
-                                      console.log(
-                                        `Discount input change: raw="${
-                                          e.target.value
-                                        }", will be parsed to=${
-                                          e.target.value === ""
-                                            ? 0
-                                            : parseFloat(e.target.value)
-                                        }`
-                                      );
+                                    onChange={e => {
                                       updateItem(
                                         index,
                                         "discount",
@@ -1152,23 +1041,35 @@ export default function EditOrderPage({
                                     }}
                                     placeholder="0"
                                     min="0"
+                                    max={
+                                      item.discountType === "PERCENTAGE"
+                                        ? "100"
+                                        : undefined
+                                    }
                                     step={
-                                      discountUnit === "PERCENTAGE"
-                                        ? "0.1"
+                                      item.discountType === "PERCENTAGE"
+                                        ? "1"
                                         : "1000"
                                     }
-                                    className="block w-full pl-8 pr-3 py-3 text-sm border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md text-right"
+                                    className="block w-full px-2 py-2 text-xs border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
                                   />
-                                  <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <span className="text-gray-400 text-xs">
-                                      {discountUnit === "PERCENTAGE"
-                                        ? "%"
-                                        : "Rp"}
-                                    </span>
-                                  </div>
                                 </div>
+                                <select
+                                  value={item.discountType || "AMOUNT"}
+                                  onChange={e =>
+                                    updateItem(
+                                      index,
+                                      "discountType",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-12 px-1 py-2 text-xs border-0 bg-white/90 dark:bg-gray-600/90 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+                                >
+                                  <option value="AMOUNT">Rp</option>
+                                  <option value="PERCENTAGE">%</option>
+                                </select>
                               </div>
-                            )}
+                            </div>
 
                             <div className="w-24 sm:w-28 md:w-32 flex-shrink-0">
                               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -1180,18 +1081,14 @@ export default function EditOrderPage({
                                   const subtotal = item.quantity * item.price;
                                   let discountAmount = 0;
 
-                                  if (discountType === "PER_CRATE") {
-                                    if (discountUnit === "PERCENTAGE") {
+                                  // Calculate item-level discount
+                                  if (item.discount && item.discount > 0) {
+                                    if (item.discountType === "PERCENTAGE") {
                                       discountAmount =
                                         subtotal * ((item.discount || 0) / 100);
                                     } else {
-                                      // For amount discount per crate, calculate crates and multiply
-                                      const crates = calculateCrates(
-                                        item.quantity,
-                                        item.productName
-                                      );
-                                      discountAmount =
-                                        crates * (item.discount || 0);
+                                      // For amount discount per unit
+                                      discountAmount = item.discount || 0;
                                     }
                                   }
 
@@ -1234,98 +1131,89 @@ export default function EditOrderPage({
                             Subtotal Item:
                           </span>
                           <span className="font-medium text-gray-900 dark:text-white">
-                            Rp {calculateRawSubtotal().toLocaleString("id-ID")}
+                            Rp {calculateSubtotal().toLocaleString("id-ID")}
                           </span>
                         </div>
 
-                        {discountType === "PER_CRATE" &&
-                          items.some((item) => (item.discount || 0) > 0) && (
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-center">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Detail Diskon Per Item:
-                                </span>
-                              </div>
-                              {items
-                                .filter((item) => (item.discount || 0) > 0)
-                                .map((item, index) => {
-                                  const crates = calculateCrates(
-                                    item.quantity,
-                                    item.productName
-                                  );
-                                  const totalDiscountForItem =
-                                    crates * (item.discount || 0);
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="flex justify-between items-center text-sm pl-4"
-                                    >
-                                      <span className="text-gray-500 dark:text-gray-400">
-                                        {item.productName}: {crates.toFixed(1)}{" "}
-                                        krat × Rp{" "}
-                                        {(item.discount || 0).toLocaleString(
-                                          "id-ID"
-                                        )}
-                                      </span>
-                                      <span className="font-medium text-red-500 dark:text-red-400">
-                                        -Rp{" "}
-                                        {totalDiscountForItem.toLocaleString(
-                                          "id-ID"
-                                        )}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          )}
-
-                        {discountType === "PER_CRATE" &&
-                          items.some((item) => (item.discount || 0) > 0) && (
+                        {/* Item Level Discounts */}
+                        {calculateItemDiscounts() > 0 && (
+                          <div className="space-y-2">
                             <div className="flex justify-between items-center">
                               <span className="text-gray-600 dark:text-gray-400">
-                                Total Diskon Per Krat:
+                                Detail Diskon Item:
+                              </span>
+                            </div>
+                            {items
+                              .filter(item => (item.discount || 0) > 0)
+                              .map((item, index) => {
+                                const subtotal = item.quantity * item.price;
+                                let discountAmount = 0;
+                                if (item.discountType === "PERCENTAGE") {
+                                  discountAmount =
+                                    subtotal * ((item.discount || 0) / 100);
+                                } else {
+                                  discountAmount = item.discount || 0;
+                                }
+                                return (
+                                  <div
+                                    key={index}
+                                    className="flex justify-between items-center text-sm pl-4"
+                                  >
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      {item.productName}:{" "}
+                                      {item.discountType === "PERCENTAGE"
+                                        ? `${item.discount}%`
+                                        : `Rp ${(
+                                            item.discount || 0
+                                          ).toLocaleString("id-ID")}`}
+                                    </span>
+                                    <span className="font-medium text-red-500 dark:text-red-400">
+                                      -Rp{" "}
+                                      {discountAmount.toLocaleString("id-ID")}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Total Diskon Item:
                               </span>
                               <span className="font-medium text-red-600 dark:text-red-400">
                                 -Rp{" "}
-                                {(
-                                  calculateRawSubtotal() -
-                                  calculateItemsSubtotal()
-                                ).toLocaleString("id-ID")}
-                              </span>
-                            </div>
-                          )}
-
-                        {discountType === "PER_CRATE" &&
-                          items.some((item) => (item.discount || 0) > 0) && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Subtotal Setelah Diskon:
-                              </span>
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                Rp{" "}
-                                {calculateItemsSubtotal().toLocaleString(
+                                {calculateItemDiscounts().toLocaleString(
                                   "id-ID"
                                 )}
                               </span>
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                        {discountType === "OVERALL" && totalDiscount > 0 && (
+                        {/* Subtotal after item discounts */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Subtotal Setelah Diskon Item:
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            Rp{" "}
+                            {(
+                              calculateSubtotal() - calculateItemDiscounts()
+                            ).toLocaleString("id-ID")}
+                          </span>
+                        </div>
+
+                        {/* Order Level Discount */}
+                        {orderDiscount > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 dark:text-gray-400">
-                              Diskon{" "}
-                              {discountUnit === "PERCENTAGE"
-                                ? `(${totalDiscount}%)`
+                              Diskon Order{" "}
+                              {orderDiscountUnit === "PERCENTAGE"
+                                ? `(${orderDiscount}%)`
                                 : ""}
                               :
                             </span>
                             <span className="font-medium text-red-600 dark:text-red-400">
                               -Rp{" "}
-                              {(discountUnit === "PERCENTAGE"
-                                ? calculateItemsSubtotal() *
-                                  (totalDiscount / 100)
-                                : totalDiscount
-                              ).toLocaleString("id-ID")}
+                              {calculateOrderDiscount().toLocaleString("id-ID")}
                             </span>
                           </div>
                         )}
@@ -1367,7 +1255,7 @@ export default function EditOrderPage({
                   </label>
                   <textarea
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={e => setNotes(e.target.value)}
                     rows={3}
                     className="block w-full border-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white rounded-xl px-4 py-4 text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent shadow-lg transition-all duration-200 hover:shadow-xl resize-none"
                     placeholder="Catatan tambahan untuk order ini (opsional)..."

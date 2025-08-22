@@ -245,7 +245,7 @@ export default function SideBar({
         label: "Gudang",
         icon: "📦",
         href: "#",
-        roles: ["WAREHOUSE", "ADMIN", "OWNER"], // Added roles
+        roles: ["WAREHOUSE", "OWNER"], // Added roles
         children: [
           // {
           //   id: "stock-dashboard",
@@ -279,7 +279,7 @@ export default function SideBar({
             icon: "🏭",
             href: "/inventory/produksi",
             children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+            roles: ["WAREHOUSE", "OWNER"],
           },
           {
             id: "manajemen-stok",
@@ -287,7 +287,7 @@ export default function SideBar({
             icon: "⚖️",
             href: "/inventory/manajemen-stok",
             children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+            roles: ["WAREHOUSE", "OWNER"],
           },
           {
             id: "stok-opname",
@@ -295,7 +295,7 @@ export default function SideBar({
             icon: "🔍",
             href: "/inventory/stok-opname",
             children: [],
-            roles: ["WAREHOUSE", "ADMIN", "OWNER"],
+            roles: ["WAREHOUSE", "OWNER"],
           },
         ],
       },
@@ -430,14 +430,14 @@ export default function SideBar({
             children: [],
             roles: ["ADMIN", "OWNER"],
           },
-          {
-            id: "me",
-            label: "Me (Demo)",
-            icon: "👤",
-            href: "/management/me",
-            children: [],
-            roles: ["ADMIN"],
-          },
+          // {
+          //   id: "me",
+          //   label: "Me (Demo)",
+          //   icon: "👤",
+          //   href: "/management/me",
+          //   children: [],
+          //   roles: ["ADMIN"],
+          // },
           {
             id: "users",
             label: "Users",

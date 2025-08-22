@@ -8,6 +8,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   discount?: number; // Diskon per item
+  discountType?: "AMOUNT" | "PERCENTAGE"; // Tipe diskon per item
   crates?: number; // Jumlah krat
 }
 
@@ -85,38 +86,40 @@ export async function createOrder({
       };
     }
 
-    // Calculate total amount with discounts
-    let subtotal = items.reduce((sum: number, item: OrderItem) => {
-      const itemTotal = item.quantity * item.price;
-      // Don't subtract itemDiscount here for PER_CRATE, it will be calculated in totalDiscount
-      return sum + itemTotal;
-    }, 0);
+    // Calculate total amount with both order-level and item-level discounts
+    let subtotal = 0;
+    let totalItemDiscounts = 0;
 
-    // Calculate total discount
-    let totalDiscount = 0;
-    if (discountType === "OVERALL") {
-      if (discountUnit === "PERCENTAGE") {
-        totalDiscount = (subtotal * (discount || 0)) / 100;
-      } else {
-        totalDiscount = discount || 0;
-      }
-    } else if (discountType === "PER_CRATE") {
-      // Calculate total discount from all items
-      totalDiscount = items.reduce((total, item) => {
-        const crates = item.crates || item.quantity / 24;
+    // Calculate subtotal and item-level discounts
+    for (const item of items) {
+      const itemSubtotal = item.quantity * item.price;
+      subtotal += itemSubtotal;
+
+      // Calculate item-level discount
+      if (item.discount && item.discount > 0) {
         let itemDiscount = 0;
-
-        if (discountUnit === "PERCENTAGE") {
-          const itemTotal = item.quantity * item.price;
-          itemDiscount = (itemTotal * (item.discount || 0)) / 100;
+        if (item.discountType === "PERCENTAGE") {
+          itemDiscount = (itemSubtotal * item.discount) / 100;
         } else {
-          itemDiscount = crates * (item.discount || 0);
+          // AMOUNT discount type (default)
+          itemDiscount = item.discount;
         }
-
-        return total + itemDiscount;
-      }, 0);
+        totalItemDiscounts += itemDiscount;
+      }
     }
 
+    // Calculate order-level discount (applied to subtotal after item discounts)
+    let orderLevelDiscount = 0;
+    if (discountType === "OVERALL" && discount && discount > 0) {
+      const subtotalAfterItemDiscounts = subtotal - totalItemDiscounts;
+      if (discountUnit === "PERCENTAGE") {
+        orderLevelDiscount = (subtotalAfterItemDiscounts * discount) / 100;
+      } else {
+        orderLevelDiscount = discount;
+      }
+    }
+
+    const totalDiscount = totalItemDiscounts + orderLevelDiscount;
     const totalAmount = subtotal - totalDiscount + (shippingCost || 0);
 
     let finalStoreId: string = storeId || "";
@@ -271,16 +274,15 @@ export async function createOrder({
       }
 
       // Create order item
-      const itemDiscount =
-        discountType === "PER_ITEM" ? item.quantity * (item.discount || 0) : 0;
       const orderItem = await db.orderItems.create({
         data: {
           orderId: order.id,
           productId: product.id,
           quantity: item.quantity,
           price: item.price,
-          discount: item.discount || 0, // Store per-piece discount value
-          totalPrice: item.quantity * item.price - itemDiscount,
+          discount: item.discount || 0,
+          discountType: item.discountType || "AMOUNT",
+          totalPrice: item.quantity * item.price,
         },
       });
 
@@ -383,7 +385,7 @@ export async function getOrders({
     });
 
     // Transform the data to match the expected format
-    const transformedOrders = orders.map((order) => ({
+    const transformedOrders = orders.map(order => ({
       ...order,
       order_items: order.orderItems,
     }));
@@ -448,7 +450,7 @@ export async function getLatestOrdersForDashboard({
     });
 
     // Transform the data to match the expected format
-    const transformedOrders = orders.map((order) => ({
+    const transformedOrders = orders.map(order => ({
       ...order,
       order_items: order.orderItems,
     }));
@@ -582,10 +584,11 @@ export async function getOrderById(orderId: string) {
     console.log("=== LOADED ORDER FROM DB ===");
     console.log(
       "Order items discounts from DB:",
-      order.orderItems.map((item) => ({
+      order.orderItems.map(item => ({
         productName: item.products.name,
         discount: item.discount,
-        discountType: typeof item.discount,
+        discountType: item.discountType, // Show actual discountType value
+        discountTypeType: typeof item.discountType, // Show type
       }))
     );
     console.log("=== END DB LOAD ===");
@@ -636,6 +639,7 @@ export async function updateOrder({
     quantity: number;
     price: number;
     discount?: number;
+    discountType?: "AMOUNT" | "PERCENTAGE";
   }>;
 }) {
   try {
@@ -646,7 +650,7 @@ export async function updateOrder({
     console.log("totalDiscount received:", totalDiscount);
     console.log(
       "items with discounts:",
-      items.map((item) => ({
+      items.map(item => ({
         productId: item.productId,
         discount: item.discount,
       }))
@@ -677,64 +681,41 @@ export async function updateOrder({
       };
     }
 
-    // Calculate new total amount with discounts
-    let totalAmount = 0;
+    // Calculate new total amount with both order-level and item-level discounts
+    let subtotal = 0;
+    let totalItemDiscounts = 0;
 
-    if (discountType === "PER_CRATE") {
-      // For per-crate discount, apply discount to each item
-      // First, get all unique product IDs to fetch product data
-      const productIds = [...new Set(items.map((item) => item.productId))];
-      const products = await db.products.findMany({
-        where: { id: { in: productIds } },
-        select: { id: true, bottlesPerCrate: true },
-      });
+    // Calculate subtotal and item-level discounts
+    for (const item of items) {
+      const itemSubtotal = item.quantity * item.price;
+      subtotal += itemSubtotal;
 
-      const productMap = products.reduce((map, product) => {
-        map[product.id] = product.bottlesPerCrate || 24;
-        return map;
-      }, {} as Record<string, number>);
-
-      totalAmount = items.reduce((sum, item) => {
-        const itemSubtotal = item.quantity * item.price;
-        let discountAmount = 0;
-
-        if (discountUnit === "PERCENTAGE") {
-          discountAmount = itemSubtotal * ((item.discount || 0) / 100);
+      // Calculate item-level discount
+      if (item.discount && item.discount > 0) {
+        let itemDiscount = 0;
+        if (item.discountType === "PERCENTAGE") {
+          itemDiscount = (itemSubtotal * item.discount) / 100;
         } else {
-          // For amount discount per crate, calculate crates properly
-          const bottlesPerCrate = productMap[item.productId] || 24;
-          const crates = item.quantity / bottlesPerCrate;
-          discountAmount = crates * (item.discount || 0);
+          // AMOUNT discount type (default)
+          itemDiscount = item.discount;
         }
-
-        const itemTotal = itemSubtotal - discountAmount;
-        console.log(
-          `Server calculation for item ${
-            item.productId
-          }: subtotal=${itemSubtotal}, crates=${
-            item.quantity / (productMap[item.productId] || 24)
-          }, discount=${discountAmount}, total=${itemTotal}`
-        );
-        return sum + itemTotal;
-      }, 0);
-    } else {
-      // For overall discount, calculate subtotal first then apply overall discount
-      const subtotal = items.reduce((sum, item) => {
-        return sum + item.quantity * item.price;
-      }, 0);
-
-      let overallDiscount = 0;
-      if (discountUnit === "PERCENTAGE") {
-        overallDiscount = subtotal * ((totalDiscount || 0) / 100);
-      } else {
-        overallDiscount = totalDiscount || 0;
+        totalItemDiscounts += itemDiscount;
       }
-
-      totalAmount = subtotal - overallDiscount;
     }
 
-    // Add shipping cost
-    totalAmount += shippingCost || 0;
+    // Calculate order-level discount (applied to subtotal after item discounts)
+    let orderLevelDiscount = 0;
+    if (discountType === "OVERALL" && totalDiscount && totalDiscount > 0) {
+      const subtotalAfterItemDiscounts = subtotal - totalItemDiscounts;
+      if (discountUnit === "PERCENTAGE") {
+        orderLevelDiscount = (subtotalAfterItemDiscounts * totalDiscount) / 100;
+      } else {
+        orderLevelDiscount = totalDiscount;
+      }
+    }
+
+    const finalTotalDiscount = totalItemDiscounts + orderLevelDiscount;
+    const totalAmount = subtotal - finalTotalDiscount + (shippingCost || 0);
 
     console.log("=== SERVER TOTAL CALCULATION ===");
     console.log("discountType:", discountType);
@@ -765,7 +746,7 @@ export async function updateOrder({
         paymentDeadline: paymentDeadline || undefined,
         discountType: discountType || undefined,
         discountUnit: discountUnit || undefined,
-        totalDiscount: totalDiscount || 0,
+        totalDiscount: finalTotalDiscount,
         shippingCost: shippingCost || 0,
         paymentType: paymentType || undefined,
         totalAmount,
@@ -801,7 +782,8 @@ export async function updateOrder({
           quantity: item.quantity,
           price: item.price,
           discount: item.discount || 0,
-          totalPrice: item.quantity * item.price, // Store raw total, let frontend handle discount calculation
+          discountType: item.discountType || "AMOUNT",
+          totalPrice: item.quantity * item.price,
         },
       });
     }

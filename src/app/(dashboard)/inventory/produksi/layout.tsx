@@ -15,7 +15,7 @@ export default async function ManajemenStokLayout({
   const myStaticData = {
     module: "inventory",
     subModule: "Produksi",
-    allowedRole: ["OWNER", "WAREHOUSE", "ADMIN"],
+    allowedRole: ["OWNER", "WAREHOUSE"],
     data: await getProductions(), // Await the async function
   };
 

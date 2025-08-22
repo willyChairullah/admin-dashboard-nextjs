@@ -98,24 +98,25 @@ model Users {
   isActive              Boolean             @default(true)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
+
+  userNotifications     UserNotifications[]
+  ManagementStocks      ManagementStocks[]
   customerVisits        CustomerVisits[]
+  PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
+  stockConfirmations    PurchaseOrders[]    @relation("StockConfirmationUser")
+  stockMovements        StockMovements[]
   deliveryNotes         DeliveryNotes[]
+  requestedSalesReturns SalesReturns[]      @relation("SalesRequester")
+  processedSalesReturns SalesReturns[]      @relation("AdminProcessor")
+  salesTargets          SalesTargets[]
+  stockOpnames          StockOpnames[]
+  transactions          Transactions[]
+  Productions           Productions[]
   fieldVisits           FieldVisit[]
   InvoicesCreated       Invoices[]          @relation("InvoiceCreator")
   InvoicesUpdated       Invoices[]          @relation("InvoiceUpdater")
-  ManagementStocks      ManagementStocks[]
-  orders                Orders[]
   Payments              Payments[]
-  Productions           Productions[]
-  PurchaseOrders        PurchaseOrders[]    @relation("CreatedPurchaseOrders")
-  stockConfirmations    PurchaseOrders[]    @relation("StockConfirmationUser")
-  processedSalesReturns SalesReturns[]      @relation("AdminProcessor")
-  requestedSalesReturns SalesReturns[]      @relation("SalesRequester")
-  salesTargets          SalesTargets[]
-  stockMovements        StockMovements[]
-  stockOpnames          StockOpnames[]
-  transactions          Transactions[]
-  userNotifications     UserNotifications[]
+  orders                Orders[]
 
   @@map("users")
 }
@@ -234,29 +235,30 @@ model Orders {
   totalDiscount Float        @default(0)
   subtotal      Float        @default(0)
 
+  purchaseOrders PurchaseOrders[]
+  StockMovements StockMovements[]
+  salesReturns   SalesReturns[]
   orderItems     OrderItems[]
-  customer       Customers        @relation(fields: [customerId], references: [id])
   sales          Users            @relation(fields: [salesId], references: [id])
   store          Store?           @relation(fields: [storeId], references: [id])
-  purchaseOrders PurchaseOrders[]
-  salesReturns   SalesReturns[]
-  StockMovements StockMovements[]
+  customer       Customers        @relation(fields: [customerId], references: [id])
 
   @@map("orders")
 }
 
 model OrderItems {
-  id         String   @id @default(cuid())
-  quantity   Float
-  price      Float
-  totalPrice Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  orderId    String
-  productId  String
-  discount   Float    @default(0)
-  orders     Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  products   Products @relation(fields: [productId], references: [id])
+  id           String        @id @default(cuid())
+  quantity     Float
+  price        Float
+  totalPrice   Float
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  orderId      String
+  productId    String
+  discount     Float         @default(0)
+  discountType DiscountUnit? @default(AMOUNT)
+  orders       Orders        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  products     Products      @relation(fields: [productId], references: [id])
 
   @@map("order_items")
 }
@@ -278,10 +280,10 @@ model DeliveryNotes {
   deliveryPostalCode  String?
   invoiceId           String                @unique
   delivery_note_items delivery_note_items[]
-  customers           Customers             @relation(fields: [customerId], references: [id])
-  invoices            Invoices              @relation(fields: [invoiceId], references: [id])
-  users               Users                 @relation(fields: [warehouseUserId], references: [id])
   stock_movements     StockMovements[]
+  invoices            Invoices              @relation(fields: [invoiceId], references: [id])
+  customers           Customers             @relation(fields: [customerId], references: [id])
+  users               Users                 @relation(fields: [warehouseUserId], references: [id])
 
   @@map("delivery_notes")
 }
@@ -312,13 +314,13 @@ model Invoices {
   type              InvoiceType       @default(PRODUCT)
   statusPreparation PreparationStatus @default(WAITING_PREPARATION)
   delivery_notes    DeliveryNotes?
-  invoiceItems      InvoiceItems[]
-  creator           Users?            @relation("InvoiceCreator", fields: [createdBy], references: [id])
-  customer          Customers?        @relation(fields: [customerId], references: [id])
-  purchaseOrder     PurchaseOrders?   @relation(fields: [purchaseOrderId], references: [id])
-  updater           Users?            @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
   payments          Payments[]
   salesReturns      SalesReturns[]
+  invoiceItems      InvoiceItems[]
+  customer          Customers?        @relation(fields: [customerId], references: [id])
+  purchaseOrder     PurchaseOrders?   @relation(fields: [purchaseOrderId], references: [id])
+  creator           Users?            @relation("InvoiceCreator", fields: [createdBy], references: [id])
+  updater           Users?            @relation("InvoiceUpdater", fields: [updatedBy], references: [id])
 
   @@map("invoices")
 }
