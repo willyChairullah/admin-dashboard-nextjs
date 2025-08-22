@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/common";
 import { signUp } from "@/lib/action";
 import Link from "next/link";
 import { useState } from "react";
@@ -97,7 +96,7 @@ const Page = () => {
             {/* Premium Form Section */}
             <form
               className="relative space-y-6"
-              onSubmit={async (e) => {
+              onSubmit={async e => {
                 e.preventDefault();
                 setIsLoading(true);
                 setError(null);
@@ -117,8 +116,10 @@ const Page = () => {
                       res.message || "Sign up failed. Please try again."
                     );
                   }
-                } catch (error) {
-                  setError("An unexpected error occurred. Please try again.");
+                } catch (er) {
+                  setError(
+                    `{"An unexpected error occurred. Please try again."} ${er}`
+                  );
                 } finally {
                   setIsLoading(false);
                 }

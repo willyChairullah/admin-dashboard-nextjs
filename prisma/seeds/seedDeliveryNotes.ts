@@ -16,9 +16,7 @@ export async function seedDeliveryNotes(
 
   // Only create delivery notes for invoices that are PAID and READY_FOR_DELIVERY
   const readyForDeliveryInvoices = createdInvoices.filter(
-    invoice =>
-      invoice.statusPreparation === "READY_FOR_DELIVERY" &&
-      (invoice.paymentStatus === "PAID" || invoice.status === "PAID")
+    invoice => invoice.paymentStatus === "PAID" || invoice.status === "PAID"
   );
 
   const deliveryNotesData = [

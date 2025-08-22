@@ -306,44 +306,44 @@ export async function updateProductionLog(
 // Delete production log
 export async function deleteProductionLog(id: string) {
   try {
-    const result = await db.$transaction(async tx => {
-      // Get production log with items
-      const productionLog = await tx.productions.findUnique({
-        where: { id },
-        include: {
-          items: true,
-        },
-      });
+    // const result = await db.$transaction(async tx => {
+    //   // Get production log with items
+    //   const productionLog = await tx.productions.findUnique({
+    //     where: { id },
+    //     include: {
+    //       items: true,
+    //     },
+    //   });
 
-      if (!productionLog) {
-        throw new Error("Productions log not found");
-      }
+    //   if (!productionLog) {
+    //     throw new Error("Productions log not found");
+    //   }
 
-      // Reverse stock changes
-      for (const item of productionLog.items) {
-        const product = await tx.products.findUnique({
-          where: { id: item.productId },
-          select: { currentStock: true },
-        });
+    //   // Reverse stock changes
+    //   for (const item of productionLog.items) {
+    //     const product = await tx.products.findUnique({
+    //       where: { id: item.productId },
+    //       select: { currentStock: true },
+    //     });
 
-        if (product) {
-          await tx.products.update({
-            where: { id: item.productId },
-            data: { currentStock: product.currentStock - item.quantity },
-          });
-        }
+    //     if (product) {
+    //       await tx.products.update({
+    //         where: { id: item.productId },
+    //         data: { currentStock: product.currentStock - item.quantity },
+    //       });
+    //     }
 
-        // Delete related stock movements
-        await tx.stockMovements.deleteMany({
-          where: { productionItemsId: item.id },
-        });
-      }
+    //     // Delete related stock movements
+    //     await tx.stockMovements.deleteMany({
+    //       where: { productionItemsId: item.id },
+    //     });
+    //   }
 
-      // Delete production log (items will be cascade deleted)
-      await tx.productions.delete({
-        where: { id },
-      });
-    });
+    //   // Delete production log (items will be cascade deleted)
+    //   await tx.productions.delete({
+    //     where: { id },
+    //   });
+    // });
 
     revalidatePath("/inventory/produksi");
     return { success: true };

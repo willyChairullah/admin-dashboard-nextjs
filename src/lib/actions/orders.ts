@@ -580,11 +580,14 @@ export async function getOrderById(orderId: string) {
     };
 
     console.log("=== LOADED ORDER FROM DB ===");
-    console.log("Order items discounts from DB:", order.orderItems.map(item => ({
-      productName: item.products.name,
-      discount: item.discount,
-      discountType: typeof item.discount
-    })));
+    console.log(
+      "Order items discounts from DB:",
+      order.orderItems.map((item) => ({
+        productName: item.products.name,
+        discount: item.discount,
+        discountType: typeof item.discount,
+      }))
+    );
     console.log("=== END DB LOAD ===");
 
     return {
@@ -641,12 +644,15 @@ export async function updateOrder({
     console.log("discountType:", discountType);
     console.log("discountUnit:", discountUnit);
     console.log("totalDiscount received:", totalDiscount);
-    console.log("items with discounts:", items.map(item => ({
-      productId: item.productId,
-      discount: item.discount
-    })));
+    console.log(
+      "items with discounts:",
+      items.map((item) => ({
+        productId: item.productId,
+        discount: item.discount,
+      }))
+    );
     console.log("=== UPDATE ORDER DEBUG END ===");
-    
+
     // Check if order exists and can be edited
     const existingOrder = await db.orders.findUnique({
       where: { id: orderId },
@@ -673,25 +679,25 @@ export async function updateOrder({
 
     // Calculate new total amount with discounts
     let totalAmount = 0;
-    
+
     if (discountType === "PER_CRATE") {
       // For per-crate discount, apply discount to each item
       // First, get all unique product IDs to fetch product data
-      const productIds = [...new Set(items.map(item => item.productId))];
+      const productIds = [...new Set(items.map((item) => item.productId))];
       const products = await db.products.findMany({
         where: { id: { in: productIds } },
-        select: { id: true, bottlesPerCrate: true }
+        select: { id: true, bottlesPerCrate: true },
       });
-      
+
       const productMap = products.reduce((map, product) => {
         map[product.id] = product.bottlesPerCrate || 24;
         return map;
       }, {} as Record<string, number>);
-      
+
       totalAmount = items.reduce((sum, item) => {
         const itemSubtotal = item.quantity * item.price;
         let discountAmount = 0;
-        
+
         if (discountUnit === "PERCENTAGE") {
           discountAmount = itemSubtotal * ((item.discount || 0) / 100);
         } else {
@@ -700,29 +706,35 @@ export async function updateOrder({
           const crates = item.quantity / bottlesPerCrate;
           discountAmount = crates * (item.discount || 0);
         }
-        
+
         const itemTotal = itemSubtotal - discountAmount;
-        console.log(`Server calculation for item ${item.productId}: subtotal=${itemSubtotal}, crates=${item.quantity / (productMap[item.productId] || 24)}, discount=${discountAmount}, total=${itemTotal}`);
+        console.log(
+          `Server calculation for item ${
+            item.productId
+          }: subtotal=${itemSubtotal}, crates=${
+            item.quantity / (productMap[item.productId] || 24)
+          }, discount=${discountAmount}, total=${itemTotal}`
+        );
         return sum + itemTotal;
       }, 0);
     } else {
       // For overall discount, calculate subtotal first then apply overall discount
       const subtotal = items.reduce((sum, item) => {
-        return sum + (item.quantity * item.price);
+        return sum + item.quantity * item.price;
       }, 0);
-      
+
       let overallDiscount = 0;
       if (discountUnit === "PERCENTAGE") {
         overallDiscount = subtotal * ((totalDiscount || 0) / 100);
       } else {
         overallDiscount = totalDiscount || 0;
       }
-      
+
       totalAmount = subtotal - overallDiscount;
     }
-    
+
     // Add shipping cost
-    totalAmount += (shippingCost || 0);
+    totalAmount += shippingCost || 0;
 
     console.log("=== SERVER TOTAL CALCULATION ===");
     console.log("discountType:", discountType);
@@ -779,9 +791,9 @@ export async function updateOrder({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
-        discount: item.discount
+        discount: item.discount,
       });
-      
+
       await db.orderItems.create({
         data: {
           orderId,
@@ -848,7 +860,11 @@ export async function cancelOrder(orderId: string, reason?: string) {
     }
 
     // Only allow cancellation for certain statuses
-    if (!["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"].includes(existingOrder.status)) {
+    if (
+      !["NEW", "PENDING_CONFIRMATION", "IN_PROCESS"].includes(
+        existingOrder.status
+      )
+    ) {
       return {
         success: false,
         error: "Order cannot be cancelled in current status",
@@ -906,7 +922,11 @@ export async function cancelOrder(orderId: string, reason?: string) {
   }
 }
 
-export async function updateOrderStatus(orderId: string, newStatus: string, notes?: string) {
+export async function updateOrderStatus(
+  orderId: string,
+  newStatus: string,
+  notes?: string
+) {
   try {
     const existingOrder = await db.orders.findUnique({
       where: { id: orderId },
@@ -928,7 +948,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string, note
 
     // Handle stock changes based on status transitions
     const oldStatus = existingOrder.status;
-    
+
     // If moving from PENDING_CONFIRMATION to IN_PROCESS, reduce stock
     if (oldStatus === "PENDING_CONFIRMATION" && newStatus === "IN_PROCESS") {
       for (const item of existingOrder.orderItems) {

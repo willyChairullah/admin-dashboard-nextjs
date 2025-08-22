@@ -1,8 +1,7 @@
 // app/purchasing/daftar-po/edit/[id]/page.tsx
 "use client";
-
 import { ManagementHeader } from "@/components/ui";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Input,
   FormField,
@@ -11,27 +10,29 @@ import {
   InputDate,
   Select,
   CustomerInfo,
+  TaxSelect,
 } from "@/components/ui";
+import { FiTrash2, FiPlus } from "react-icons/fi";
 import {
-  getPurchaseOrderById,
   updatePurchaseOrder,
-  getAvailableOrders,
-  getAvailableUsers,
-  getProductsWithStock,
   deletePurchaseOrder,
+  getPurchaseOrderById,
+  getAvailableOrders,
+  getProductsWithStock,
 } from "@/lib/actions/purchaseOrders";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
-import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 
 interface PurchaseOrderItemFormData {
   productId: string;
   quantity: number;
   price: number;
   discount: number;
+  discountType: "AMOUNT" | "PERCENTAGE";
   totalPrice: number;
 }
 
@@ -43,13 +44,15 @@ interface PurchaseOrderFormData {
   creatorId: string;
   orderId: string;
   orderLevelDiscount: number;
+  orderLevelDiscountType: "AMOUNT" | "PERCENTAGE";
+  paymentMethod: Date | null;
   totalAmount: number;
   totalDiscount: number;
   totalTax: number;
   taxPercentage: number | null;
   shippingCost: number;
   totalPayment: number;
-  paymentDeadline: string | null;
+  paymentDeadline: Date | null;
   items: PurchaseOrderItemFormData[];
 }
 
@@ -61,6 +64,8 @@ interface PurchaseOrderFormErrors {
   orderId?: string;
   poType?: string;
   orderLevelDiscount?: string;
+  orderLevelDiscountType?: string;
+  paymentMethod?: string;
   totalAmount?: string;
   totalDiscount?: string;
   totalTax?: string;
@@ -74,6 +79,7 @@ interface PurchaseOrderFormErrors {
       quantity?: string;
       price?: string;
       discount?: string;
+      discountType?: string;
       totalPrice?: string;
     };
   };
@@ -82,7 +88,7 @@ interface PurchaseOrderFormErrors {
 interface Order {
   id: string;
   orderNumber: string;
-  paymentDeadline: Date | string | null;
+  paymentDeadline?: Date | null;
   discount: number;
   shippingCost: number;
   customer: {
@@ -95,7 +101,13 @@ interface Order {
   orderItems: {
     id: string;
     quantity: number;
+    price: number;
     discount: number;
+    totalPrice: number;
+    orderId: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
     products: {
       id: string;
       name: string;
@@ -105,25 +117,20 @@ interface Order {
   }[];
 }
 
-interface User {
-  id: string;
-  name: string;
-  role: string;
-}
-
 interface Product {
   id: string;
   name: string;
   unit: string;
   price: number;
   currentStock: number;
+  code: string;
 }
 
 export default function EditPurchaseOrderPage() {
-  const params = useParams();
+  const data = useSharedData();
   const router = useRouter();
-  const id = params.id as string;
-
+  const params = useParams();
+  const { user } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -131,7 +138,9 @@ export default function EditPurchaseOrderPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { user } = useCurrentUser();
+  const [originalPO, setOriginalPO] = useState<any>(null);
+
+  const purchaseOrderId = params.id as string;
 
   const [formData, setFormData] = useState<PurchaseOrderFormData>({
     code: "",
@@ -141,6 +150,8 @@ export default function EditPurchaseOrderPage() {
     creatorId: "",
     orderId: "",
     orderLevelDiscount: 0,
+    orderLevelDiscountType: "AMOUNT",
+    paymentMethod: null,
     totalAmount: 0,
     totalDiscount: 0,
     totalTax: 0,
@@ -153,14 +164,46 @@ export default function EditPurchaseOrderPage() {
 
   const [formErrors, setFormErrors] = useState<PurchaseOrderFormErrors>({});
 
+  // Fungsi untuk menghitung potongan item - dimemoized untuk performa
+  const calculateItemDiscount = React.useCallback(
+    (
+      price: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (price * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
+  // Fungsi untuk menghitung potongan order level - dimemoized untuk performa
+  const calculateOrderLevelDiscount = React.useCallback(
+    (
+      subtotal: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (subtotal * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [purchaseOrder, orders, users, products] = await Promise.all([
-          getPurchaseOrderById(id),
-          getAvailableOrders(id), // Pass current PO ID to get available orders
-          getAvailableUsers(),
+        // Only fetch data if user is available and we have purchaseOrderId
+        if (!user?.id || !purchaseOrderId) return;
+
+        const [orders, products, purchaseOrder] = await Promise.all([
+          getAvailableOrders(purchaseOrderId), // Pass current PO ID to include its order
           getProductsWithStock(),
+          getPurchaseOrderById(purchaseOrderId),
         ]);
 
         if (!purchaseOrder) {
@@ -169,12 +212,23 @@ export default function EditPurchaseOrderPage() {
           return;
         }
 
+        // Check if PO can be edited (only if status is PROCESSING or PENDING)
+        if (!["PROCESSING", "PENDING"].includes(purchaseOrder.status)) {
+          toast.error("Purchase Order dengan status ini tidak dapat diedit");
+          router.push("/purchasing/daftar-po");
+          return;
+        }
+
         setAvailableOrders(orders);
         setAvailableProducts(products);
+        setOriginalPO(purchaseOrder);
 
-        console.log(purchaseOrder);
+        // Set selected order if exists
+        if (purchaseOrder.order) {
+          setSelectedOrder(purchaseOrder.order as any);
+        }
 
-        // Set form data from existing PO
+        // Populate form with existing data
         setFormData({
           code: purchaseOrder.code,
           poDate: new Date(purchaseOrder.poDate).toISOString().split("T")[0],
@@ -183,33 +237,33 @@ export default function EditPurchaseOrderPage() {
             .split("T")[0],
           notes: purchaseOrder.notes || "",
           creatorId: purchaseOrder.creatorId,
-          orderId: purchaseOrder.orderId,
+          orderId: purchaseOrder.orderId || "",
           orderLevelDiscount: purchaseOrder.orderLevelDiscount || 0,
+          orderLevelDiscountType: (purchaseOrder.orderLevelDiscountType ||
+            "AMOUNT") as "AMOUNT" | "PERCENTAGE",
+          paymentMethod: purchaseOrder.paymentMethod
+            ? new Date(purchaseOrder.paymentMethod)
+            : null,
           totalAmount: purchaseOrder.totalAmount,
-          totalDiscount: purchaseOrder.totalDiscount || 0,
-          totalTax: purchaseOrder.totalTax || 0,
-          taxPercentage: purchaseOrder.taxPercentage || null,
+          totalDiscount: purchaseOrder.totalDiscount,
+          totalTax: purchaseOrder.totalTax,
+          taxPercentage: purchaseOrder.taxPercentage,
           shippingCost: purchaseOrder.shippingCost || 0,
-          totalPayment: purchaseOrder.totalPayment || 0,
+          totalPayment: purchaseOrder.totalPayment,
           paymentDeadline: purchaseOrder.paymentDeadline
             ? new Date(purchaseOrder.paymentDeadline)
-                .toISOString()
-                .split("T")[0]
             : null,
-          items: purchaseOrder.items.map(item => ({
+          items: purchaseOrder.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.price,
             discount: item.discount || 0,
+            discountType: (item.discountType || "AMOUNT") as
+              | "AMOUNT"
+              | "PERCENTAGE",
             totalPrice: item.totalPrice,
           })),
         });
-
-        // Find selected order if exists
-        if (purchaseOrder.orderId) {
-          const order = orders.find(o => o.id === purchaseOrder.orderId);
-          setSelectedOrder(order || null);
-        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Gagal memuat data");
@@ -220,43 +274,79 @@ export default function EditPurchaseOrderPage() {
     };
 
     fetchData();
-  }, [id, router]);
+  }, [user?.id, purchaseOrderId, router]); // Include router in dependencies
 
-  // Recalculate total amount whenever items change
-  useEffect(() => {
-    // Subtotal sudah termasuk pengurangan diskon per item (harga - diskon per item) × jumlah
+  // Memoized calculations to prevent unnecessary recalculations
+  const calculations = React.useMemo(() => {
+    // Hitung total potongan item
+    const totalItemDiscount = formData.items.reduce((sum, item) => {
+      const itemDiscountAmount = calculateItemDiscount(
+        item.price || 0,
+        item.discount || 0,
+        item.discountType || "AMOUNT"
+      );
+      return sum + itemDiscountAmount * (item.quantity || 0);
+    }, 0);
+
+    // Subtotal dari item (total price sudah termasuk pengurangan diskon per item)
     const subtotal = formData.items.reduce(
       (sum, item) => sum + (item.totalPrice || 0),
       0
     );
 
-    // Total diskon item untuk tampilan detail saja
-    const totalItemDiscount = formData.items.reduce(
-      (sum, item) => sum + (item.discount || 0) * (item.quantity || 0),
-      0
+    // Hitung potongan order level berdasarkan subtotal setelah diskon item
+    const subtotalAfterItemDiscount = subtotal;
+    const orderLevelDiscountAmount = calculateOrderLevelDiscount(
+      subtotalAfterItemDiscount,
+      formData.orderLevelDiscount || 0,
+      formData.orderLevelDiscountType || "AMOUNT"
     );
 
-    // Total diskon hanya dari order level karena item discount sudah dipotong di subtotal
-    const totalDiscount = formData.orderLevelDiscount || 0;
+    // Total diskon keseluruhan (item + order level)
+    const totalDiscount = totalItemDiscount + orderLevelDiscountAmount;
 
+    // Taxable amount adalah subtotal dikurangi order level discount
     const taxableAmount = subtotal - totalDiscount;
-    const totalTax = (taxableAmount * (formData.taxPercentage || 0)) / 100;
-    const totalPayment =
-      subtotal - totalDiscount + totalTax + (formData.shippingCost || 0);
+    const totalTax = Math.max(
+      0,
+      (taxableAmount * (formData.taxPercentage || 0)) / 100
+    );
 
-    setFormData(prev => ({
-      ...prev,
-      totalAmount: subtotal,
+    // Total pembayaran
+    const totalPayment =
+      subtotal -
+      orderLevelDiscountAmount +
+      totalTax +
+      (formData.shippingCost || 0);
+
+    return {
+      subtotal,
+      totalItemDiscount,
+      orderLevelDiscountAmount,
       totalDiscount,
       totalTax,
       totalPayment,
-    }));
+    };
   }, [
     formData.items,
     formData.orderLevelDiscount,
+    formData.orderLevelDiscountType,
     formData.taxPercentage,
     formData.shippingCost,
+    calculateItemDiscount,
+    calculateOrderLevelDiscount,
   ]);
+
+  // Update formData when calculations change
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      totalAmount: calculations.subtotal,
+      totalDiscount: calculations.totalDiscount,
+      totalTax: calculations.totalTax,
+      totalPayment: calculations.totalPayment,
+    }));
+  }, [calculations]);
 
   const validateForm = (): boolean => {
     const errors: PurchaseOrderFormErrors = {};
@@ -264,17 +354,14 @@ export default function EditPurchaseOrderPage() {
     if (!formData.code) {
       errors.code = "Kode PO wajib diisi";
     }
-
     if (!formData.poDate) {
       errors.poDate = "Tanggal PO wajib diisi";
     }
-
     if (!formData.dateline) {
       errors.dateline = "Deadline wajib diisi";
     } else if (new Date(formData.dateline) < new Date(formData.poDate)) {
       errors.dateline = "Deadline tidak boleh lebih awal dari tanggal PO";
     }
-
     // Removed creatorId validation - automatically filled from session
     if (!formData.orderId) {
       errors.orderId = "Order wajib dipilih";
@@ -285,102 +372,89 @@ export default function EditPurchaseOrderPage() {
     ) {
       errors.taxPercentage = "Pajak wajib dipilih";
     }
-
     if (formData.items.length === 0) {
       errors.items = { 0: { productId: "Minimal harus ada satu item" } };
     } else {
-      const itemErrors: {
-        [key: number]: {
-          productId?: string;
-          quantity?: string;
-          price?: string;
-          totalPrice?: string;
-        };
-      } = {};
-
+      const itemErrors: { [key: number]: { [key: string]: string } } = {};
       formData.items.forEach((item, index) => {
-        const itemError: {
-          productId?: string;
-          quantity?: string;
-          price?: string;
-          totalPrice?: string;
-        } = {};
-
-        if (!item.productId) {
-          itemError.productId = "Produk wajib dipilih";
-        }
-
-        if (!item.quantity || item.quantity <= 0) {
+        const itemError: { [key: string]: string } = {};
+        if (!item.productId) itemError.productId = "Produk wajib dipilih";
+        if (!item.quantity || item.quantity <= 0)
           itemError.quantity = "Quantity harus lebih dari 0";
+        if (!item.price || item.price < 0)
+          itemError.price = "Harga tidak boleh negatif";
+
+        // Validasi stok
+        if (item.productId && item.quantity > 0) {
+          const product = availableProducts.find(
+            (p) => p.id === item.productId
+          );
+          if (product && product.currentStock < item.quantity) {
+            itemError.quantity = `Stok tidak mencukupi`;
+          }
         }
 
-        if (!item.price || item.price <= 0) {
-          itemError.price = "Harga harus lebih dari 0";
-        }
-
-        if (Object.keys(itemError).length > 0) {
-          itemErrors[index] = itemError;
-        }
+        if (Object.keys(itemError).length > 0) itemErrors[index] = itemError;
       });
-
-      if (Object.keys(itemErrors).length > 0) {
-        errors.items = itemErrors;
-      }
+      if (Object.keys(itemErrors).length > 0) errors.items = itemErrors;
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleInputChange = (
-    field: keyof PurchaseOrderFormData,
-    value: any
-  ) => {
-    setFormData({ ...formData, [field]: value });
-
-    if (field in formErrors) {
-      setFormErrors({ ...formErrors, [field]: undefined });
-    }
-  };
+  const handleInputChange = useCallback(
+    (field: keyof PurchaseOrderFormData, value: any) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      if (formErrors[field as keyof PurchaseOrderFormErrors]) {
+        setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    },
+    [formErrors]
+  );
 
   const handleOrderChange = (orderId: string) => {
-    const order = availableOrders.find(o => o.id === orderId);
+    const order = availableOrders.find((o) => o.id === orderId);
     setSelectedOrder(order || null);
 
-    // Auto-populate items from order
     if (order) {
-      const items: PurchaseOrderItemFormData[] = order.orderItems.map(item => {
-        const price = item.products.price;
-        const quantity = item.quantity;
-        const discount = item.discount || 0;
-        const priceAfterDiscount = price - discount;
-        const totalPrice = priceAfterDiscount * quantity;
+      const items: PurchaseOrderItemFormData[] = order.orderItems.map(
+        (item) => {
+          const price = item.products.price;
+          const quantity = item.quantity;
+          const discount = item.discount || 0;
+          const priceAfterDiscount = price - discount;
+          const totalPrice = priceAfterDiscount * quantity;
+          return {
+            productId: item.products.id,
+            quantity,
+            price,
+            discount,
+            discountType: "AMOUNT" as const,
+            totalPrice,
+          };
+        }
+      );
 
-        return {
-          productId: item.products.id,
-          quantity: quantity,
-          price: price,
-          discount: discount,
-          totalPrice: totalPrice,
-        };
-      });
+      console.log(order);
 
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         orderId,
         items,
         orderLevelDiscount: order.discount || 0,
         shippingCost: order.shippingCost || 0,
-        paymentDeadline: order.paymentDeadline
-          ? new Date(order.paymentDeadline).toISOString().split("T")[0]
-          : null,
-      });
+        paymentDeadline: order.paymentDeadline || null,
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         orderId: "",
         items: [],
-      });
+        orderLevelDiscount: 0,
+        shippingCost: 0,
+        paymentDeadline: null,
+      }));
     }
 
     if (formErrors.orderId) {
@@ -396,26 +470,71 @@ export default function EditPurchaseOrderPage() {
     const newItems = [...formData.items];
     const currentItem = { ...newItems[index], [field]: value };
 
-    if (["quantity", "price", "discount"].includes(field)) {
-      const priceAfterDiscount =
-        (currentItem.price || 0) - (currentItem.discount || 0);
+    if (["quantity", "price", "discount", "discountType"].includes(field)) {
+      const itemDiscountAmount = calculateItemDiscount(
+        currentItem.price || 0,
+        currentItem.discount || 0,
+        currentItem.discountType || "AMOUNT"
+      );
+      const priceAfterDiscount = (currentItem.price || 0) - itemDiscountAmount;
       currentItem.totalPrice = priceAfterDiscount * (currentItem.quantity || 0);
     }
 
     if (field === "productId") {
-      const product = availableProducts.find(p => p.id === value);
+      const product = availableProducts.find((p) => p.id === value);
       if (product) {
         currentItem.price = product.price;
-        const priceAfterDiscount = product.price - (currentItem.discount || 0);
+        const itemDiscountAmount = calculateItemDiscount(
+          product.price,
+          currentItem.discount || 0,
+          currentItem.discountType || "AMOUNT"
+        );
+        const priceAfterDiscount = product.price - itemDiscountAmount;
         currentItem.totalPrice =
           priceAfterDiscount * (currentItem.quantity || 0);
+      }
+    }
+
+    // Validasi stok jika field quantity atau productId berubah
+    if (field === "quantity" || field === "productId") {
+      const productId = field === "productId" ? value : currentItem.productId;
+      const quantity = field === "quantity" ? value : currentItem.quantity;
+
+      if (productId && quantity) {
+        const product = availableProducts.find((p) => p.id === productId);
+        if (product && product.currentStock < quantity) {
+          // Set error untuk item ini
+          const newErrors = { ...formErrors };
+          if (!newErrors.items) newErrors.items = {};
+          if (!newErrors.items[index]) newErrors.items[index] = {};
+          newErrors.items[index].quantity = `Stok tidak mencukupi.`;
+          setFormErrors(newErrors);
+        } else {
+          // Hapus error stok jika ada
+          const newErrors = { ...formErrors };
+          if (
+            newErrors.items?.[index]?.quantity?.includes("Stok tidak mencukupi")
+          ) {
+            delete newErrors.items[index].quantity;
+            if (Object.keys(newErrors.items[index]).length === 0) {
+              delete newErrors.items[index];
+              if (Object.keys(newErrors.items).length === 0) {
+                delete newErrors.items;
+              }
+            }
+            setFormErrors(newErrors);
+          }
+        }
       }
     }
 
     newItems[index] = currentItem;
     setFormData({ ...formData, items: newItems });
 
-    if (formErrors.items?.[index]?.[field]) {
+    if (
+      formErrors.items?.[index]?.[field] &&
+      !formErrors.items[index][field]?.includes("Stok tidak mencukupi")
+    ) {
       const newErrors = { ...formErrors };
       if (newErrors.items && newErrors.items[index]) {
         delete newErrors.items[index][field as keyof PurchaseOrderItemFormData];
@@ -430,12 +549,40 @@ export default function EditPurchaseOrderPage() {
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const result = await deletePurchaseOrder(params.id as string);
+
+      if (result.success) {
+        toast.success("Purchase Order berhasil dihapus!");
+        router.push("/purchasing/daftar-po");
+      } else {
+        toast.error(result.error || "Gagal menghapus Purchase Order");
+      }
+    } catch (error) {
+      console.error("Error deleting PO:", error);
+      toast.error("Terjadi kesalahan saat menghapus data");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   const addItem = () => {
     setFormData({
       ...formData,
       items: [
         ...formData.items,
-        { productId: "", quantity: 1, price: 0, discount: 0, totalPrice: 0 },
+        {
+          productId: "",
+          quantity: 1,
+          price: 0,
+          discount: 0,
+          discountType: "AMOUNT" as const,
+          totalPrice: 0,
+        },
       ],
     });
   };
@@ -454,51 +601,27 @@ export default function EditPurchaseOrderPage() {
     }
 
     setIsSubmitting(true);
-
     try {
-      const dataToSubmit = {
+      const result = await updatePurchaseOrder(purchaseOrderId, {
         ...formData,
         poDate: new Date(formData.poDate),
         dateline: new Date(formData.dateline),
         paymentDeadline: formData.paymentDeadline
           ? new Date(formData.paymentDeadline)
           : null,
-      };
-
-      const result = await updatePurchaseOrder(id, dataToSubmit);
+      });
 
       if (result.success) {
-        toast.success("Purchase Order berhasil diperbarui!");
+        toast.success("Purchase Order berhasil diupdate!");
         router.push("/purchasing/daftar-po");
       } else {
-        toast.error(result.error || "Gagal memperbarui Purchase Order");
+        toast.error(result.error || "Gagal mengupdate Purchase Order");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("Terjadi kesalahan saat menyimpan data");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-
-    try {
-      const result = await deletePurchaseOrder(id);
-
-      if (result.success) {
-        toast.success("Purchase Order berhasil dihapus!");
-        router.push("/purchasing/daftar-po");
-      } else {
-        toast.error(result.error || "Gagal menghapus Purchase Order");
-      }
-    } catch (error) {
-      console.error("Error deleting PO:", error);
-      toast.error("Terjadi kesalahan saat menghapus data");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteModal(false);
     }
   };
 
@@ -523,61 +646,72 @@ export default function EditPurchaseOrderPage() {
       <ManagementHeader
         allowedRoles={["ADMIN", "OWNER", "WAREHOUSE"]}
         mainPageName="/purchasing/daftar-po"
-        headerTittle="Purchase Order"
+        headerTittle="Edit Purchase Order"
       />
       <ManagementForm
         subModuleName="daftar-po"
         moduleName="purchasing"
         isSubmitting={isSubmitting}
-        handleFormSubmit={handleFormSubmit}
-        handleDelete={() => setShowDeleteModal(true)}
         hideDeleteButton={false}
+        handleDelete={() => setShowDeleteModal(true)}
+        handleFormSubmit={handleFormSubmit}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField label="Kode PO" errorMessage={formErrors.code}>
             <Input
-              type="text"
               name="code"
+              type="text"
               value={formData.code}
               readOnly
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100 cursor-default dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"
-              onChange={e => handleInputChange("code", e.target.value)}
-              placeholder="Masukkan kode PO"
+              className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
             />
           </FormField>
-
-          {/* Hidden field untuk Pembuat PO - diambil langsung dari session */}
-          <input type="hidden" name="creatorId" value={formData.creatorId} />
-
           <FormField label="Tanggal PO" errorMessage={formErrors.poDate}>
             <InputDate
               value={new Date(formData.poDate)}
-              onChange={value => {
-                if (value) {
-                  handleInputChange(
-                    "poDate",
-                    value.toISOString().split("T")[0]
-                  );
-                }
-              }}
-              errorMessage={formErrors.poDate}
+              onChange={(value) =>
+                value &&
+                handleInputChange("poDate", value.toISOString().split("T")[0])
+              }
             />
           </FormField>
         </div>
 
-        <FormField label="Pilih Order" errorMessage={formErrors.orderId}>
-          <Select
-            value={formData.orderId || ""}
-            onChange={handleOrderChange}
-            options={availableOrders.map(order => ({
-              value: order.id,
-              label: `${order.orderNumber} - ${order.customer.name}`,
-            }))}
-            placeholder="Pilih Order"
-            searchable={true}
-            searchPlaceholder="Cari order..."
-            className={formErrors.orderId ? "border-red-500" : ""}
-          />
+        {/* Hidden field untuk Pembuat PO - diambil langsung dari session */}
+        <input type="hidden" name="creatorId" value={formData.creatorId} />
+
+        <FormField label="Order Terkait" errorMessage={formErrors.orderId}>
+          {originalPO?.orderId ? (
+            <div className="mt-1">
+              <Input
+                type="text"
+                name="orderId"
+                value={
+                  selectedOrder
+                    ? `${selectedOrder.orderNumber} - ${selectedOrder.customer.name}`
+                    : "Order tidak ditemukan"
+                }
+                readOnly
+                className="bg-gray-100 cursor-default dark:bg-gray-800"
+              />
+              <div className="text-sm text-gray-500 mt-1">
+                Order sudah terkait dan tidak dapat diubah
+              </div>
+            </div>
+          ) : (
+            <Select
+              value={formData.orderId || ""}
+              onChange={handleOrderChange}
+              options={availableOrders.map((order) => ({
+                value: order.id,
+                label: `${order.orderNumber} - ${order.customer.name}`,
+              }))}
+              placeholder="Pilih Order"
+              searchable={true}
+              searchPlaceholder="Cari order..."
+              className={formErrors.orderId ? "border-red-500" : ""}
+            />
+          )}
         </FormField>
 
         {selectedOrder && (
@@ -590,29 +724,18 @@ export default function EditPurchaseOrderPage() {
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
-                label="Tenggat Pembayaran"
+                label="Net Pembayaran"
                 errorMessage={formErrors.paymentDeadline}
               >
                 <InputDate
-                  value={
-                    formData.paymentDeadline
-                      ? new Date(formData.paymentDeadline)
-                      : null
-                  }
-                  onChange={value =>
-                    handleInputChange(
-                      "paymentDeadline",
-                      value ? value.toISOString().split("T")[0] : null
-                    )
-                  }
-                  showNullAsText="Bayar Langsung"
-                  allowClearToNull={true}
-                  isOptional={true}
+                  value={formData.paymentDeadline}
                   showClearButton={true}
-                  placeholder="Pilih tanggal pembayaran"
+                  showNullAsText="Bayar Langsung"
+                  onChange={(value) =>
+                    handleInputChange("paymentDeadline", value)
+                  }
                 />
               </FormField>
-
               <FormField
                 label="Biaya Pengiriman"
                 errorMessage={formErrors.shippingCost}
@@ -625,7 +748,7 @@ export default function EditPurchaseOrderPage() {
                     type="text"
                     name="shippingCost"
                     value={formData.shippingCost.toLocaleString("id-ID")}
-                    onChange={e => {
+                    onChange={(e) => {
                       const value =
                         parseFloat(e.target.value.replace(/\D/g, "")) || 0;
                       handleInputChange("shippingCost", value);
@@ -644,7 +767,7 @@ export default function EditPurchaseOrderPage() {
             <InputTextArea
               name="notes"
               value={formData.notes}
-              onChange={e => handleInputChange("notes", e.target.value)}
+              onChange={(e) => handleInputChange("notes", e.target.value)}
               placeholder="Catatan tambahan (opsional)"
             />
           </FormField>
@@ -655,40 +778,56 @@ export default function EditPurchaseOrderPage() {
             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
               Item Purchase Order
             </h3>
+            <button
+              type="button"
+              onClick={addItem}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <FiPlus className="w-3 h-3" />
+              Tambah Item
+            </button>
           </div>
-          {formData.items.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Belum ada item. Klik 'Tambah Item' untuk menambah item.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+        </div>
+
+        {formData.items.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            Belum ada item. Pilih Order untuk menampilkan barang.
+          </div>
+        ) : (
+          <div className="overflow-x-auto shadow-sm">
+            <div className="min-w-[1000px]">
+              {" "}
+              {/* Ensure minimum width for all columns */}
+              <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-1/3">
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
                       Produk
                     </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[100px]">
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
                       Stok
                     </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[100px]">
-                      Jumlah
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
+                      Qty
                     </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
                       Harga
                     </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Potongan Per Item
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
+                      Potongan
                     </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
                       Total
+                    </th>
+                    <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[30px]">
+                      Aksi
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {formData.items.map((item, index) => {
                     const product = availableProducts.find(
-                      p => p.id === item.productId
+                      (p) => p.id === item.productId
                     );
 
                     return (
@@ -696,28 +835,39 @@ export default function EditPurchaseOrderPage() {
                         key={index}
                         className="border-t border-gray-200 dark:border-gray-600"
                       >
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                           <select
                             value={item.productId}
-                            onChange={e =>
+                            onChange={(e) =>
                               handleItemChange(
                                 index,
                                 "productId",
                                 e.target.value
                               )
                             }
-                            className={`w-full px-3 py-2 border rounded-md dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            className={`w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                               formErrors.items?.[index]?.productId
                                 ? "border-red-500"
                                 : "border-gray-300"
                             }`}
                           >
                             <option value="">Pilih Produk</option>
-                            {availableProducts.map(product => (
-                              <option key={product.id} value={product.id}>
-                                {product.name}
-                              </option>
-                            ))}
+                            {availableProducts
+                              .filter(
+                                (product) =>
+                                  // Show current product or products not selected in other rows
+                                  product.id === item.productId ||
+                                  !formData.items.some(
+                                    (otherItem, otherIndex) =>
+                                      otherIndex !== index &&
+                                      otherItem.productId === product.id
+                                  )
+                              )
+                              .map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name}
+                                </option>
+                              ))}
                           </select>
                           {formErrors.items?.[index]?.productId && (
                             <div className="text-xs text-red-500 mt-1">
@@ -726,29 +876,12 @@ export default function EditPurchaseOrderPage() {
                           )}
                         </td>
 
-                        <td>
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                           {product && (
-                            <div className="text-m text-center">
-                              {product.currentStock} {product.unit}
+                            <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                              {product.currentStock}
                             </div>
                           )}
-                        </td>
-
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <Input
-                            type="number"
-                            name={`quantity_${index}`}
-                            value={item.quantity.toString()}
-                            onChange={e =>
-                              handleItemChange(
-                                index,
-                                "quantity",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder="0"
-                            className="w-full"
-                          />
                           {formErrors.items?.[index]?.quantity && (
                             <div className="text-xs text-red-500 mt-1">
                               {formErrors.items[index].quantity}
@@ -756,24 +889,42 @@ export default function EditPurchaseOrderPage() {
                           )}
                         </td>
 
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                          <Input
+                            type="number"
+                            name={`quantity_${index}`}
+                            value={item.quantity.toString()}
+                            onChange={(e) =>
+                              handleItemChange(
+                                index,
+                                "quantity",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            placeholder="0"
+                            className="w-full text-m px-2 py-1"
+                          />
+                        </td>
+
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                            <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-m">
                               Rp
                             </span>
                             <Input
                               type="text"
                               name={`price_${index}`}
                               value={item.price.toLocaleString("id-ID")}
-                              onChange={e => {
+                              onChange={(e) => {
                                 const value =
                                   parseFloat(
                                     e.target.value.replace(/\D/g, "")
                                   ) || 0;
                                 handleItemChange(index, "price", value);
                               }}
-                              className="pl-10 w-full"
+                              className="pl-6 pr-1 w-full text-right text-m py-1"
                               placeholder="0"
+                              title={`Rp ${item.price.toLocaleString("id-ID")}`}
                             />
                           </div>
                           {formErrors.items?.[index]?.price && (
@@ -783,25 +934,50 @@ export default function EditPurchaseOrderPage() {
                           )}
                         </td>
 
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                              Rp
-                            </span>
-                            <Input
-                              type="text"
-                              name={`discount_${index}`}
-                              value={item.discount.toLocaleString("id-ID")}
-                              onChange={e => {
-                                const value =
-                                  parseFloat(
-                                    e.target.value.replace(/\D/g, "")
-                                  ) || 0;
-                                handleItemChange(index, "discount", value);
-                              }}
-                              className="pl-10 w-full"
-                              placeholder="0"
-                            />
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                          <div className="flex gap-1">
+                            <div className="relative flex-1 min-w-0">
+                              <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                                {item.discountType === "PERCENTAGE"
+                                  ? "%"
+                                  : "Rp"}
+                              </span>
+                              <Input
+                                type="text"
+                                name={`discount_${index}`}
+                                value={item.discount.toLocaleString("id-ID")}
+                                onChange={(e) => {
+                                  const value =
+                                    parseFloat(
+                                      e.target.value.replace(/\D/g, "")
+                                    ) || 0;
+                                  handleItemChange(index, "discount", value);
+                                }}
+                                className="pl-5 pr-1 w-full text-right text-s py-1"
+                                placeholder="0"
+                                title={`${
+                                  item.discountType === "PERCENTAGE"
+                                    ? ""
+                                    : "Rp "
+                                }${item.discount.toLocaleString("id-ID")}${
+                                  item.discountType === "PERCENTAGE" ? "%" : ""
+                                }`}
+                              />
+                            </div>
+                            <select
+                              value={item.discountType}
+                              onChange={(e) =>
+                                handleItemChange(
+                                  index,
+                                  "discountType",
+                                  e.target.value as "AMOUNT" | "PERCENTAGE"
+                                )
+                              }
+                              className="w-11 px-1 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                            >
+                              <option value="AMOUNT">Rp</option>
+                              <option value="PERCENTAGE">%</option>
+                            </select>
                           </div>
                           {formErrors.items?.[index]?.discount && (
                             <div className="text-xs text-red-500 mt-1">
@@ -810,26 +986,58 @@ export default function EditPurchaseOrderPage() {
                           )}
                         </td>
 
-                        <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                          {formatRupiah(item.totalPrice)}
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                          <div
+                            className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate"
+                            title={formatRupiah(item.totalPrice)}
+                          >
+                            {formatRupiah(item.totalPrice)}
+                          </div>
+                        </td>
+
+                        <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            className=" cursor-pointer flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-red-500"
+                            title="Hapus item"
+                          >
+                            <FiTrash2 className="w-5 h-5" />
+                          </button>
                         </td>
                       </tr>
                     );
                   })}
+                  <tr className="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                    <td
+                      className="border border-gray-200 dark:border-gray-600 px-2 py-2 font-bold text-xl"
+                      colSpan={5}
+                    >
+                      Subtotal:
+                    </td>
+                    <td className="font-bold border border-gray-200 dark:border-gray-600 px-2 py-2 text-m text-right">
+                      {formatRupiah(formData.totalAmount)}
+                    </td>
+                    <td></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-          )}
-          <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <FormField
-                  label="Potongan Keseluruhan"
-                  errorMessage={formErrors.orderLevelDiscount}
-                >
-                  <div className="relative">
+          </div>
+        )}
+        <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <FormField
+                label="Potongan Keseluruhan"
+                errorMessage={formErrors.orderLevelDiscount}
+              >
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                      Rp
+                      {formData.orderLevelDiscountType === "PERCENTAGE"
+                        ? "%"
+                        : "Rp"}
                     </span>
                     <Input
                       type="text"
@@ -837,129 +1045,122 @@ export default function EditPurchaseOrderPage() {
                       value={formData.orderLevelDiscount.toLocaleString(
                         "id-ID"
                       )}
-                      onChange={e => {
+                      onChange={(e) => {
                         const value =
                           parseFloat(e.target.value.replace(/\D/g, "")) || 0;
                         handleInputChange("orderLevelDiscount", value);
                       }}
-                      placeholder="0"
                       className="pl-10"
+                      placeholder="0"
                     />
                   </div>
-                </FormField>
-
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Detail Potongan
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Total Potongan Item:
-                      </span>
-                      <span className="font-medium text-red-600 dark:text-red-400">
-                        -Rp{" "}
-                        {formData.items
-                          .reduce(
-                            (sum, item) =>
-                              sum + (item.discount || 0) * (item.quantity || 0),
-                            0
-                          )
-                          .toLocaleString("id-ID")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Potongan Keseluruhan:
-                      </span>
-                      <span className="font-medium text-red-600 dark:text-red-400">
-                        -Rp{" "}
-                        {formData.orderLevelDiscount.toLocaleString("id-ID")}
-                      </span>
-                    </div>
+                  <select
+                    name="orderLevelDiscountType"
+                    value={formData.orderLevelDiscountType}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "orderLevelDiscountType",
+                        e.target.value as "AMOUNT" | "PERCENTAGE"
+                      )
+                    }
+                    className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="AMOUNT">Rp</option>
+                    <option value="PERCENTAGE">%</option>
+                  </select>
+                </div>
+              </FormField>
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Detail Potongan
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Total Potongan Item:
+                    </span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      -Rp{" "}
+                      {calculations.totalItemDiscount.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Potongan Keseluruhan:
+                    </span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      -{formatRupiah(calculations.orderLevelDiscountAmount)}
+                    </span>
                   </div>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Subtotal:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatRupiah(formData.totalAmount)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Total Potongan:
-                  </span>
-                  <span className="font-medium text-red-600 dark:text-red-400">
-                    -
-                    {formatRupiah(
-                      formData.items.reduce(
-                        (sum, item) =>
-                          sum + (item.discount || 0) * (item.quantity || 0),
-                        0
-                      ) + formData.orderLevelDiscount
-                    )}
-                  </span>
-                </div>
-                {/* Pajak */}
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <span>Pajak</span>
-                      <select
-                        value={
-                          formData.taxPercentage === null ||
-                          formData.taxPercentage === undefined
-                            ? ""
-                            : formData.taxPercentage
-                        }
-                        onChange={e => {
-                          const value = e.target.value;
-                          const taxPercentage =
-                            value === "" ? null : parseFloat(value);
-                          handleInputChange("taxPercentage", taxPercentage);
-                        }}
-                        className={`px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                          formErrors.taxPercentage ? "border-red-500" : ""
-                        }`}
-                      >
-                        <option value="">Pilih Pajak</option>
-                        <option value={0}>0%</option>
-                        <option value={11}>11%</option>
-                        <option value={12}>12%</option>
-                      </select>
-                    </div>
-                    {formErrors.taxPercentage && (
-                      <div className="text-xs text-red-500">
-                        {formErrors.taxPercentage}
-                      </div>
-                    )}
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Total Potongan:
+                </span>
+                <span className="font-medium text-red-600 dark:text-red-400">
+                  -{formatRupiah(calculations.totalDiscount)}
+                </span>
+              </div>
+              {/* Sub setelah potongan */}
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Total Setelah potongan:
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(
+                    calculations.subtotal -
+                      (calculations.orderLevelDiscountAmount +
+                        calculations.totalItemDiscount)
+                  )}
+                </span>
+              </div>
+              {/* Pajak */}
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <span>Pajak</span>
+                    <TaxSelect
+                      value={formData.taxPercentage?.toString() || ""}
+                      onChange={(value) => {
+                        const taxPercentage =
+                          value === "" ? null : parseFloat(value);
+                        handleInputChange("taxPercentage", taxPercentage);
+                      }}
+                      name="taxPercentage"
+                      returnValue="percentage"
+                      className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
                   </div>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatRupiah(formData.totalTax)}
-                  </span>
+                  {formErrors.taxPercentage && (
+                    <div className="text-xs text-red-500">
+                      {formErrors.taxPercentage}
+                    </div>
+                  )}
                 </div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.totalTax)}
+                </span>
+              </div>
 
-                <div className="flex justify-between">
-                  <span className="text-gray-700 dark:text-gray-300">
-                    Biaya Pengiriman:
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatRupiah(formData.shippingCost)}
-                  </span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Biaya Pengiriman:
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.shippingCost)}
+                </span>
+              </div>
 
-                <div className="flex justify-between border-t pt-2 border-gray-200 dark:border-gray-600">
-                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Total Pembayaran:
-                  </span>
-                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {formatRupiah(formData.totalPayment)}
-                  </span>
-                </div>
+              <div className="flex justify-between border-t pt-2 border-gray-200 dark:border-gray-600">
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Total Pembayaran:
+                </span>
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {formatRupiah(formData.totalPayment)}
+                </span>
               </div>
             </div>
           </div>

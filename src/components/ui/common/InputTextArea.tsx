@@ -18,7 +18,7 @@ const InputTextArea: React.FC<InputTextAreaProps> = ({
   errorMessage,
   className = "",
   name,
-  height,
+  height = "80px", // Default height ditingkatkan dari tidak ada menjadi 100px
   ...props
 }) => {
   const hasError = errorMessage && errorMessage.length > 0;

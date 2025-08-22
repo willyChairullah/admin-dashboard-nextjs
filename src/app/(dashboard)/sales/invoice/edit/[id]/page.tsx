@@ -517,7 +517,7 @@ export default function EditInvoicePage() {
 
           {/* Tenggat Pembayaran */}
           <FormField
-            label="Tenggat Pembayaran"
+            label="Net Pembayaran"
             errorMessage={formErrors.dueDate}
           >
             <InputDate

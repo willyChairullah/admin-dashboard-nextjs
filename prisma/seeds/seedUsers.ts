@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { v4 as uuid } from "uuid";
 
 export async function seedUsers(prisma: PrismaClient) {
-  console.log("👥 Creating 4 users...");
+  console.log("👥 Creating 5 users...");
   const usersToCreate = [
     {
       id: "owner123",
@@ -44,6 +44,17 @@ export async function seedUsers(prisma: PrismaClient) {
       password: "password123",
       role: "SALES" as const,
       phone: "+62812345681",
+      address: "Jakarta",
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    {
+      id: "helper123",
+      email: "helper@indana.com",
+      name: "Helper User",
+      password: "password123",
+      role: "HELPER" as const,
+      phone: "+62812345682",
       address: "Jakarta",
       isActive: true,
       updatedAt: new Date(),
