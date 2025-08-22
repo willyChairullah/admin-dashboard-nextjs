@@ -21,6 +21,8 @@ import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { Trash2, Plus } from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
+import { formatRupiah } from "@/utils/formatRupiah";
+import type { ProductionLogItemFormData } from "@/lib/actions/productions";
 
 // [PERUBAHAN] Tambahkan 'code' ke ProductionLogFormData
 interface ProductionLogFormData {
@@ -31,12 +33,6 @@ interface ProductionLogFormData {
   items: ProductionLogItemFormData[];
 }
 
-interface ProductionLogItemFormData {
-  productId: string;
-  quantity: number;
-  notes?: string;
-}
-
 // [PERUBAHAN] Tambahkan 'code' ke ProductionLogFormErrors
 interface ProductionLogFormErrors {
   code?: string;
@@ -44,7 +40,7 @@ interface ProductionLogFormErrors {
   notes?: string;
   producedById?: string;
   items?: {
-    [key: number]: { productId?: string; quantity?: string; notes?: string };
+    [key: number]: { productId?: string; quantity?: string; salaryPerBottle?: string };
   };
 }
 
@@ -81,7 +77,7 @@ export default function EditProductionLogPage() {
     productionDate: "",
     notes: "",
     producedById: "",
-    items: [{ productId: "", quantity: 0, notes: "" }],
+    items: [{ productId: "", quantity: 0, salaryPerBottle: 0 }],
   });
 
   const [formErrors, setFormErrors] = useState<ProductionLogFormErrors>({});
@@ -117,7 +113,7 @@ export default function EditProductionLogPage() {
           items: productionLog.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            notes: (item as any).notes || "", // Pastikan notes ada di ProductionLogItem jika digunakan
+            salaryPerBottle: (item as any).salaryPerBottle || 0,
           })),
         });
       } catch (error) {
@@ -158,7 +154,7 @@ export default function EditProductionLogPage() {
         [key: number]: {
           productId?: string;
           quantity?: string;
-          notes?: string;
+          salaryPerBottle?: string;
         };
       } = {};
 
@@ -166,7 +162,7 @@ export default function EditProductionLogPage() {
         const itemError: {
           productId?: string;
           quantity?: string;
-          notes?: string;
+          salaryPerBottle?: string;
         } = {};
 
         if (!item.productId) {
@@ -177,9 +173,9 @@ export default function EditProductionLogPage() {
           itemError.quantity = "Quantity harus lebih dari 0";
         }
 
-        // if (item.notes && item.notes.length > 500) { // Contoh validasi notes jika ada
-        //   itemError.notes = "Catatan item tidak boleh melebihi 500 karakter";
-        // }
+        if (!item.salaryPerBottle || item.salaryPerBottle < 0) {
+          itemError.salaryPerBottle = "Gaji per botol harus lebih dari atau sama dengan 0";
+        }
 
         if (Object.keys(itemError).length > 0) {
           itemErrors[index] = itemError;
@@ -215,10 +211,10 @@ export default function EditProductionLogPage() {
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
 
-    if (formErrors.items?.[index]?.[field]) {
+    if (formErrors.items?.[index] && field in formErrors.items[index]) {
       const newErrors = { ...formErrors };
       if (newErrors.items) {
-        delete newErrors.items[index][field];
+        delete (newErrors.items[index] as any)[field];
         if (Object.keys(newErrors.items[index]).length === 0) {
           delete newErrors.items[index];
         }
@@ -230,7 +226,7 @@ export default function EditProductionLogPage() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: "", quantity: 0, notes: "" }],
+      items: [...formData.items, { productId: "", quantity: 0, salaryPerBottle: 0 }],
     });
   };
 
@@ -288,6 +284,7 @@ export default function EditProductionLogPage() {
           productId: item.productId,
           quantity: Number(item.quantity),
           notes: item.notes || undefined,
+          salaryPerBottle: Number(item.salaryPerBottle),
         })),
       });
 
@@ -502,18 +499,25 @@ export default function EditProductionLogPage() {
                 </FormField>
 
                 <FormField
-                  label="Catatan Item"
-                  errorMessage={formErrors.items?.[index]?.notes}
+                  label="Gaji Karyawan/Botol (Rp)"
+                  errorMessage={formErrors.items?.[index]?.salaryPerBottle}
                 >
                   <Input
-                    type="text"
-                    name={`notes-${index}`}
-                    value={item.notes || ""}
-                    onChange={e =>
-                      handleItemChange(index, "notes", e.target.value)
-                    }
-                    errorMessage={formErrors.items?.[index]?.notes}
-                    placeholder="Catatan untuk item ini (opsional)"
+                    type="number"
+                    name={`salaryPerBottle-${index}`}
+                    min="0"
+                    step="100"
+                    value={item.salaryPerBottle?.toString() || ""}
+                    onChange={e => {
+                      const value = e.target.value;
+                      handleItemChange(
+                        index, 
+                        "salaryPerBottle", 
+                        value === "" ? 0 : parseFloat(value)
+                      );
+                    }}
+                    errorMessage={formErrors.items?.[index]?.salaryPerBottle}
+                    placeholder="0"
                   />
                 </FormField>
               </div>

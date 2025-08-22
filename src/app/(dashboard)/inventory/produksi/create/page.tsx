@@ -18,6 +18,7 @@ import { getActiveCategories } from "@/lib/actions/categories"; // Pastikan path
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
+import { formatRupiah } from "@/utils/formatRupiah";
 import { Trash2, Plus } from "lucide-react";
 import { generateCodeByTable } from "@/utils/getCode"; // Pastikan path ini benar
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,6 +27,7 @@ interface ProductionLogItemFormData {
   productId: string;
   quantity: number;
   notes?: string;
+  salaryPerBottle?: number; // Gaji per botol untuk item ini
 }
 
 interface ProductionLogFormData {
@@ -41,7 +43,12 @@ interface ProductionLogFormErrors {
   productionDate?: string;
   notes?: string;
   items?: {
-    [key: number]: { productId?: string; quantity?: string; notes?: string };
+    [key: number]: { 
+      productId?: string; 
+      quantity?: string; 
+      notes?: string;
+      salaryPerBottle?: string;
+    };
   };
 }
 
@@ -75,7 +82,7 @@ export default function CreateProductionLogPage() {
     productionDate: new Date().toISOString().split("T")[0],
     notes: "",
     producedById: user?.id || "",
-    items: [{ productId: "", quantity: 0, notes: "" }],
+    items: [{ productId: "", quantity: 0, notes: "", salaryPerBottle: 0 }],
   });
 
   console.log(formData);
@@ -222,7 +229,7 @@ export default function CreateProductionLogPage() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: "", quantity: 0, notes: "" }],
+      items: [...formData.items, { productId: "", quantity: 0, notes: "", salaryPerBottle: 0 }],
     });
   };
 
@@ -259,6 +266,7 @@ export default function CreateProductionLogPage() {
           productId: item.productId,
           quantity: Number(item.quantity),
           notes: item.notes || undefined,
+          salaryPerBottle: Number(item.salaryPerBottle),
         })),
       });
 
@@ -480,18 +488,25 @@ export default function CreateProductionLogPage() {
                 </FormField>
 
                 <FormField
-                  label="Catatan Item"
-                  errorMessage={formErrors.items?.[index]?.notes}
+                  label="Gaji Karyawan/Botol (Rp)"
+                  errorMessage={formErrors.items?.[index]?.salaryPerBottle}
                 >
                   <Input
-                    type="text"
-                    name={`notes-${index}`}
-                    value={item.notes || ""}
-                    onChange={e =>
-                      handleItemChange(index, "notes", e.target.value)
-                    }
-                    errorMessage={formErrors.items?.[index]?.notes}
-                    placeholder="Catatan untuk item ini (opsional)"
+                    type="number"
+                    name={`salaryPerBottle-${index}`}
+                    min="0"
+                    step="100"
+                    value={item.salaryPerBottle?.toString() || ""}
+                    onChange={e => {
+                      const value = e.target.value;
+                      handleItemChange(
+                        index, 
+                        "salaryPerBottle", 
+                        value === "" ? 0 : parseFloat(value)
+                      );
+                    }}
+                    errorMessage={formErrors.items?.[index]?.salaryPerBottle}
+                    placeholder="0"
                   />
                 </FormField>
               </div>

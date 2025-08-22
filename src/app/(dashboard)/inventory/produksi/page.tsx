@@ -9,6 +9,8 @@ import { Button } from "@/components/ui";
 import { FileText, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRouter } from "next/navigation";
 
 const columns = [
   {
@@ -76,6 +78,12 @@ const excludedAccessors = ["productionDate", "items"];
 export default function ManajemenStokPage() {
   const data = useSharedData();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const { user } = useCurrentUser();
+  const router = useRouter();
+
+  // Check if user has permission to add new production
+  const allowedRoles = ["OWNER", "WAREHOUSE", "ADMIN"];
+  const canAddProduction = user && allowedRoles.includes(user.role || "");
 
   // Function to process data for PDF export
   const processDataForPDF = (productions: any[]) => {
@@ -187,20 +195,33 @@ export default function ManajemenStokPage() {
 
   return (
     <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Daftar Produksi
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Kelola data produksi barang
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl md:text-3xl font-semibold text-gray-900 dark:text-white">
+          Daftar Produksi
+        </h3>
+        <div className="flex space-x-2">
+          <Button
+            size="medium"
+            variant="primary"
+            className="text-xs md:text-sm bg-blue-500"
+            onClick={() => router.push('/inventory/produksi')}
+          >
+            Daftar
+          </Button>
+          {canAddProduction && (
+            <Button
+              size="medium"
+              variant="secondary"
+              className="text-xs md:text-sm"
+              onClick={() => router.push('/inventory/produksi/create')}
+            >
+              Tambah Produksi
+            </Button>
+          )}
           <Button
             onClick={generatePDF}
             disabled={isGeneratingPDF || !data.data || data.data.length === 0}
-            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
+            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 text-xs md:text-sm"
           >
             {isGeneratingPDF ? (
               <>
@@ -223,7 +244,7 @@ export default function ManajemenStokPage() {
         excludedAccessors={excludedAccessors}
         dateAccessor="productionDate"
         emptyMessage="Belum ada data production logs"
-        linkPath={`/${data.module}/${data.subModule}`}
+        linkPath="/inventory/produksi"
       />
     </div>
   );

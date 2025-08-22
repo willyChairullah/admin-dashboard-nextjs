@@ -13,6 +13,7 @@ export type ProductionLogItemFormData = {
   productId: string;
   quantity: number;
   notes?: string;
+  salaryPerBottle?: number; // Gaji per botol untuk item ini
 };
 
 export type ProductionLogFormData = {
@@ -27,12 +28,15 @@ export type ProductionLogWithDetails = Productions & {
   producedBy: {
     id: string;
     name: string;
+    salaryPerBottle?: number;
   };
   items: (ProductionItems & {
     product: {
       id: string;
       name: string;
+      code: string;
       unit: string;
+      bottlesPerCrate: number;
     };
   })[];
 };
@@ -54,7 +58,9 @@ export async function getProductions(): Promise<ProductionLogWithDetails[]> {
               select: {
                 id: true,
                 name: true,
+                code: true,
                 unit: true,
+                bottlesPerCrate: true,
               },
             },
           },
@@ -92,7 +98,9 @@ export async function getProductionLogById(
               select: {
                 id: true,
                 name: true,
+                code: true,
                 unit: true,
+                bottlesPerCrate: true,
               },
             },
           },
@@ -144,6 +152,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
             productionLogId: productionLog.id,
             productId: item.productId,
             notes: item.notes || null,
+            salaryPerBottle: item.salaryPerBottle || 0,
           },
         });
 
@@ -262,6 +271,7 @@ export async function updateProductionLog(
             productionLogId: updatedLog.id,
             productId: item.productId,
             notes: item.notes || null,
+            salaryPerBottle: item.salaryPerBottle || 0,
           },
         });
 
