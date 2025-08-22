@@ -218,7 +218,7 @@ export default function OrdersPage() {
     setSelectedStore(storeId);
     setStoreSearchQuery(storeName);
     setShowStoreDropdown(false);
-    
+
     // Auto-populate customer info
     const selectedStore = stores.find((store) => store.id === storeId);
     if (selectedStore) {
@@ -296,14 +296,14 @@ export default function OrdersPage() {
       discount = items.reduce((totalDiscount, item) => {
         const crates = calculateCrates(item.quantity, item.productName);
         let itemDiscount = 0;
-        
+
         if (discountUnit === "PERCENTAGE") {
           const itemTotal = item.quantity * item.price;
           itemDiscount = (itemTotal * (item.discount || 0)) / 100;
         } else {
           itemDiscount = crates * (item.discount || 0);
         }
-        
+
         return totalDiscount + itemDiscount;
       }, 0);
     }
@@ -326,14 +326,14 @@ export default function OrdersPage() {
       discount = items.reduce((totalDiscount, item) => {
         const crates = calculateCrates(item.quantity, item.productName);
         let itemDiscount = 0;
-        
+
         if (discountUnit === "PERCENTAGE") {
           const itemTotal = item.quantity * item.price;
           itemDiscount = (itemTotal * (item.discount || 0)) / 100;
         } else {
           itemDiscount = crates * (item.discount || 0);
         }
-        
+
         return totalDiscount + itemDiscount;
       }, 0);
     }
@@ -409,7 +409,7 @@ export default function OrdersPage() {
         try {
           // Send the correct discount value based on discount type
           const discountValue = discountType === "OVERALL" ? totalDiscount : 0;
-          
+
           const result = await createOrder({
             salesId: user.id, // Use current user ID
             storeId: useExistingStore ? selectedStore : undefined,
@@ -809,13 +809,13 @@ export default function OrdersPage() {
                           value={customerCity}
                           onChange={(e) => setCustomerCity(e.target.value)}
                           placeholder="Kota toko akan terisi otomatis"
-                          disabled={useExistingStore && selectedStore}
+                          disabled={useExistingStore && !!selectedStore}
                           className={`block w-full px-4 py-4 text-sm sm:text-base border-0 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none rounded-xl shadow-lg transition-all duration-200 ${
                             useExistingStore && selectedStore
                               ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed"
                               : "bg-white/80 dark:bg-gray-700/80 focus:ring-2 focus:ring-green-500 focus:border-transparent hover:shadow-xl"
                           }`}
-                          readOnly={useExistingStore && selectedStore}
+                          readOnly={useExistingStore && !!selectedStore}
                         />
                       </div>
                     </div>
@@ -1418,19 +1418,20 @@ export default function OrdersPage() {
                             </span>
                           </div>
                         )}
-                        {discountType === "PER_CRATE" && calculateActualDiscount() > 0 && (
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600 dark:text-gray-300 font-medium">
-                              Diskon Per Krat:
-                            </span>
-                            <span className="font-bold text-red-600">
-                              -Rp{" "}
-                              {calculateActualDiscount().toLocaleString(
-                                "id-ID"
-                              )}
-                            </span>
-                          </div>
-                        )}
+                        {discountType === "PER_CRATE" &&
+                          calculateActualDiscount() > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600 dark:text-gray-300 font-medium">
+                                Diskon Per Krat:
+                              </span>
+                              <span className="font-bold text-red-600">
+                                -Rp{" "}
+                                {calculateActualDiscount().toLocaleString(
+                                  "id-ID"
+                                )}
+                              </span>
+                            </div>
+                          )}
                         {shippingCost > 0 && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-600 dark:text-gray-300 font-medium">

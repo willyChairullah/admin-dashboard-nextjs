@@ -51,8 +51,10 @@ interface ProductionLogFormErrors {
 interface Product {
   id: string;
   name: string;
+  code: string;
   unit: string;
   currentStock: number;
+  bottlesPerCrate: number;
 }
 
 interface User {

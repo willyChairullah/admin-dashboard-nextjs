@@ -367,8 +367,10 @@ export async function getAvailableProducts() {
       select: {
         id: true,
         name: true,
+        code: true,
         unit: true,
         currentStock: true,
+        bottlesPerCrate: true,
       },
       orderBy: {
         name: "asc",
