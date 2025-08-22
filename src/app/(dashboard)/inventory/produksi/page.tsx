@@ -156,11 +156,11 @@ export default function ManajemenStokPage() {
 
       // Create A4 PDF with better margins
       const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
-      
+
       // Use filtered data from ManagementContent
       const dataToProcess =
         filteredDataForPDF.length > 0 ? filteredDataForPDF : data.data || [];
@@ -182,45 +182,38 @@ export default function ManajemenStokPage() {
         }
       }
 
-      // Add company header with professional styling
+      // Add simple company header
       const pageWidth = doc.internal.pageSize.getWidth();
-      
-      // Company header background
-      doc.setFillColor(41, 98, 255); // Professional blue
-      doc.rect(0, 0, pageWidth, 35, 'F');
-      
-      // Company name
-      doc.setTextColor(255, 255, 255); // White text
-      doc.setFontSize(18);
+
+      // Company name - simple black text
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("CV HM JAYA BERKAH", pageWidth / 2, 15, { align: 'center' });
-      
+      doc.text("CV HM JAYA BERKAH", pageWidth / 2, 20, { align: "center" });
+
       // Company subtitle
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("Laporan Produksi", pageWidth / 2, 25, { align: 'center' });
-      
-      // Reset text color for content
-      doc.setTextColor(0, 0, 0);
-      
-      // Add report details with better spacing
+      doc.text("Laporan Produksi", pageWidth / 2, 28, { align: "center" });
+
+      // Add report details
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("LAPORAN PRODUKSI", pageWidth / 2, 50, { align: 'center' });
-      
-      // Add divider line
+      doc.text("LAPORAN PRODUKSI", pageWidth / 2, 40, { align: "center" });
+
+      // Add simple divider line
       doc.setLineWidth(0.5);
-      doc.setDrawColor(200, 200, 200);
-      doc.line(15, 55, pageWidth - 15, 55);
-      
+      doc.setDrawColor(0, 0, 0);
+      doc.line(20, 45, pageWidth - 20, 45);
+
       // Report information
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Tanggal Cetak: ${formatDate(new Date())}`, 15, 65);
-      doc.text(`Periode: ${periodText}`, 15, 72);
-      
+      doc.text(`Tanggal Cetak: ${formatDate(new Date())}`, 20, 55);
+      doc.text(`Periode: ${periodText}`, 20, 62);
+
       // Add another divider
-      doc.line(15, 80, pageWidth - 15, 80);
+      doc.line(20, 68, pageWidth - 20, 68);
 
       // Prepare table data with row numbers
       const tableData = processedData.map((item, index) => [
@@ -234,7 +227,7 @@ export default function ManajemenStokPage() {
         `Rp ${item.gajiPerBotol.toLocaleString()}`,
       ]);
 
-      // Add professional table
+      // Add simple table
       autoTable(doc, {
         head: [
           [
@@ -249,43 +242,40 @@ export default function ManajemenStokPage() {
           ],
         ],
         body: tableData,
-        startY: 88,
-        theme: "striped",
+        startY: 75,
+        theme: "grid",
         styles: {
           fontSize: 9,
-          cellPadding: 4,
-          lineColor: [200, 200, 200],
+          cellPadding: 3,
+          lineColor: [0, 0, 0],
           lineWidth: 0.1,
-          textColor: [50, 50, 50],
-          fontStyle: 'normal',
+          textColor: [0, 0, 0],
+          fontStyle: "normal",
         },
         headStyles: {
-          fillColor: [41, 98, 255], // Company blue
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 10,
-          halign: 'center',
-          valign: 'middle',
-        },
-        alternateRowStyles: {
-          fillColor: [248, 250, 252], // Light gray
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontStyle: "bold",
+          fontSize: 9,
+          halign: "center",
+          valign: "middle",
         },
         columnStyles: {
-          0: { cellWidth: 12, halign: 'center' }, // No
-          1: { cellWidth: 25, halign: 'center' }, // Kode Produksi
-          2: { cellWidth: 20, halign: 'center' }, // Tanggal
-          3: { cellWidth: 18, halign: 'center' }, // Kode Barang
-          4: { cellWidth: 35, halign: 'left' },   // Nama Barang
-          5: { cellWidth: 18, halign: 'right' },  // Total Krat
-          6: { cellWidth: 18, halign: 'right' },  // Total Botol
-          7: { cellWidth: 25, halign: 'right' },  // Gaji per Botol
+          0: { cellWidth: 12, halign: "center" }, // No
+          1: { cellWidth: 25, halign: "center" }, // Kode Produksi
+          2: { cellWidth: 20, halign: "center" }, // Tanggal
+          3: { cellWidth: 18, halign: "center" }, // Kode Barang
+          4: { cellWidth: 35, halign: "left" }, // Nama Barang
+          5: { cellWidth: 18, halign: "right" }, // Total Krat
+          6: { cellWidth: 18, halign: "right" }, // Total Botol
+          7: { cellWidth: 25, halign: "right" }, // Gaji per Botol
         },
-        margin: { left: 15, right: 15 },
-        tableWidth: 'auto',
-        showHead: 'everyPage',
+        margin: { left: 20, right: 20 },
+        tableWidth: "auto",
+        showHead: "everyPage",
       });
 
-      // Add professional summary section
+      // Add simple summary section
       const totalKrat = processedData.reduce(
         (sum, item) => sum + item.totalKrat,
         0
@@ -299,60 +289,49 @@ export default function ManajemenStokPage() {
         0
       );
 
-      const finalY = (doc as any).lastAutoTable.finalY || 88;
-      
-      // Summary section with professional styling
+      const finalY = (doc as any).lastAutoTable.finalY || 75;
+
+      // Simple summary section
       const summaryStartY = finalY + 15;
-      
-      // Summary header background
-      doc.setFillColor(245, 245, 245);
-      doc.rect(15, summaryStartY - 5, pageWidth - 30, 8, 'F');
-      
+
       // Summary header
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(41, 98, 255);
-      doc.text("RINGKASAN PRODUKSI", 20, summaryStartY);
-      
-      // Reset text color
       doc.setTextColor(0, 0, 0);
-      
-      // Summary data with better formatting
+      doc.text("RINGKASAN PRODUKSI", 20, summaryStartY);
+
+      // Summary data
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      
-      const summaryY = summaryStartY + 10;
-      doc.text(`• Total Krat Diproduksi:`, 20, summaryY);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${totalKrat.toLocaleString()} krat`, 70, summaryY);
-      
-      doc.setFont("helvetica", "normal");
-      doc.text(`• Total Botol Diproduksi:`, 20, summaryY + 7);
-      doc.setFont("helvetica", "bold");
-      doc.text(`${totalBotol.toLocaleString()} botol`, 70, summaryY + 7);
-      
-      doc.setFont("helvetica", "normal");
-      doc.text(`• Total Gaji Karyawan:`, 20, summaryY + 14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 150, 0); // Green for money
-      doc.text(`Rp ${totalGajiKaryawan.toLocaleString()}`, 70, summaryY + 14);
-      
-      // Add footer
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
+
+      const summaryY = summaryStartY + 8;
       doc.text(
-        `Dokumen ini digenerate secara otomatis oleh sistem CV HM JAYA BERKAH pada ${formatDate(new Date())}`,
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: 'center' }
+        `Total Krat Diproduksi: ${totalKrat.toLocaleString()} krat`,
+        20,
+        summaryY
       );
-      
-      // Add page border
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.5);
-      doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+      doc.text(
+        `Total Botol Diproduksi: ${totalBotol.toLocaleString()} botol`,
+        20,
+        summaryY + 6
+      );
+      doc.text(
+        `Total Gaji Karyawan: Rp ${totalGajiKaryawan.toLocaleString()}`,
+        20,
+        summaryY + 12
+      );
+
+      // Add simple footer
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Dicetak pada: ${formatDate(new Date())} - CV HM JAYA BERKAH`,
+        pageWidth / 2,
+        pageHeight - 15,
+        { align: "center" }
+      );
 
       // Save the PDF with better filename
       const fileName = `Laporan-Produksi-CV-HM-JAYA-BERKAH-${
