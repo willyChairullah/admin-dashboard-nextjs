@@ -23,7 +23,7 @@ const getTableAbbreviation = (tableName: string): string | null => {
     case "ManagementStocks":
       return "SMN";
     case "Productions":
-      return "PDK";
+      return "PRD";
     case "DeliveryNotes":
       return "SJN";
     // Tambahkan singkatan untuk tabel lain yang akan memiliki kode
@@ -158,6 +158,19 @@ async function getLastCodeForCurrentMonth(
           select: { code: true },
         });
         lastCode = lastProductionLog?.code || null;
+        break;
+
+      case "Productions":
+        const lastProduction = await db.productions.findFirst({
+          where: {
+            code: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { code: "desc" },
+          select: { code: true },
+        });
+        lastCode = lastProduction?.code || null;
         break;
 
       case "ManagementStocks":
