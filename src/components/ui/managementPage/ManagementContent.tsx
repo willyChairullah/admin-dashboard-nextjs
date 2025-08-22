@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   CombinedSearchInput,
   DataRangePicker,
@@ -23,6 +23,7 @@ interface ManagementContentProps<T extends Record<string, any>> {
   dateAccessor?: keyof T; // Use a key of T for date filtering (optional)
   emptyMessage?: string | "Tidak ada data ditemukan";
   linkPath: string; // Dynamic link path for editing the row
+  onFilteredDataChange?: (filteredData: T[]) => void; // New prop to expose filtered data
 }
 
 const ManagementContent = <T extends Record<string, any>>({
@@ -32,6 +33,7 @@ const ManagementContent = <T extends Record<string, any>>({
   dateAccessor = "createdAt", // Default date accessor
   emptyMessage = "No data found",
   linkPath,
+  onFilteredDataChange, // New prop
 }: ManagementContentProps<T>) => {
   const initialDateRange = useMemo(() => {
     return {
@@ -61,7 +63,7 @@ const ManagementContent = <T extends Record<string, any>>({
   // }, [columns, dateAccessor]);
 
   const enhancedColumns = useMemo(() => {
-    return columns.map(column => {
+    return columns.map((column) => {
       // Jika Anda tetap ingin mengkonversi 'cell' ke 'render' secara universal
       if (column.cell && typeof column.cell === "function") {
         const cellFn = column.cell;
@@ -73,7 +75,7 @@ const ManagementContent = <T extends Record<string, any>>({
       return column; // Kembalikan kolom apa adanya, karena 'render' sudah ada di definisi kolom
     });
   }, [columns]);
-  
+
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,7 +105,7 @@ const ManagementContent = <T extends Record<string, any>>({
   };
 
   const filteredData = useMemo(() => {
-    return sampleData.filter(item => {
+    return sampleData.filter((item) => {
       // Date filtering (only if dateAccessor exists in the data)
       let isWithinDateRange = true;
       if (dateAccessor && item[dateAccessor]) {
@@ -115,7 +117,7 @@ const ManagementContent = <T extends Record<string, any>>({
       const searchMatch =
         !searchQuery ||
         (searchOption === "all"
-          ? Object.values(item).some(value =>
+          ? Object.values(item).some((value) =>
               String(value).toLowerCase().includes(searchQuery.toLowerCase())
             )
           : item[searchOption]
@@ -126,6 +128,13 @@ const ManagementContent = <T extends Record<string, any>>({
       return isWithinDateRange && searchMatch;
     });
   }, [sampleData, searchQuery, searchOption, startDate, endDate, dateAccessor]);
+
+  // Use useEffect to call the callback after render
+  useEffect(() => {
+    if (onFilteredDataChange) {
+      onFilteredDataChange(filteredData);
+    }
+  }, [filteredData, onFilteredDataChange]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;

@@ -118,7 +118,7 @@ export async function getProductionLogById(
 // Create new production log
 export async function createProductionLog(data: ProductionLogFormData) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Create production log
       const productionLog = await tx.productions.create({
         data: {
@@ -201,7 +201,7 @@ export async function updateProductionLog(
   data: ProductionLogFormData
 ) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Get existing production log with items
       const existingLog = await tx.productions.findUnique({
         where: { id },
@@ -316,7 +316,7 @@ export async function updateProductionLog(
 // Delete production log
 export async function deleteProductionLog(id: string) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Get production log with items
       const productionLog = await tx.productions.findUnique({
         where: { id },
