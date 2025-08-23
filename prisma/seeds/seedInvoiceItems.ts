@@ -32,7 +32,6 @@ export async function seedInvoiceItems(
           invoiceId: invoice.id,
           productId: product.id,
           discount,
-          description: `${product.name} - Quantity: ${quantity} - Invoice: ${invoice.code}`,
         },
       });
       itemsCreated++;

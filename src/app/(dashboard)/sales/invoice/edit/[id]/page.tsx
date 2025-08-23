@@ -32,7 +32,7 @@ import { DiscountType, InvoiceType } from "@prisma/client";
 import { Plus, Trash2 } from "lucide-react";
 
 interface InvoiceItemFormData {
-  productId?: string;
+  productId: string;
   description?: string;
   quantity: number;
   price: number;
@@ -44,7 +44,7 @@ interface InvoiceItemFormData {
 interface InvoiceFormData {
   code: string;
   invoiceDate: string;
-  dueDate: string | null;
+  dueDate: Date | null;
   status: string;
   type: InvoiceType;
   subtotal: number;
@@ -109,53 +109,19 @@ export default function EditInvoicePage() {
     []
   );
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<
-    any | null
-  >(null);
-  const [inputMode, setInputMode] = useState<"product" | "manual">("product");
-  const [isLockedToProduct, setIsLockedToProduct] = useState(false);
-
-  // Fungsi untuk menghitung potongan item - sama dengan PO
-  const calculateItemDiscount = React.useCallback(
-    (
-      price: number,
-      discount: number,
-      discountType: "AMOUNT" | "PERCENTAGE"
-    ) => {
-      if (discountType === "PERCENTAGE") {
-        return (price * discount) / 100;
-      }
-      return discount;
-    },
-    []
-  );
-
-  // Fungsi untuk menghitung potongan keseluruhan - sama dengan PO
-  const calculateOrderLevelDiscount = React.useCallback(
-    (
-      subtotal: number,
-      discount: number,
-      discountType: "AMOUNT" | "PERCENTAGE"
-    ) => {
-      if (discountType === "PERCENTAGE") {
-        return (subtotal * discount) / 100;
-      }
-      return discount;
-    },
-    []
-  );
 
   const [formData, setFormData] = useState<InvoiceFormData>({
     code: "",
     invoiceDate: new Date().toISOString().split("T")[0],
-    dueDate: null, // Default to null for "Bayar Langsung"
+    dueDate: null,
     status: "DRAFT",
-    type: InvoiceType.PRODUCT,
+    type: InvoiceType.PRODUCT, // Always PRODUCT type
     subtotal: 0,
     tax: 0,
     taxPercentage: 0,
@@ -181,6 +147,36 @@ export default function EditInvoicePage() {
   });
 
   const [formErrors, setFormErrors] = useState<InvoiceFormErrors>({});
+
+  // Fungsi untuk menghitung potongan keseluruhan - sama dengan PO
+  const calculateOrderLevelDiscount = React.useCallback(
+    (
+      subtotal: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (subtotal * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
+  // Fungsi untuk menghitung potongan item - sama dengan PO
+  const calculateItemDiscount = React.useCallback(
+    (
+      price: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (price * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
 
   // Recalculate totals when items change
   useEffect(() => {
@@ -256,9 +252,7 @@ export default function EditInvoicePage() {
           invoiceDate: new Date(invoice.invoiceDate)
             .toISOString()
             .split("T")[0],
-          dueDate: invoice.dueDate
-            ? new Date(invoice.dueDate).toISOString().split("T")[0]
-            : null,
+          dueDate: invoice.dueDate,
           status: invoice.status,
           type: invoice.type || InvoiceType.PRODUCT,
           subtotal: invoice.subtotal,
@@ -281,7 +275,6 @@ export default function EditInvoicePage() {
             );
             return {
               productId: item.productId || "",
-              description: item.description || "",
               quantity: item.quantity,
               price: item.price,
               discount: item.discount || 0,
@@ -293,10 +286,6 @@ export default function EditInvoicePage() {
 
         const customer = customers.find(c => c.id === invoice.customerId);
         setSelectedCustomer(customer || null);
-
-        setInputMode(
-          invoice.type === InvoiceType.MANUAL ? "manual" : "product"
-        );
       } catch (error: any) {
         console.error("Error fetching data:", error);
         setErrorLoadingData(error.message || "Gagal memuat data invoice.");
@@ -384,18 +373,6 @@ export default function EditInvoicePage() {
     }));
   }, [calculations]);
 
-  // Auto-set invoice type based on input mode
-  useEffect(() => {
-    const newType =
-      inputMode === "product" ? InvoiceType.PRODUCT : InvoiceType.MANUAL;
-    if (formData.type !== newType) {
-      setFormData(prev => ({
-        ...prev,
-        type: newType,
-      }));
-    }
-  }, [inputMode, formData.type]);
-
   const validateForm = (): boolean => {
     const errors: InvoiceFormErrors = {};
 
@@ -472,12 +449,12 @@ export default function EditInvoicePage() {
         ...formData.items,
         {
           productId: "",
-          quantity: 1,
+          quantity: 0,
           price: 0,
           discount: 0,
           discountType: "AMOUNT",
           totalPrice: 0,
-        }, // (0 - 0) * 1 = 0
+        },
       ],
     });
   };
@@ -560,6 +537,63 @@ export default function EditInvoicePage() {
       setShowDeleteModal(false);
     }
   };
+
+  // Auto-fill customer and items when purchase order is selected
+  useEffect(() => {
+    if (formData.purchaseOrderId) {
+      const fetchPurchaseOrderDetails = async () => {
+        try {
+          const purchaseOrderDetails = await getPurchaseOrderForInvoice(
+            formData.purchaseOrderId
+          );
+          if (purchaseOrderDetails) {
+            setFormData(prev => ({
+              ...prev,
+              customerId: purchaseOrderDetails.order?.customerId || "",
+              taxPercentage: purchaseOrderDetails.taxPercentage || 0,
+              shippingCost: purchaseOrderDetails.shippingCost || 0,
+              discount: purchaseOrderDetails.orderLevelDiscount || 0,
+              discountType:
+                purchaseOrderDetails.orderLevelDiscountType || "AMOUNT",
+              dueDate: purchaseOrderDetails.paymentDeadline || null,
+              items: purchaseOrderDetails.items.map(item => {
+                const price = item.price || 0;
+                const discount = item.discount || 0;
+                const discountType = item.discountType || "AMOUNT";
+                const discountAmount = calculateItemDiscount(
+                  price,
+                  discount,
+                  discountType
+                );
+                const totalPrice = (price - discountAmount) * item.quantity;
+
+                return {
+                  productId: item.product.id,
+                  quantity: item.quantity,
+                  price: price,
+                  discount: discount,
+                  discountType: discountType,
+                  totalPrice: totalPrice,
+                };
+              }),
+            }));
+
+            // Set selected customer for CustomerInfo component
+            if (purchaseOrderDetails.order?.customer) {
+              setSelectedCustomer(purchaseOrderDetails.order.customer);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching purchase order details:", error);
+          toast.error("Gagal memuat detail purchase order");
+        }
+      };
+      fetchPurchaseOrderDetails();
+    } else {
+      // Clear selected customer when PO is cleared
+      setSelectedCustomer(null);
+    }
+  }, [formData.purchaseOrderId]);
 
   if (isLoadingData) {
     return (
@@ -795,40 +829,7 @@ export default function EditInvoicePage() {
             </button>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex">
-            <button
-              type="button"
-              onClick={() => !isLockedToProduct && setInputMode("product")}
-              disabled={isLockedToProduct && inputMode !== "product"}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                inputMode === "product"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              } ${
-                isLockedToProduct && inputMode !== "product"
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              Produk
-              {isLockedToProduct && <span className="ml-2 text-xs">🔒</span>}
-            </button>
-            <button
-              type="button"
-              onClick={() => !isLockedToProduct && setInputMode("manual")}
-              disabled={isLockedToProduct}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                inputMode === "manual"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              } ${isLockedToProduct ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Manual
-            </button>
-          </div>
-
-          {formErrors.items && (
+          {formErrors.items && typeof formErrors.items === "string" && (
             <div className="text-red-500 dark:text-red-400 text-sm mb-4">
               {formErrors.items}
             </div>
@@ -845,13 +846,11 @@ export default function EditInvoicePage() {
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
-                        {inputMode === "product" ? "Produk" : "Deskripsi"}
+                        Produk
                       </th>
-                      {inputMode === "product" && (
-                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
-                          Stok
-                        </th>
-                      )}
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
+                        Stok
+                      </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
                         Qty
                       </th>
@@ -880,112 +879,86 @@ export default function EditInvoicePage() {
                           key={index}
                           className="border-t border-gray-200 dark:border-gray-600"
                         >
-                          {/* Product/Description */}
+                          {/* Product - Only product dropdown, no manual input */}
                           <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                            {inputMode === "product" ? (
-                              <div>
-                                <select
-                                  value={item.productId || ""}
-                                  onChange={e => {
-                                    const selectedProductId = e.target.value;
-                                    const selectedProduct =
-                                      availableProducts.find(
-                                        p => p.id === selectedProductId
-                                      );
-
-                                    console.log(
-                                      "Debug - Selected Product ID:",
-                                      selectedProductId
-                                    );
-                                    console.log(
-                                      "Debug - Current form item productId:",
-                                      formData.items[index]?.productId
-                                    );
-                                    console.log(
-                                      "Debug - Found product:",
-                                      selectedProduct
+                            <div>
+                              <select
+                                value={item.productId || ""}
+                                onChange={e => {
+                                  const selectedProductId = e.target.value;
+                                  const selectedProduct =
+                                    availableProducts.find(
+                                      p => p.id === selectedProductId
                                     );
 
-                                    // Update both productId and price in a single update
-                                    const newItems = [...formData.items];
-                                    newItems[index] = {
-                                      ...newItems[index],
-                                      productId: selectedProductId,
-                                      price: selectedProduct
-                                        ? selectedProduct.price
-                                        : newItems[index].price,
-                                    };
+                                  const newItems = [...formData.items];
+                                  newItems[index] = {
+                                    ...newItems[index],
+                                    productId: selectedProductId,
+                                    price: selectedProduct
+                                      ? selectedProduct.price
+                                      : newItems[index].price,
+                                  };
 
-                                    // Recalculate totalPrice using proper discount calculation
-                                    const updatedItem = newItems[index];
-                                    const discountAmount =
-                                      calculateItemDiscount(
-                                        updatedItem.price,
-                                        updatedItem.discount,
-                                        updatedItem.discountType
-                                      );
-                                    updatedItem.totalPrice =
-                                      (updatedItem.price - discountAmount) *
-                                      updatedItem.quantity;
+                                  // Recalculate totalPrice
+                                  const item = newItems[index];
+                                  const discountAmount = calculateItemDiscount(
+                                    item.price,
+                                    item.discount,
+                                    item.discountType
+                                  );
+                                  item.totalPrice =
+                                    (item.price - discountAmount) *
+                                    item.quantity;
 
-                                    setFormData({
-                                      ...formData,
-                                      items: newItems,
-                                    });
-                                  }}
-                                  className="w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 border-gray-300"
-                                >
-                                  <option value="">Pilih Produk</option>
-                                  {availableProducts
-                                    .filter(
-                                      product =>
-                                        // Show current product or products not selected in other rows
-                                        product.id === item.productId ||
-                                        !formData.items.some(
-                                          (otherItem, otherIndex) =>
-                                            otherIndex !== index &&
-                                            otherItem.productId === product.id
-                                        )
-                                    )
-                                    .map(product => (
-                                      <option
-                                        key={product.id}
-                                        value={product.id}
-                                      >
-                                        {product.name}
-                                      </option>
-                                    ))}
-                                </select>
-                              </div>
-                            ) : (
-                              <div>
-                                <Input
-                                  type="text"
-                                  name={`description_${index}`}
-                                  value={item.description || ""}
-                                  onChange={e =>
-                                    handleItemChange(
-                                      index,
-                                      "description",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Masukkan deskripsi item..."
-                                  className="w-full px-2 py-1 text-m"
-                                />
+                                  setFormData({
+                                    ...formData,
+                                    items: newItems,
+                                  });
+                                }}
+                                className={`w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                  formErrors.items?.[index] &&
+                                  typeof formErrors.items[index] === "object" &&
+                                  "productId" in formErrors.items[index]
+                                    ? "border-red-500"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                <option value="">Pilih Produk</option>
+                                {availableProducts
+                                  .filter(
+                                    product =>
+                                      // Show current product or products not selected in other rows
+                                      product.id === item.productId ||
+                                      !formData.items.some(
+                                        (otherItem, otherIndex) =>
+                                          otherIndex !== index &&
+                                          otherItem.productId === product.id
+                                      )
+                                  )
+                                  .map(product => (
+                                    <option key={product.id} value={product.id}>
+                                      {product.name}
+                                    </option>
+                                  ))}
+                              </select>
+                              {formErrors.items?.[index] &&
+                                typeof formErrors.items[index] === "object" &&
+                                "productId" in formErrors.items[index] && (
+                                  <div className="text-xs text-red-500 mt-1">
+                                    {(formErrors.items[index] as any).productId}
+                                  </div>
+                                )}
+                            </div>
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            {product && (
+                              <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                                {product.currentStock}
                               </div>
                             )}
                           </td>
-
-                          {inputMode === "product" && (
-                            <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                              {product && (
-                                <div className="text-m text-center text-gray-700 dark:text-gray-300">
-                                  {product.currentStock}
-                                </div>
-                              )}
-                            </td>
-                          )}
 
                           {/* Quantity */}
                           <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
@@ -1111,7 +1084,7 @@ export default function EditInvoicePage() {
                     <tr className="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
                       <td
                         className="border border-gray-200 dark:border-gray-600 px-2 py-2 font-bold text-xl"
-                        colSpan={inputMode === "product" ? 5 : 4}
+                        colSpan={5}
                       >
                         Subtotal:
                       </td>

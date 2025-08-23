@@ -117,6 +117,8 @@ model Users {
   InvoicesUpdated       Invoices[]          @relation("InvoiceUpdater")
   Payments              Payments[]
   orders                Orders[]
+  ExpensesCreated       Expenses[]          @relation("ExpenseCreator")
+  ExpensesUpdated       Expenses[]          @relation("ExpenseUpdater")
 
   @@map("users")
 }
@@ -336,12 +338,11 @@ model InvoiceItems {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   invoiceId   String
-  productId   String?
+  productId   String
   discount    Float             @default(0)
   discountType DiscountValueType @default(AMOUNT)
-  description String?
   invoices    Invoices          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products    Products?         @relation(fields: [productId], references: [id])
+  products    Products          @relation(fields: [productId], references: [id])
 
   @@map("invoice_items")
 }
@@ -686,7 +687,6 @@ enum InvoiceStatus {
 
 enum InvoiceType {
   PRODUCT
-  MANUAL
 }
 
 enum PaymentStatus {
@@ -781,4 +781,47 @@ enum DiscountType {
 enum DiscountValueType {
   AMOUNT
   PERCENTAGE
+}
+
+model Expenses {
+  id           String            @id @default(cuid())
+  code         String            @unique
+  expenseDate  DateTime          @default(now())
+  dueDate      DateTime?
+  status       InvoiceStatus     @default(DRAFT)
+  subtotal     Float             @default(0)
+  tax          Float             @default(0)
+  taxPercentage Float            @default(0)
+  discount     Float             @default(0)
+  discountType DiscountValueType @default(AMOUNT)
+  shippingCost Float             @default(0)
+  totalAmount  Float             @default(0)
+  notes        String?
+  createdBy    String?
+  updatedBy    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  
+  expenseItems ExpenseItems[]
+  creator      Users?            @relation("ExpenseCreator", fields: [createdBy], references: [id])
+  updater      Users?            @relation("ExpenseUpdater", fields: [updatedBy], references: [id])
+
+  @@map("expenses")
+}
+
+model ExpenseItems {
+  id           String            @id @default(cuid())
+  description  String
+  quantity     Float
+  price        Float
+  discount     Float             @default(0)
+  discountType DiscountValueType @default(AMOUNT)
+  totalPrice   Float
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  expenseId    String
+  
+  expense      Expenses          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@map("expense_items")
 }

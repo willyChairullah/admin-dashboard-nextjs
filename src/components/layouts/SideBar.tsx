@@ -315,6 +315,14 @@ export default function SideBar({
             roles: ["OWNER", "ADMIN"],
           },
           {
+            id: "pengeluaran",
+            label: "Pengeluaran",
+            icon: "💸",
+            href: "/purchasing/pengeluaran",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
+          },
+          {
             id: "pembayaran",
             label: "Pembayaran",
             icon: "💳",

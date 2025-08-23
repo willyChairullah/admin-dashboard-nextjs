@@ -26,6 +26,10 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "PRD";
     case "DeliveryNotes":
       return "SJN";
+    case "expenses":
+      return "EXP";
+    case "Expenses":
+      return "EXP";
     // Tambahkan singkatan untuk tabel lain yang akan memiliki kode
     // case 'Users': return 'USR'; // Contoh jika Users juga punya kode format ini
     // case 'Orders': return 'ORD'; // Contoh jika Orders juga punya kode format ini
@@ -197,6 +201,20 @@ async function getLastCodeForCurrentMonth(
           select: { code: true },
         });
         lastCode = lastDeliveryNote?.code || null;
+        break;
+
+      case "expenses":
+      case "Expenses":
+        const lastExpense = await db.expenses.findFirst({
+          where: {
+            code: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { code: "desc" },
+          select: { code: true },
+        });
+        lastCode = lastExpense?.code || null;
         break;
 
       default:

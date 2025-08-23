@@ -113,8 +113,6 @@ export default function CreateInvoicePage() {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<"product" | "manual">("product");
-  const [isLockedToProduct, setIsLockedToProduct] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -124,7 +122,7 @@ export default function CreateInvoicePage() {
     invoiceDate: new Date().toISOString().split("T")[0],
     dueDate: null, // Default to null for "Bayar Langsung"
     status: "DRAFT",
-    type: InvoiceType.PRODUCT,
+    type: InvoiceType.PRODUCT, // Always PRODUCT type
     subtotal: 0,
     tax: 0,
     taxPercentage: 0,
@@ -140,7 +138,6 @@ export default function CreateInvoicePage() {
     items: [
       {
         productId: "",
-        description: "",
         quantity: 0,
         price: 0,
         discount: 0,
@@ -234,10 +231,6 @@ export default function CreateInvoicePage() {
             formData.purchaseOrderId
           );
           if (purchaseOrderDetails) {
-            // Lock to product mode when PO is selected
-            setIsLockedToProduct(true);
-            setInputMode("product");
-
             setFormData(prev => ({
               ...prev,
               customerId: purchaseOrderDetails.order?.customerId || "",
@@ -260,7 +253,6 @@ export default function CreateInvoicePage() {
 
                 return {
                   productId: item.product.id,
-                  description: item.product.name,
                   quantity: item.quantity,
                   price: price,
                   discount: discount,
@@ -282,8 +274,7 @@ export default function CreateInvoicePage() {
       };
       fetchPurchaseOrderDetails();
     } else {
-      // Unlock when PO is cleared
-      setIsLockedToProduct(false);
+      // Clear selected customer when PO is cleared
       setSelectedCustomer(null);
     }
   }, [formData.purchaseOrderId]);
@@ -334,18 +325,6 @@ export default function CreateInvoicePage() {
     formData.shippingCost,
     formData.discount,
   ]);
-
-  // Auto-set invoice type based on input mode
-  useEffect(() => {
-    const newType =
-      inputMode === "product" ? InvoiceType.PRODUCT : InvoiceType.MANUAL;
-    if (formData.type !== newType) {
-      setFormData(prev => ({
-        ...prev,
-        type: newType,
-      }));
-    }
-  }, [inputMode, formData.type]);
 
   const validateForm = (): boolean => {
     const errors: InvoiceFormErrors = {};
@@ -431,7 +410,6 @@ export default function CreateInvoicePage() {
         ...formData.items,
         {
           productId: "",
-          description: "",
           quantity: 0,
           price: 0,
           discount: 0,
@@ -745,39 +723,6 @@ export default function CreateInvoicePage() {
             </button>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex">
-            <button
-              type="button"
-              onClick={() => !isLockedToProduct && setInputMode("product")}
-              disabled={isLockedToProduct && inputMode !== "product"}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                inputMode === "product"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              } ${
-                isLockedToProduct && inputMode !== "product"
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              Produk
-              {isLockedToProduct && <span className="ml-2 text-xs">🔒</span>}
-            </button>
-            <button
-              type="button"
-              onClick={() => !isLockedToProduct && setInputMode("manual")}
-              disabled={isLockedToProduct}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                inputMode === "manual"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              } ${isLockedToProduct ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              Manual
-            </button>
-          </div>
-
           {formErrors.items && typeof formErrors.items === "string" && (
             <div className="text-red-500 dark:text-red-400 text-sm mb-4">
               {formErrors.items}
@@ -795,13 +740,11 @@ export default function CreateInvoicePage() {
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
-                        {inputMode === "product" ? "Produk" : "Deskripsi"}
+                        Produk
                       </th>
-                      {inputMode === "product" && (
-                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
-                          Stok
-                        </th>
-                      )}
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
+                        Stok
+                      </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
                         Qty
                       </th>
@@ -830,132 +773,93 @@ export default function CreateInvoicePage() {
                           key={index}
                           className="border-t border-gray-200 dark:border-gray-600"
                         >
-                          {/* Product/Description */}
+                          {/* Product */}
                           <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                            {inputMode === "product" ? (
-                              <div>
-                                <select
-                                  value={item.productId || ""}
-                                  onChange={e => {
-                                    const selectedProductId = e.target.value;
-                                    const selectedProduct =
-                                      availableProducts.find(
-                                        p => p.id === selectedProductId
-                                      );
+                            <div>
+                              <select
+                                value={item.productId || ""}
+                                onChange={e => {
+                                  const selectedProductId = e.target.value;
+                                  const selectedProduct =
+                                    availableProducts.find(
+                                      p => p.id === selectedProductId
+                                    );
 
-                                    const newItems = [...formData.items];
-                                    newItems[index] = {
-                                      ...newItems[index],
-                                      productId: selectedProductId,
-                                      price: selectedProduct
-                                        ? selectedProduct.price
-                                        : newItems[index].price,
-                                    };
+                                  const newItems = [...formData.items];
+                                  newItems[index] = {
+                                    ...newItems[index],
+                                    productId: selectedProductId,
+                                    price: selectedProduct
+                                      ? selectedProduct.price
+                                      : newItems[index].price,
+                                  };
 
-                                    // Recalculate totalPrice
-                                    const item = newItems[index];
-                                    const discountAmount =
-                                      calculateItemDiscount(
-                                        item.price,
-                                        item.discount,
-                                        item.discountType
-                                      );
-                                    item.totalPrice =
-                                      (item.price - discountAmount) *
-                                      item.quantity;
+                                  // Recalculate totalPrice
+                                  const item = newItems[index];
+                                  const discountAmount = calculateItemDiscount(
+                                    item.price,
+                                    item.discount,
+                                    item.discountType
+                                  );
+                                  item.totalPrice =
+                                    (item.price - discountAmount) *
+                                    item.quantity;
 
-                                    setFormData({
-                                      ...formData,
-                                      items: newItems,
-                                    });
-                                  }}
-                                  className={`w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                                    formErrors.items?.[index] &&
-                                    typeof formErrors.items[index] ===
-                                      "object" &&
-                                    "productId" in formErrors.items[index]
-                                      ? "border-red-500"
-                                      : "border-gray-300"
-                                  }`}
-                                >
-                                  <option value="">Pilih Produk</option>
-                                  {availableProducts
-                                    .filter(
-                                      product =>
-                                        // Show current product or products not selected in other rows
-                                        product.id === item.productId ||
-                                        !formData.items.some(
-                                          (otherItem, otherIndex) =>
-                                            otherIndex !== index &&
-                                            otherItem.productId === product.id
-                                        )
-                                    )
-                                    .map(product => (
-                                      <option
-                                        key={product.id}
-                                        value={product.id}
-                                      >
-                                        {product.name}
-                                      </option>
-                                    ))}
-                                </select>
-                                {formErrors.items?.[index] &&
+                                  setFormData({
+                                    ...formData,
+                                    items: newItems,
+                                  });
+                                }}
+                                className={`w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                                  formErrors.items?.[index] &&
                                   typeof formErrors.items[index] === "object" &&
-                                  "productId" in formErrors.items[index] && (
-                                    <div className="text-xs text-red-500 mt-1">
-                                      {
-                                        (formErrors.items[index] as any)
-                                          .productId
-                                      }
-                                    </div>
-                                  )}
-                              </div>
-                            ) : (
-                              <div>
-                                <Input
-                                  type="text"
-                                  name={`description_${index}`}
-                                  value={item.description || ""}
-                                  onChange={e =>
-                                    handleItemChange(
-                                      index,
-                                      "description",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Masukkan deskripsi item..."
-                                  className="w-full px-2 py-1 text-m"
-                                />
-                                {formErrors.items?.[index] &&
-                                  typeof formErrors.items[index] === "object" &&
-                                  "description" in formErrors.items[index] && (
-                                    <div className="text-xs text-red-500 mt-1">
-                                      {
-                                        (formErrors.items[index] as any)
-                                          .description
-                                      }
-                                    </div>
-                                  )}
-                              </div>
-                            )}
-                          </td>
-
-                          {inputMode === "product" && (
-                            <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                              {product && (
-                                <div className="text-m text-center text-gray-700 dark:text-gray-300">
-                                  {product.currentStock}
-                                </div>
-                              )}
+                                  "productId" in formErrors.items[index]
+                                    ? "border-red-500"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                <option value="">Pilih Produk</option>
+                                {availableProducts
+                                  .filter(
+                                    product =>
+                                      // Show current product or products not selected in other rows
+                                      product.id === item.productId ||
+                                      !formData.items.some(
+                                        (otherItem, otherIndex) =>
+                                          otherIndex !== index &&
+                                          otherItem.productId === product.id
+                                      )
+                                  )
+                                  .map(product => (
+                                    <option key={product.id} value={product.id}>
+                                      {product.name}
+                                    </option>
+                                  ))}
+                              </select>
                               {formErrors.items?.[index] &&
                                 typeof formErrors.items[index] === "object" &&
-                                "quantity" in formErrors.items[index] && (
+                                "productId" in formErrors.items[index] && (
                                   <div className="text-xs text-red-500 mt-1">
-                                    {(formErrors.items[index] as any).quantity}
+                                    {(formErrors.items[index] as any).productId}
                                   </div>
                                 )}
-                            </td>
-                          )}
+                            </div>
+                          </td>
+
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            {product && (
+                              <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                                {product.currentStock}
+                              </div>
+                            )}
+                            {formErrors.items?.[index] &&
+                              typeof formErrors.items[index] === "object" &&
+                              "quantity" in formErrors.items[index] && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  {(formErrors.items[index] as any).quantity}
+                                </div>
+                              )}
+                          </td>
 
                           {/* Quantity */}
                           <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
@@ -1095,7 +999,7 @@ export default function CreateInvoicePage() {
                     <tr className="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
                       <td
                         className="border border-gray-200 dark:border-gray-600 px-2 py-2 font-bold text-xl"
-                        colSpan={inputMode === "product" ? 5 : 4}
+                        colSpan={5}
                       >
                         Subtotal:
                       </td>

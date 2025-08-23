@@ -118,7 +118,6 @@ export async function seedInvoices(
       createdBy: adminUser.id,
       purchaseOrderId: null,
       paymentStatus: "PARTIALLY_PAID" as const,
-      type: "MANUAL" as const,
       statusPreparation: "WAITING_PREPARATION" as const,
       subtotal: 1500000,
       tax: 150000,

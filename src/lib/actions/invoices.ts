@@ -13,8 +13,7 @@ import {
 import { revalidatePath } from "next/cache";
 
 export type InvoiceItemFormData = {
-  productId?: string; // Made optional to support non-product items
-  description?: string; // Added for non-product items
+  productId: string; // No longer optional - required field
   quantity: number;
   price: number;
   discount: number;
@@ -27,7 +26,7 @@ export type InvoiceFormData = {
   invoiceDate: Date;
   dueDate: Date | null;
   status: InvoiceStatus;
-  type: InvoiceType;
+  type: InvoiceType; // Will only support PRODUCT now
   subtotal: number;
   tax: number;
   taxPercentage: number;
@@ -70,7 +69,7 @@ export type InvoiceWithDetails = Invoices & {
       name: string;
       unit: string;
       price: number;
-    } | null; // Made nullable to match the database schema
+    }; // No longer nullable - always required
   })[];
 };
 
@@ -326,9 +325,6 @@ export async function getAvailableUsers() {
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
-    // // Calculate totals
-    // const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    // const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
     const remainingAmount = data.totalAmount - 0; // paidAmount starts at 0
 
     const result = await db.$transaction(async tx => {
@@ -337,7 +333,7 @@ export async function createInvoice(data: InvoiceFormData) {
         data: {
           code: data.code,
           invoiceDate: data.invoiceDate,
-          dueDate: data.dueDate || new Date(), // If null, set to today's date
+          dueDate: data.dueDate || new Date(),
           status: data.status,
           type: data.type,
           subtotal: data.subtotal,
@@ -357,19 +353,18 @@ export async function createInvoice(data: InvoiceFormData) {
         },
       });
 
-      // Create invoice items
+      // Create invoice items - removed description field
       const invoiceItems = await Promise.all(
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
-              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               discountType: item.discountType,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId || null,
+              productId: item.productId, // No longer nullable
             },
           })
         )
@@ -393,10 +388,6 @@ export async function updateInvoice(
   updatedBy: string
 ) {
   try {
-    // Calculate totals
-    // const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    // const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
-
     const result = await db.$transaction(async tx => {
       // Get current invoice to preserve paidAmount
       const currentInvoice = await tx.invoices.findUnique({
@@ -416,7 +407,7 @@ export async function updateInvoice(
         data: {
           code: data.code,
           invoiceDate: data.invoiceDate,
-          dueDate: data.dueDate || new Date(), // If null, set to today's date
+          dueDate: data.dueDate || new Date(),
           status: data.status,
           type: data.type,
           subtotal: data.subtotal,
@@ -440,19 +431,18 @@ export async function updateInvoice(
         where: { invoiceId: id },
       });
 
-      // Create new invoice items
+      // Create new invoice items - removed description field
       const invoiceItems = await Promise.all(
         data.items.map(item =>
           tx.invoiceItems.create({
             data: {
-              description: item.description,
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
               discountType: item.discountType,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
-              productId: item.productId || null,
+              productId: item.productId, // No longer nullable
             },
           })
         )
