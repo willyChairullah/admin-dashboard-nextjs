@@ -18,6 +18,7 @@ import { getActiveCategories } from "@/lib/actions/categories"; // Pastikan path
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
+import { formatRupiah } from "@/utils/formatRupiah";
 import { Trash2, Plus } from "lucide-react";
 import { generateCodeByTable } from "@/utils/getCode"; // Pastikan path ini benar
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,6 +27,7 @@ interface ProductionLogItemFormData {
   productId: string;
   quantity: number;
   notes?: string;
+  salaryPerBottle?: number; // Gaji per botol untuk item ini
 }
 
 interface ProductionLogFormData {
@@ -41,15 +43,22 @@ interface ProductionLogFormErrors {
   productionDate?: string;
   notes?: string;
   items?: {
-    [key: number]: { productId?: string; quantity?: string; notes?: string };
+    [key: number]: {
+      productId?: string;
+      quantity?: string;
+      notes?: string;
+      salaryPerBottle?: string;
+    };
   };
 }
 
 interface Product {
   id: string;
   name: string;
+  code: string;
   unit: string;
   currentStock: number;
+  bottlesPerCrate: number;
 }
 
 interface User {
@@ -73,7 +82,7 @@ export default function CreateProductionLogPage() {
     productionDate: new Date().toISOString().split("T")[0],
     notes: "",
     producedById: user?.id || "",
-    items: [{ productId: "", quantity: 0, notes: "" }],
+    items: [{ productId: "", quantity: 0, notes: "", salaryPerBottle: 0 }],
   });
 
   console.log(formData);
@@ -95,7 +104,7 @@ export default function CreateProductionLogPage() {
         ]);
 
         setAvailableProducts(products);
-        setFormData(prevData => ({
+        setFormData((prevData) => ({
           ...prevData,
           code: newCode, // Set kode yang digenerate
           producedById: user?.id || prevData.producedById,
@@ -192,7 +201,7 @@ export default function CreateProductionLogPage() {
       field !== "producedById" &&
       formErrors[field as keyof ProductionLogFormErrors]
     ) {
-      setFormErrors(prevErrors => ({ ...prevErrors, [field]: undefined }));
+      setFormErrors((prevErrors) => ({ ...prevErrors, [field]: undefined }));
     }
   };
 
@@ -220,7 +229,10 @@ export default function CreateProductionLogPage() {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: "", quantity: 0, notes: "" }],
+      items: [
+        ...formData.items,
+        { productId: "", quantity: 0, notes: "", salaryPerBottle: 0 },
+      ],
     });
   };
 
@@ -253,10 +265,11 @@ export default function CreateProductionLogPage() {
         productionDate: new Date(formData.productionDate),
         notes: formData.notes || undefined,
         producedById: formData.producedById,
-        items: formData.items.map(item => ({
+        items: formData.items.map((item) => ({
           productId: item.productId,
           quantity: Number(item.quantity),
           notes: item.notes || undefined,
+          salaryPerBottle: Number(item.salaryPerBottle),
         })),
       });
 
@@ -267,7 +280,7 @@ export default function CreateProductionLogPage() {
         const errorMessage = result.error || "Gagal membuat production log";
         toast.error(errorMessage);
         // Mungkin set error ke field code jika ada konflik kode?
-        setFormErrors(prevErrors => ({
+        setFormErrors((prevErrors) => ({
           ...prevErrors,
           code: result.error?.includes("duplicate")
             ? "Kode ini sudah ada. Harap coba lagi."
@@ -279,7 +292,7 @@ export default function CreateProductionLogPage() {
     } catch (error) {
       console.error("Terjadi kesalahan saat membuat production log:", error);
       toast.error("Terjadi kesalahan yang tidak terduga.");
-      setFormErrors(prevErrors => ({
+      setFormErrors((prevErrors) => ({
         ...prevErrors,
         general: "Terjadi kesalahan yang tidak terduga.", // Tambahkan field error general jika belum ada
       }));
@@ -350,7 +363,7 @@ export default function CreateProductionLogPage() {
                   ? new Date(formData.productionDate)
                   : null
               }
-              onChange={date => {
+              onChange={(date) => {
                 const dateString = date ? date.toISOString().split("T")[0] : "";
                 handleInputChange("productionDate", dateString);
               }}
@@ -365,7 +378,7 @@ export default function CreateProductionLogPage() {
             name="notes"
             placeholder="Masukkan catatan produksi (opsional)"
             value={formData.notes}
-            onChange={e => handleInputChange("notes", e.target.value)}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
             errorMessage={formErrors.notes}
             rows={3}
           />
@@ -414,7 +427,7 @@ export default function CreateProductionLogPage() {
                 >
                   <select
                     value={item.productId}
-                    onChange={e =>
+                    onChange={(e) =>
                       handleItemChange(index, "productId", e.target.value)
                     }
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white ${
@@ -424,7 +437,7 @@ export default function CreateProductionLogPage() {
                     }`}
                   >
                     <option value="">Pilih Produk</option>
-                    {availableProducts.map(product => (
+                    {availableProducts.map((product) => (
                       <option key={product.id} value={product.id}>
                         {product.name}
                       </option>
@@ -442,11 +455,13 @@ export default function CreateProductionLogPage() {
                     value={
                       item.productId
                         ? `${
-                            availableProducts.find(p => p.id === item.productId)
-                              ?.currentStock || 0
+                            availableProducts.find(
+                              (p) => p.id === item.productId
+                            )?.currentStock || 0
                           } ${
-                            availableProducts.find(p => p.id === item.productId)
-                              ?.unit || ""
+                            availableProducts.find(
+                              (p) => p.id === item.productId
+                            )?.unit || ""
                           }`
                         : "-"
                     }
@@ -466,7 +481,7 @@ export default function CreateProductionLogPage() {
                     min="0"
                     step="0.01"
                     value={item.quantity.toString()}
-                    onChange={e =>
+                    onChange={(e) =>
                       handleItemChange(
                         index,
                         "quantity",
@@ -478,18 +493,25 @@ export default function CreateProductionLogPage() {
                 </FormField>
 
                 <FormField
-                  label="Catatan Item"
-                  errorMessage={formErrors.items?.[index]?.notes}
+                  label="Gaji Karyawan/Botol (Rp)"
+                  errorMessage={formErrors.items?.[index]?.salaryPerBottle}
                 >
                   <Input
-                    type="text"
-                    name={`notes-${index}`}
-                    value={item.notes || ""}
-                    onChange={e =>
-                      handleItemChange(index, "notes", e.target.value)
-                    }
-                    errorMessage={formErrors.items?.[index]?.notes}
-                    placeholder="Catatan untuk item ini (opsional)"
+                    type="number"
+                    name={`salaryPerBottle-${index}`}
+                    min="0"
+                    step="100"
+                    value={item.salaryPerBottle?.toString() || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleItemChange(
+                        index,
+                        "salaryPerBottle",
+                        value === "" ? 0 : parseFloat(value)
+                      );
+                    }}
+                    errorMessage={formErrors.items?.[index]?.salaryPerBottle}
+                    placeholder="0"
                   />
                 </FormField>
               </div>

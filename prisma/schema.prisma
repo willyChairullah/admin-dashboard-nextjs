@@ -501,6 +501,7 @@ model ProductionItems {
   productionLogId String
   productId       String
   notes           String?
+  salaryPerBottle Float            @default(0) // Gaji per botol untuk item ini
   product         Products         @relation(fields: [productId], references: [id])
   productionLog   Productions      @relation(fields: [productionLogId], references: [id], onDelete: Cascade)
   StockMovements  StockMovements[]

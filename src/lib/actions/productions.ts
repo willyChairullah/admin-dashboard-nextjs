@@ -13,6 +13,7 @@ export type ProductionLogItemFormData = {
   productId: string;
   quantity: number;
   notes?: string;
+  salaryPerBottle?: number; // Gaji per botol untuk item ini
 };
 
 export type ProductionLogFormData = {
@@ -27,12 +28,15 @@ export type ProductionLogWithDetails = Productions & {
   producedBy: {
     id: string;
     name: string;
+    salaryPerBottle?: number;
   };
   items: (ProductionItems & {
     product: {
       id: string;
       name: string;
+      code: string;
       unit: string;
+      bottlesPerCrate: number;
     };
   })[];
 };
@@ -54,7 +58,9 @@ export async function getProductions(): Promise<ProductionLogWithDetails[]> {
               select: {
                 id: true,
                 name: true,
+                code: true,
                 unit: true,
+                bottlesPerCrate: true,
               },
             },
           },
@@ -92,7 +98,9 @@ export async function getProductionLogById(
               select: {
                 id: true,
                 name: true,
+                code: true,
                 unit: true,
+                bottlesPerCrate: true,
               },
             },
           },
@@ -110,7 +118,7 @@ export async function getProductionLogById(
 // Create new production log
 export async function createProductionLog(data: ProductionLogFormData) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Create production log
       const productionLog = await tx.productions.create({
         data: {
@@ -144,6 +152,7 @@ export async function createProductionLog(data: ProductionLogFormData) {
             productionLogId: productionLog.id,
             productId: item.productId,
             notes: item.notes || null,
+            salaryPerBottle: item.salaryPerBottle || 0,
           },
         });
 
@@ -192,7 +201,7 @@ export async function updateProductionLog(
   data: ProductionLogFormData
 ) {
   try {
-    const result = await db.$transaction(async tx => {
+    const result = await db.$transaction(async (tx) => {
       // Get existing production log with items
       const existingLog = await tx.productions.findUnique({
         where: { id },
@@ -262,6 +271,7 @@ export async function updateProductionLog(
             productionLogId: updatedLog.id,
             productId: item.productId,
             notes: item.notes || null,
+            salaryPerBottle: item.salaryPerBottle || 0,
           },
         });
 
@@ -306,47 +316,49 @@ export async function updateProductionLog(
 // Delete production log
 export async function deleteProductionLog(id: string) {
   try {
-    // const result = await db.$transaction(async tx => {
-    //   // Get production log with items
-    //   const productionLog = await tx.productions.findUnique({
-    //     where: { id },
-    //     include: {
-    //       items: true,
-    //     },
-    //   });
+    const result = await db.$transaction(async (tx) => {
+      // Get production log with items
+      const productionLog = await tx.productions.findUnique({
+        where: { id },
+        include: {
+          items: true,
+        },
+      });
 
-    //   if (!productionLog) {
-    //     throw new Error("Productions log not found");
-    //   }
+      if (!productionLog) {
+        throw new Error("Productions log not found");
+      }
 
-    //   // Reverse stock changes
-    //   for (const item of productionLog.items) {
-    //     const product = await tx.products.findUnique({
-    //       where: { id: item.productId },
-    //       select: { currentStock: true },
-    //     });
+      // Reverse stock changes
+      for (const item of productionLog.items) {
+        const product = await tx.products.findUnique({
+          where: { id: item.productId },
+          select: { currentStock: true },
+        });
 
-    //     if (product) {
-    //       await tx.products.update({
-    //         where: { id: item.productId },
-    //         data: { currentStock: product.currentStock - item.quantity },
-    //       });
-    //     }
+        if (product) {
+          await tx.products.update({
+            where: { id: item.productId },
+            data: { currentStock: product.currentStock - item.quantity },
+          });
+        }
 
-    //     // Delete related stock movements
-    //     await tx.stockMovements.deleteMany({
-    //       where: { productionItemsId: item.id },
-    //     });
-    //   }
+        // Delete related stock movements
+        await tx.stockMovements.deleteMany({
+          where: { productionItemsId: item.id },
+        });
+      }
 
-    //   // Delete production log (items will be cascade deleted)
-    //   await tx.productions.delete({
-    //     where: { id },
-    //   });
-    // });
+      // Delete production log (items will be cascade deleted)
+      await tx.productions.delete({
+        where: { id },
+      });
+
+      return productionLog;
+    });
 
     revalidatePath("/inventory/produksi");
-    return { success: true };
+    return { success: true, data: result };
   } catch (error) {
     console.error("Error deleting production log:", error);
     return {
@@ -367,8 +379,10 @@ export async function getAvailableProducts() {
       select: {
         id: true,
         name: true,
+        code: true,
         unit: true,
         currentStock: true,
+        bottlesPerCrate: true,
       },
       orderBy: {
         name: "asc",
