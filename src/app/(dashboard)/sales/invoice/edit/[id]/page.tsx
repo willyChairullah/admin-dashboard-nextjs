@@ -10,6 +10,7 @@ import {
   InputDate,
   Select,
   CustomerInfo,
+  TaxSelect,
 } from "@/components/ui";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import {
@@ -27,8 +28,8 @@ import { toast } from "sonner";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { formatInputRupiah, parseInputRupiah } from "@/utils/formatInput";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { InvoiceType } from "@prisma/client";
-import { Plus } from "lucide-react";
+import { DiscountType, InvoiceType } from "@prisma/client";
+import { Plus, Trash2 } from "lucide-react";
 
 interface InvoiceItemFormData {
   productId?: string;
@@ -36,6 +37,7 @@ interface InvoiceItemFormData {
   quantity: number;
   price: number;
   discount: number;
+  discountType: "AMOUNT" | "PERCENTAGE";
   totalPrice: number;
 }
 
@@ -49,6 +51,7 @@ interface InvoiceFormData {
   tax: number;
   taxPercentage: number;
   discount: number;
+  discountType: "AMOUNT" | "PERCENTAGE";
   discountDetail?: string;
   shippingCost: number;
   totalAmount: number;
@@ -56,6 +59,7 @@ interface InvoiceFormData {
   customerId: string | null;
   purchaseOrderId: string;
   createdBy: string;
+  useDeliveryNote: boolean;
   items: InvoiceItemFormData[];
 }
 
@@ -116,6 +120,36 @@ export default function EditInvoicePage() {
   const [inputMode, setInputMode] = useState<"product" | "manual">("product");
   const [isLockedToProduct, setIsLockedToProduct] = useState(false);
 
+  // Fungsi untuk menghitung potongan item - sama dengan PO
+  const calculateItemDiscount = React.useCallback(
+    (
+      price: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (price * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
+  // Fungsi untuk menghitung potongan keseluruhan - sama dengan PO
+  const calculateOrderLevelDiscount = React.useCallback(
+    (
+      subtotal: number,
+      discount: number,
+      discountType: "AMOUNT" | "PERCENTAGE"
+    ) => {
+      if (discountType === "PERCENTAGE") {
+        return (subtotal * discount) / 100;
+      }
+      return discount;
+    },
+    []
+  );
+
   const [formData, setFormData] = useState<InvoiceFormData>({
     code: "",
     invoiceDate: new Date().toISOString().split("T")[0],
@@ -126,24 +160,72 @@ export default function EditInvoicePage() {
     tax: 0,
     taxPercentage: 0,
     discount: 0,
+    discountType: "AMOUNT",
     shippingCost: 0,
     totalAmount: 0,
     notes: "",
     customerId: "",
     purchaseOrderId: "",
     createdBy: "",
+    useDeliveryNote: false,
     items: [
-      { productId: "", quantity: 0, price: 0, discount: 0, totalPrice: 0 },
+      {
+        productId: "",
+        quantity: 0,
+        price: 0,
+        discount: 0,
+        discountType: "AMOUNT",
+        totalPrice: 0,
+      },
     ],
   });
 
   const [formErrors, setFormErrors] = useState<InvoiceFormErrors>({});
 
-  // Calculate subtotal from items
-  const subtotal = formData.items.reduce(
-    (sum, item) => sum + item.totalPrice,
-    0
-  );
+  // Recalculate totals when items change
+  useEffect(() => {
+    const subtotal = formData.items.reduce(
+      (sum, item) => sum + item.totalPrice,
+      0
+    );
+
+    // Hitung total potongan item
+    const totalItemDiscount = formData.items.reduce((sum, item) => {
+      const itemDiscountAmount = calculateItemDiscount(
+        item.price,
+        item.discount,
+        item.discountType
+      );
+      return sum + itemDiscountAmount * (item.quantity || 0);
+    }, 0);
+
+    const orderLevelDiscountAmount = calculateOrderLevelDiscount(
+      subtotal,
+      formData.discount,
+      formData.discountType
+    );
+
+    const taxableAmount =
+      subtotal - (orderLevelDiscountAmount + totalItemDiscount);
+    const tax = (taxableAmount * (formData.taxPercentage || 0)) / 100;
+
+    const totalAmount = Math.round(taxableAmount + tax + formData.shippingCost);
+
+    // Use a functional update to avoid stale state, especially if calculations are rapid
+    setFormData(prev => ({
+      ...prev,
+      subtotal,
+      tax,
+      totalAmount,
+    }));
+  }, [
+    formData.items,
+    formData.discount,
+    formData.discountType,
+    formData.taxPercentage,
+    formData.shippingCost,
+    calculateOrderLevelDiscount,
+  ]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -168,7 +250,8 @@ export default function EditInvoicePage() {
         setAvailableProducts(products);
 
         // Fill form data with existing invoice data
-        setFormData({
+        setFormData(prev => ({
+          ...prev,
           code: invoice.code,
           invoiceDate: new Date(invoice.invoiceDate)
             .toISOString()
@@ -180,7 +263,7 @@ export default function EditInvoicePage() {
           type: invoice.type || InvoiceType.PRODUCT,
           subtotal: invoice.subtotal,
           tax: invoice.tax,
-          taxPercentage: invoice.taxPercentage || 0, // Use from database if available
+          taxPercentage: invoice.taxPercentage ?? 0,
           discount: invoice.discount,
           shippingCost: invoice.shippingCost || 0,
           totalAmount: invoice.totalAmount,
@@ -188,23 +271,29 @@ export default function EditInvoicePage() {
           customerId: invoice.customerId || null,
           purchaseOrderId: invoice.purchaseOrderId || "",
           createdBy: invoice.createdBy || "",
-          items: invoice.invoiceItems.map(item => ({
-            productId: item.productId || "",
-            description: item.description || "",
-            quantity: item.quantity,
-            price: item.price,
-            discount: item.discount || 0, // Use actual discount from data
-            totalPrice: (item.price - (item.discount || 0)) * item.quantity,
-          })),
-        });
+          useDeliveryNote: invoice.useDeliveryNote || false,
+          discountType: invoice.discountType || "AMOUNT",
+          items: invoice.invoiceItems.map(item => {
+            const discountAmount = calculateItemDiscount(
+              item.price,
+              item.discount || 0,
+              item.discountType || "AMOUNT"
+            );
+            return {
+              productId: item.productId || "",
+              description: item.description || "",
+              quantity: item.quantity,
+              price: item.price,
+              discount: item.discount || 0,
+              discountType: item.discountType || "AMOUNT",
+              totalPrice: (item.price - discountAmount) * item.quantity,
+            };
+          }),
+        }));
 
-        // Set selected customer after data is loaded
-        const customer = availableCustomers.find(
-          c => c.id === invoice.customerId
-        );
+        const customer = customers.find(c => c.id === invoice.customerId);
         setSelectedCustomer(customer || null);
 
-        // Set input mode based on invoice type
         setInputMode(
           invoice.type === InvoiceType.MANUAL ? "manual" : "product"
         );
@@ -220,41 +309,80 @@ export default function EditInvoicePage() {
     if (invoiceId) {
       fetchData();
     }
-  }, [invoiceId]);
+  }, [invoiceId, calculateItemDiscount]);
 
-  // Auto-calculate totals
-  useEffect(() => {
+  // Memoized calculations to prevent unnecessary recalculations
+  const calculations = React.useMemo(() => {
+    // Hitung total potongan item
+    const totalItemDiscount = formData.items.reduce((sum, item) => {
+      const itemDiscountAmount = calculateItemDiscount(
+        item.price || 0,
+        item.discount || 0,
+        item.discountType || "AMOUNT"
+      );
+      return sum + itemDiscountAmount * (item.quantity || 0);
+    }, 0);
+
+    // Subtotal dari item (total price sudah termasuk pengurangan diskon per item)
     const subtotal = formData.items.reduce(
-      (sum, item) => sum + item.totalPrice,
+      (sum, item) => sum + (item.totalPrice || 0),
       0
     );
 
-    // Calculate total discount from items (already calculated in totalPrice)
-    const itemDiscountTotal = formData.items.reduce(
-      (sum, item) => sum + (item.discount || 0) * (item.quantity || 0),
-      0
+    // Hitung potongan order level berdasarkan subtotal setelah diskon item
+    const subtotalAfterItemDiscount = subtotal;
+    const orderLevelDiscountAmount = calculateOrderLevelDiscount(
+      subtotalAfterItemDiscount,
+      formData.discount || 0,
+      formData.discountType || "AMOUNT"
     );
 
-    // Calculate tax from percentage (applied to subtotal minus overall discount)
-    const taxableAmount = subtotal - formData.discount;
-    const tax = Math.round((taxableAmount * formData.taxPercentage) / 100);
+    // Total diskon keseluruhan (item + order level)
+    const totalDiscount = totalItemDiscount + orderLevelDiscountAmount;
 
-    const totalAmount = Math.round(
-      subtotal - formData.discount + tax + formData.shippingCost
+    // Taxable amount adalah subtotal dikurangi order level discount
+    const taxableAmount = subtotal - totalDiscount;
+
+    const totalTax = Math.max(
+      0,
+      (taxableAmount * (formData.taxPercentage || 0)) / 100
     );
 
-    setFormData(prev => ({
-      ...prev,
+    // Total pembayaran
+    const totalAmount =
+      subtotal -
+      orderLevelDiscountAmount +
+      totalTax +
+      (formData.shippingCost || 0);
+
+    return {
       subtotal,
-      tax,
+      totalItemDiscount,
+      orderLevelDiscountAmount,
+      totalDiscount,
+      totalTax,
       totalAmount,
-    }));
+    };
   }, [
     formData.items,
+    formData.discount,
+    formData.discountType,
     formData.taxPercentage,
     formData.shippingCost,
-    formData.discount,
+    calculateItemDiscount,
+    calculateOrderLevelDiscount,
   ]);
+
+  // Update formData when calculations change
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      // totalAmount: calculations.subtotal,
+      totalDiscount: calculations.totalDiscount,
+      totalTax: calculations.totalTax,
+      totalAmount: calculations.totalAmount,
+    }));
+  }, [calculations]);
 
   // Auto-set invoice type based on input mode
   useEffect(() => {
@@ -318,10 +446,20 @@ export default function EditInvoicePage() {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
 
-    // Recalculate totalPrice for this item - (price - discount) * quantity
-    if (field === "quantity" || field === "price" || field === "discount") {
+    // Recalculate totalPrice for this item menggunakan fungsi discount yang benar
+    if (
+      field === "quantity" ||
+      field === "price" ||
+      field === "discount" ||
+      field === "discountType"
+    ) {
       const item = newItems[index];
-      item.totalPrice = (item.price - item.discount) * item.quantity;
+      const discountAmount = calculateItemDiscount(
+        item.price,
+        item.discount,
+        item.discountType
+      );
+      item.totalPrice = (item.price - discountAmount) * item.quantity;
     }
 
     setFormData({ ...formData, items: newItems });
@@ -332,7 +470,14 @@ export default function EditInvoicePage() {
       ...formData,
       items: [
         ...formData.items,
-        { productId: "", quantity: 1, price: 0, discount: 0, totalPrice: 0 }, // (0 - 0) * 1 = 0
+        {
+          productId: "",
+          quantity: 1,
+          price: 0,
+          discount: 0,
+          discountType: "AMOUNT",
+          totalPrice: 0,
+        }, // (0 - 0) * 1 = 0
       ],
     });
   };
@@ -364,12 +509,14 @@ export default function EditInvoicePage() {
         tax: formData.tax,
         taxPercentage: formData.taxPercentage,
         discount: formData.discount,
+        discountType: formData.discountType,
         shippingCost: formData.shippingCost,
         totalAmount: formData.totalAmount,
         notes: formData.notes || undefined,
         customerId: formData.customerId || null,
         purchaseOrderId: formData.purchaseOrderId || undefined,
         createdBy: formData.createdBy,
+        useDeliveryNote: formData.useDeliveryNote,
         items: formData.items,
       };
 
@@ -516,10 +663,7 @@ export default function EditInvoicePage() {
           </FormField>
 
           {/* Tenggat Pembayaran */}
-          <FormField
-            label="Net"
-            errorMessage={formErrors.dueDate}
-          >
+          <FormField label="Net" errorMessage={formErrors.dueDate}>
             <InputDate
               value={formData.dueDate ? new Date(formData.dueDate) : null}
               onChange={value =>
@@ -568,6 +712,27 @@ export default function EditInvoicePage() {
                 })),
               ]}
             />
+          </FormField>
+
+          {/* Use Delivery Note */}
+          <FormField label="Gunakan Surat Jalan">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="useDeliveryNote"
+                checked={formData.useDeliveryNote}
+                onChange={e =>
+                  handleInputChange("useDeliveryNote", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label
+                htmlFor="useDeliveryNote"
+                className="text-sm font-medium text-gray-900 dark:text-gray-300"
+              >
+                Gunakan Surat Jalan
+              </label>
+            </div>
           </FormField>
 
           {/* Biaya Pengiriman */}
@@ -623,8 +788,9 @@ export default function EditInvoicePage() {
             <button
               type="button"
               onClick={addItem}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
             >
+              <Plus className="w-4 h-4 mr-1" />
               Tambah Item
             </button>
           </div>
@@ -673,223 +839,332 @@ export default function EditInvoicePage() {
               Belum ada item. Klik 'Tambah Item' untuk menambah item.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800">
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-1/3">
-                      {inputMode === "product" ? "Produk" : "Deskripsi"}
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-[100px]">
-                      Jumlah
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Harga
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Potongan Per Item
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Total
-                    </th>
-                    <th className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-[60px]">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.items.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="border-t border-gray-200 dark:border-gray-600"
-                    >
-                      {/* Product/Description */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                        {inputMode === "product" ? (
-                          <div>
-                            <select
-                              value={item.productId || ""}
-                              onChange={e => {
-                                const selectedProductId = e.target.value;
-                                const selectedProduct = availableProducts.find(
-                                  p => p.id === selectedProductId
-                                );
+            <div className="overflow-x-auto shadow-sm">
+              <div className="min-w-[1000px]">
+                <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800">
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
+                        {inputMode === "product" ? "Produk" : "Deskripsi"}
+                      </th>
+                      {inputMode === "product" && (
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[60px]">
+                          Stok
+                        </th>
+                      )}
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
+                        Qty
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                        Harga
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
+                        Potongan
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                        Total
+                      </th>
+                      <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[30px]">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.items.map((item, index) => {
+                      const product = availableProducts.find(
+                        p => p.id === item.productId
+                      );
 
-                                console.log(
-                                  "Debug - Selected Product ID:",
-                                  selectedProductId
-                                );
-                                console.log(
-                                  "Debug - Current form item productId:",
-                                  formData.items[index]?.productId
-                                );
-                                console.log(
-                                  "Debug - Found product:",
-                                  selectedProduct
-                                );
+                      return (
+                        <tr
+                          key={index}
+                          className="border-t border-gray-200 dark:border-gray-600"
+                        >
+                          {/* Product/Description */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            {inputMode === "product" ? (
+                              <div>
+                                <select
+                                  value={item.productId || ""}
+                                  onChange={e => {
+                                    const selectedProductId = e.target.value;
+                                    const selectedProduct =
+                                      availableProducts.find(
+                                        p => p.id === selectedProductId
+                                      );
 
-                                // Update both productId and price in a single update
-                                const newItems = [...formData.items];
-                                newItems[index] = {
-                                  ...newItems[index],
-                                  productId: selectedProductId,
-                                  price: selectedProduct
-                                    ? selectedProduct.price
-                                    : newItems[index].price,
-                                };
+                                    console.log(
+                                      "Debug - Selected Product ID:",
+                                      selectedProductId
+                                    );
+                                    console.log(
+                                      "Debug - Current form item productId:",
+                                      formData.items[index]?.productId
+                                    );
+                                    console.log(
+                                      "Debug - Found product:",
+                                      selectedProduct
+                                    );
 
-                                // Recalculate totalPrice
-                                const updatedItem = newItems[index];
-                                updatedItem.totalPrice =
-                                  (updatedItem.price - updatedItem.discount) *
-                                  updatedItem.quantity;
+                                    // Update both productId and price in a single update
+                                    const newItems = [...formData.items];
+                                    newItems[index] = {
+                                      ...newItems[index],
+                                      productId: selectedProductId,
+                                      price: selectedProduct
+                                        ? selectedProduct.price
+                                        : newItems[index].price,
+                                    };
 
-                                setFormData({ ...formData, items: newItems });
-                              }}
-                              className="w-full px-3 py-2 border rounded-md dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
-                            >
-                              <option value="">Pilih Produk</option>
-                              {availableProducts.map(product => (
-                                <option key={product.id} value={product.id}>
-                                  {product.name} - Stok:{" "}
+                                    // Recalculate totalPrice using proper discount calculation
+                                    const updatedItem = newItems[index];
+                                    const discountAmount =
+                                      calculateItemDiscount(
+                                        updatedItem.price,
+                                        updatedItem.discount,
+                                        updatedItem.discountType
+                                      );
+                                    updatedItem.totalPrice =
+                                      (updatedItem.price - discountAmount) *
+                                      updatedItem.quantity;
+
+                                    setFormData({
+                                      ...formData,
+                                      items: newItems,
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 text-m border rounded dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 border-gray-300"
+                                >
+                                  <option value="">Pilih Produk</option>
+                                  {availableProducts
+                                    .filter(
+                                      product =>
+                                        // Show current product or products not selected in other rows
+                                        product.id === item.productId ||
+                                        !formData.items.some(
+                                          (otherItem, otherIndex) =>
+                                            otherIndex !== index &&
+                                            otherItem.productId === product.id
+                                        )
+                                    )
+                                    .map(product => (
+                                      <option
+                                        key={product.id}
+                                        value={product.id}
+                                      >
+                                        {product.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <div>
+                                <Input
+                                  type="text"
+                                  name={`description_${index}`}
+                                  value={item.description || ""}
+                                  onChange={e =>
+                                    handleItemChange(
+                                      index,
+                                      "description",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Masukkan deskripsi item..."
+                                  className="w-full px-2 py-1 text-m"
+                                />
+                              </div>
+                            )}
+                          </td>
+
+                          {inputMode === "product" && (
+                            <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                              {product && (
+                                <div className="text-m text-center text-gray-700 dark:text-gray-300">
                                   {product.currentStock}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ) : (
-                          <div>
+                                </div>
+                              )}
+                            </td>
+                          )}
+
+                          {/* Quantity */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                             <Input
-                              type="text"
-                              name={`description_${index}`}
-                              value={item.description || ""}
+                              type="number"
+                              name={`quantity_${index}`}
+                              value={item.quantity.toString()}
                               onChange={e =>
                                 handleItemChange(
                                   index,
-                                  "description",
-                                  e.target.value
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
                                 )
                               }
-                              placeholder="Masukkan deskripsi item..."
-                              className="w-full"
+                              placeholder="0"
+                              className="w-full text-m px-2 py-1"
                             />
-                          </div>
-                        )}
-                      </td>
+                          </td>
 
-                      {/* Quantity */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                        <Input
-                          type="number"
-                          name={`quantity_${index}`}
-                          value={item.quantity.toString()}
-                          onChange={e =>
-                            handleItemChange(
-                              index,
-                              "quantity",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          placeholder="0"
-                          className="w-full"
-                        />
-                      </td>
+                          {/* Price */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-m">
+                                Rp
+                              </span>
+                              <Input
+                                type="text"
+                                name={`price_${index}`}
+                                value={item.price.toLocaleString("id-ID")}
+                                onChange={e => {
+                                  const value =
+                                    parseFloat(
+                                      e.target.value.replace(/\D/g, "")
+                                    ) || 0;
+                                  handleItemChange(index, "price", value);
+                                }}
+                                className="pl-6 pr-1 w-full text-right text-m py-1"
+                                placeholder="0"
+                                title={`Rp ${item.price.toLocaleString(
+                                  "id-ID"
+                                )}`}
+                              />
+                            </div>
+                          </td>
 
-                      {/* Price */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                            Rp
-                          </span>
-                          <Input
-                            type="text"
-                            name={`price_${index}`}
-                            value={formatInputRupiah(item.price)}
-                            onChange={e =>
-                              handleItemChange(
-                                index,
-                                "price",
-                                parseInputRupiah(e.target.value)
-                              )
-                            }
-                            className="pl-10 w-full"
-                            placeholder="0"
-                          />
-                        </div>
-                      </td>
+                          {/* Discount */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="flex gap-1">
+                              <div className="relative flex-1 min-w-0">
+                                <span className="absolute left-1 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs">
+                                  {item.discountType === "PERCENTAGE"
+                                    ? "%"
+                                    : "Rp"}
+                                </span>
+                                <Input
+                                  type="text"
+                                  name={`discount_${index}`}
+                                  value={item.discount.toLocaleString("id-ID")}
+                                  onChange={e => {
+                                    const value =
+                                      parseFloat(
+                                        e.target.value.replace(/\D/g, "")
+                                      ) || 0;
+                                    handleItemChange(index, "discount", value);
+                                  }}
+                                  className="pl-5 pr-1 w-full text-right text-s py-1"
+                                  placeholder="0"
+                                  title={`${
+                                    item.discountType === "PERCENTAGE"
+                                      ? ""
+                                      : "Rp "
+                                  }${item.discount.toLocaleString("id-ID")}${
+                                    item.discountType === "PERCENTAGE"
+                                      ? "%"
+                                      : ""
+                                  }`}
+                                />
+                              </div>
+                              <select
+                                value={item.discountType}
+                                onChange={e =>
+                                  handleItemChange(
+                                    index,
+                                    "discountType",
+                                    e.target.value as "AMOUNT" | "PERCENTAGE"
+                                  )
+                                }
+                                className="w-11 px-1 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                              >
+                                <option value="AMOUNT">Rp</option>
+                                <option value="PERCENTAGE">%</option>
+                              </select>
+                            </div>
+                          </td>
 
-                      {/* Discount */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3">
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                            Rp
-                          </span>
-                          <Input
-                            type="text"
-                            name={`discount_${index}`}
-                            value={formatInputRupiah(item.discount)}
-                            onChange={e =>
-                              handleItemChange(
-                                index,
-                                "discount",
-                                parseInputRupiah(e.target.value)
-                              )
-                            }
-                            className="pl-10 w-full"
-                            placeholder="0"
-                          />
-                        </div>
-                      </td>
+                          {/* Total Price */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div
+                              className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate"
+                              title={formatRupiah(item.totalPrice)}
+                            >
+                              {formatRupiah(item.totalPrice)}
+                            </div>
+                          </td>
 
-                      {/* Total Price */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {formatRupiah(item.totalPrice)}
-                      </td>
+                          {/* Actions */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            {formData.items.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeItem(index)}
+                                className=" cursor-pointer flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-red-500"
+                                title="Hapus item"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
 
-                      {/* Actions */}
-                      <td className="border border-gray-200 dark:border-gray-600 px-4 py-3 text-center">
-                        {formData.items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(index)}
-                            className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
-                          >
-                            Hapus
-                          </button>
-                        )}
+                    <tr className="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                      <td
+                        className="border border-gray-200 dark:border-gray-600 px-2 py-2 font-bold text-xl"
+                        colSpan={inputMode === "product" ? 5 : 4}
+                      >
+                        Subtotal:
                       </td>
+                      <td className="font-bold border border-gray-200 dark:border-gray-600 px-2 py-2 text-m text-right">
+                        {formatRupiah(formData.subtotal)}
+                      </td>
+                      <td></td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
 
         <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
-          {/* Summary Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left Column - Additional Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <FormField label="Potongan Akhir">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                    Rp
-                  </span>
-                  <Input
-                    type="text"
-                    name="discount"
-                    value={formatInputRupiah(formData.discount)}
-                    onChange={e => {
-                      const value = parseInputRupiah(e.target.value);
-                      handleInputChange("discount", value);
-                    }}
-                    placeholder="0"
-                    className="pl-10"
-                  />
+              <FormField label="Potongan Keseluruhan">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {formData.discountType === "PERCENTAGE" ? "%" : "Rp"}
+                    </span>
+                    <Input
+                      type="text"
+                      name="discount"
+                      value={formData.discount.toLocaleString("id-ID")}
+                      onChange={e => {
+                        const value =
+                          parseFloat(e.target.value.replace(/\D/g, "")) || 0;
+                        handleInputChange("discount", value);
+                      }}
+                      className="pl-10"
+                      placeholder="0"
+                    />
+                  </div>
+                  <select
+                    name="discountType"
+                    value={formData.discountType}
+                    onChange={e =>
+                      handleInputChange(
+                        "discountType",
+                        e.target.value as "AMOUNT" | "PERCENTAGE"
+                      )
+                    }
+                    className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="AMOUNT">Rp</option>
+                    <option value="PERCENTAGE">%</option>
+                  </select>
                 </div>
               </FormField>
-
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Detail Potongan
@@ -900,14 +1175,17 @@ export default function EditInvoicePage() {
                       Total Potongan Item:
                     </span>
                     <span className="font-medium text-red-600 dark:text-red-400">
-                      -
-                      {formatRupiah(
-                        formData.items.reduce(
-                          (sum, item) =>
-                            sum + (item.discount || 0) * (item.quantity || 0),
-                          0
-                        )
-                      )}
+                      -Rp{" "}
+                      {formData.items
+                        .reduce((sum, item) => {
+                          const discountAmount = calculateItemDiscount(
+                            item.price,
+                            item.discount,
+                            item.discountType
+                          );
+                          return sum + discountAmount * item.quantity;
+                        }, 0)
+                        .toLocaleString("id-ID")}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -915,23 +1193,20 @@ export default function EditInvoicePage() {
                       Potongan Keseluruhan:
                     </span>
                     <span className="font-medium text-red-600 dark:text-red-400">
-                      -{formatRupiah(formData.discount)}
+                      -
+                      {formatRupiah(
+                        calculateOrderLevelDiscount(
+                          formData.subtotal,
+                          formData.discount,
+                          formData.discountType
+                        )
+                      )}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Right Column - Totals */}
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-700 dark:text-gray-300">
-                  Subtotal:
-                </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {formatRupiah(formData.subtotal)}
-                </span>
-              </div>
               <div className="flex justify-between">
                 <span className="text-gray-700 dark:text-gray-300">
                   Total Potongan:
@@ -939,11 +1214,32 @@ export default function EditInvoicePage() {
                 <span className="font-medium text-red-600 dark:text-red-400">
                   -
                   {formatRupiah(
-                    formData.items.reduce(
-                      (sum, item) =>
-                        sum + (item.discount || 0) * (item.quantity || 0),
-                      0
-                    ) + formData.discount
+                    formData.items.reduce((sum, item) => {
+                      const discountAmount = calculateItemDiscount(
+                        item.price,
+                        item.discount,
+                        item.discountType
+                      );
+                      return sum + discountAmount * item.quantity;
+                    }, 0) +
+                      calculateOrderLevelDiscount(
+                        formData.subtotal,
+                        formData.discount,
+                        formData.discountType
+                      )
+                  )}
+                </span>
+              </div>
+              {/* Sub setelah potongan */}
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Total Setelah potongan:
+                </span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatRupiah(
+                    calculations.subtotal -
+                      (calculations.orderLevelDiscountAmount +
+                        calculations.totalItemDiscount)
                   )}
                 </span>
               </div>
@@ -952,31 +1248,20 @@ export default function EditInvoicePage() {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <span>Pajak</span>
-                    <select
-                      value={
-                        formData.taxPercentage === null ||
-                        formData.taxPercentage === undefined
-                          ? ""
-                          : formData.taxPercentage
-                      }
-                      onChange={e => {
-                        const value = e.target.value;
+                    <TaxSelect
+                      value={formData.taxPercentage?.toString() || ""}
+                      onChange={value => {
                         const taxPercentage =
-                          value === "" ? null : parseFloat(value);
+                          value === "" ? 0 : parseFloat(value);
                         handleInputChange("taxPercentage", taxPercentage);
                       }}
-                      className={`px-2 py-0.5 border rounded-md dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        formErrors.taxPercentage ? "border-red-500" : ""
-                      }`}
-                    >
-                      <option value="">Pilih Pajak</option>
-                      <option value={0}>0%</option>
-                      <option value={11}>11%</option>
-                      <option value={12}>12%</option>
-                    </select>
+                      name="taxPercentage"
+                      returnValue="percentage"
+                      className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
                   </div>
                   {formErrors.taxPercentage && (
-                    <div className="text-xs text-red-500 mt-1">
+                    <div className="text-xs text-red-500">
                       {formErrors.taxPercentage}
                     </div>
                   )}

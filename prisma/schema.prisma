@@ -302,6 +302,7 @@ model Invoices {
   notes             String?
   customerId        String?
   discount          Float             @default(0)
+  discountType      DiscountValueType @default(AMOUNT)
   paymentStatus     PaymentStatus     @default(UNPAID)
   updatedBy         String?
   purchaseOrderId   String?           @unique
@@ -310,7 +311,8 @@ model Invoices {
   taxPercentage     Float             @default(0)
   type              InvoiceType       @default(PRODUCT)
   statusPreparation PreparationStatus @default(WAITING_PREPARATION)
-  
+  useDeliveryNote   Boolean           @default(false)
+
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   createdBy         String?
@@ -327,18 +329,19 @@ model Invoices {
 }
 
 model InvoiceItems {
-  id          String    @id @default(cuid())
+  id          String            @id @default(cuid())
   quantity    Float
   price       Float
   totalPrice  Float
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   invoiceId   String
   productId   String?
-  discount    Float     @default(0)
+  discount    Float             @default(0)
+  discountType DiscountValueType @default(AMOUNT)
   description String?
-  invoices    Invoices  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  products    Products? @relation(fields: [productId], references: [id])
+  invoices    Invoices          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  products    Products?         @relation(fields: [productId], references: [id])
 
   @@map("invoice_items")
 }

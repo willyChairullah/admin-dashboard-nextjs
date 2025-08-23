@@ -8,6 +8,7 @@ import {
   InvoiceStatus,
   InvoiceType,
   PurchaseOrderStatus,
+  DiscountValueType,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -17,6 +18,7 @@ export type InvoiceItemFormData = {
   quantity: number;
   price: number;
   discount: number;
+  discountType: DiscountValueType;
   totalPrice: number; // calculated as (quantity * price) - discount
 };
 
@@ -30,12 +32,14 @@ export type InvoiceFormData = {
   tax: number;
   taxPercentage: number;
   discount: number;
+  discountType: DiscountValueType;
   shippingCost: number;
   totalAmount: number;
   notes?: string;
   customerId?: string | null;
   purchaseOrderId?: string;
   createdBy: string;
+  useDeliveryNote: boolean;
   items: InvoiceItemFormData[];
 };
 
@@ -322,10 +326,10 @@ export async function getAvailableUsers() {
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
-    // Calculate totals
-    const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
-    const remainingAmount = totalAmount - 0; // paidAmount starts at 0
+    // // Calculate totals
+    // const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
+    const remainingAmount = data.totalAmount - 0; // paidAmount starts at 0
 
     const result = await db.$transaction(async tx => {
       // Create invoice
@@ -336,18 +340,20 @@ export async function createInvoice(data: InvoiceFormData) {
           dueDate: data.dueDate || new Date(), // If null, set to today's date
           status: data.status,
           type: data.type,
-          subtotal: subtotal,
+          subtotal: data.subtotal,
           tax: data.tax,
           taxPercentage: data.taxPercentage,
           discount: data.discount,
+          discountType: data.discountType,
           shippingCost: data.shippingCost,
-          totalAmount: totalAmount,
+          totalAmount: data.totalAmount,
           paidAmount: 0,
           remainingAmount: remainingAmount,
           notes: data.notes,
           customerId: data.customerId || null,
           purchaseOrderId: data.purchaseOrderId,
           createdBy: data.createdBy,
+          useDeliveryNote: data.useDeliveryNote,
         },
       });
 
@@ -360,6 +366,7 @@ export async function createInvoice(data: InvoiceFormData) {
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
+              discountType: item.discountType,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
               productId: item.productId || null,
@@ -387,8 +394,8 @@ export async function updateInvoice(
 ) {
   try {
     // Calculate totals
-    const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
+    // const subtotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // const totalAmount = subtotal + data.tax - data.discount + data.shippingCost;
 
     const result = await db.$transaction(async tx => {
       // Get current invoice to preserve paidAmount
@@ -401,7 +408,7 @@ export async function updateInvoice(
         throw new Error("Invoice not found");
       }
 
-      const remainingAmount = totalAmount - currentInvoice.paidAmount;
+      const remainingAmount = data.totalAmount - currentInvoice.paidAmount;
 
       // Update invoice
       const invoice = await tx.invoices.update({
@@ -412,17 +419,19 @@ export async function updateInvoice(
           dueDate: data.dueDate || new Date(), // If null, set to today's date
           status: data.status,
           type: data.type,
-          subtotal: subtotal,
+          subtotal: data.subtotal,
           tax: data.tax,
           taxPercentage: data.taxPercentage,
           discount: data.discount,
+          discountType: data.discountType,
           shippingCost: data.shippingCost,
-          totalAmount: totalAmount,
+          totalAmount: data.totalAmount,
           remainingAmount: remainingAmount,
           notes: data.notes,
           customerId: data.customerId || null,
           purchaseOrderId: data.purchaseOrderId,
           updatedBy: updatedBy,
+          useDeliveryNote: data.useDeliveryNote,
         },
       });
 
@@ -440,6 +449,7 @@ export async function updateInvoice(
               quantity: item.quantity,
               price: item.price,
               discount: item.discount,
+              discountType: item.discountType,
               totalPrice: item.totalPrice,
               invoiceId: invoice.id,
               productId: item.productId || null,

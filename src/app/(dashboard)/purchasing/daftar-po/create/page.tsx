@@ -251,6 +251,7 @@ export default function CreatePurchaseOrderPage() {
 
     // Taxable amount adalah subtotal dikurangi order level discount
     const taxableAmount = subtotal - totalDiscount;
+
     const totalTax = Math.max(
       0,
       (taxableAmount * (formData.taxPercentage || 0)) / 100
