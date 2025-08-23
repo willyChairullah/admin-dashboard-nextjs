@@ -1,6 +1,13 @@
 // app/purchasing/pengeluaran/edit/[id]/page.tsx
 "use client";
-import { ManagementHeader, FormField } from "@/components/ui";
+import {
+  ManagementHeader,
+  FormField,
+  InputDate,
+  Select,
+  TaxSelect,
+  InputTextArea,
+} from "@/components/ui";
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui";
 import {
@@ -417,14 +424,17 @@ export default function EditExpensePage() {
               required
               errorMessage={formErrors.expenseDate}
             >
-              <Input
-                type="date"
-                name="expenseDate"
-                value={formData.expenseDate}
-                onChange={e =>
-                  setFormData({ ...formData, expenseDate: e.target.value })
+              <InputDate
+                value={
+                  formData.expenseDate ? new Date(formData.expenseDate) : null
                 }
-                disabled={isSubmitting}
+                onChange={date => {
+                  const dateString = date
+                    ? date.toISOString().split("T")[0]
+                    : "";
+                  setFormData({ ...formData, expenseDate: dateString });
+                }}
+                errorMessage={formErrors.expenseDate}
               />
             </FormField>
 
@@ -432,41 +442,36 @@ export default function EditExpensePage() {
               label="Tanggal Jatuh Tempo"
               errorMessage={formErrors.dueDate}
             >
-              <Input
-                type="date"
-                name="dueDate"
-                value={
-                  formData.dueDate
-                    ? formData.dueDate.toISOString().split("T")[0]
-                    : ""
-                }
-                onChange={e =>
+              <InputDate
+                value={formData.dueDate}
+                onChange={date => {
                   setFormData({
                     ...formData,
-                    dueDate: e.target.value ? new Date(e.target.value) : null,
-                  })
-                }
-                disabled={isSubmitting}
+                    dueDate: date,
+                  });
+                }}
                 placeholder="Kosongkan untuk bayar langsung"
+                disabled={isSubmitting}
+                isOptional={true}
+                allowClearToNull={true}
               />
             </FormField>
 
             <FormField label="Status" required errorMessage={formErrors.status}>
-              <select
-                name="status"
+              <Select
+                options={[
+                  { value: "DRAFT", label: "Draft" },
+                  { value: "SENT", label: "Terkirim" },
+                  { value: "PAID", label: "Dibayar" },
+                  { value: "OVERDUE", label: "Jatuh Tempo" },
+                  { value: "CANCELLED", label: "Dibatalkan" },
+                ]}
                 value={formData.status}
-                onChange={e =>
-                  setFormData({ ...formData, status: e.target.value })
-                }
-                disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="DRAFT">Draft</option>
-                <option value="SENT">Terkirim</option>
-                <option value="PAID">Dibayar</option>
-                <option value="OVERDUE">Jatuh Tempo</option>
-                <option value="CANCELLED">Dibatalkan</option>
-              </select>
+                onChange={value => setFormData({ ...formData, status: value })}
+                placeholder="Pilih Status"
+                errorMessage={formErrors.status}
+                className="w-full"
+              />
             </FormField>
 
             <FormField
@@ -474,22 +479,17 @@ export default function EditExpensePage() {
               required
               errorMessage={formErrors.createdBy}
             >
-              <select
+              <Input
+                type="text"
                 name="createdBy"
-                value={formData.createdBy}
-                onChange={e =>
-                  setFormData({ ...formData, createdBy: e.target.value })
+                value={
+                  availableUsers.find(u => u.id === user?.id)?.name ||
+                  user?.name ||
+                  "User not found"
                 }
-                disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="">Pilih Pembuat</option>
-                {availableUsers.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.role})
-                  </option>
-                ))}
-              </select>
+                disabled={true}
+                className="bg-gray-100 dark:bg-gray-800"
+              />
             </FormField>
           </div>
 
@@ -742,131 +742,178 @@ export default function EditExpensePage() {
           </div>
 
           {/* Summary Section */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <FormField
-                label="Persentase Pajak (%)"
-                errorMessage={formErrors.taxPercentage}
-              >
-                <Input
-                  type="number"
-                  name="taxPercentage"
-                  value={formData.taxPercentage.toString()}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      taxPercentage: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  disabled={isSubmitting}
-                  placeholder="0"
-                />
-              </FormField>
-
-              <FormField label="Potongan Pesanan">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                      {formData.discountType === "PERCENTAGE" ? "%" : "Rp"}
-                    </span>
-                    <Input
-                      type="text"
-                      name="discount"
-                      value={formData.discount.toLocaleString("id-ID")}
-                      onChange={e => {
-                        const value =
-                          parseFloat(e.target.value.replace(/\D/g, "")) || 0;
-                        setFormData({ ...formData, discount: value });
-                      }}
-                      className="pl-6 pr-1 text-right"
-                      placeholder="0"
+          <div className="mt-6 border-t pt-4 border-gray-200 dark:border-gray-600">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <FormField label="Potongan Keseluruhan">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        {formData.discountType === "PERCENTAGE" ? "%" : "Rp"}
+                      </span>
+                      <Input
+                        type="text"
+                        name="discount"
+                        value={formData.discount.toLocaleString("id-ID")}
+                        onChange={e => {
+                          const value =
+                            parseFloat(e.target.value.replace(/\D/g, "")) || 0;
+                          setFormData({ ...formData, discount: value });
+                        }}
+                        className="pl-10"
+                        placeholder="0"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <select
+                      name="discountType"
+                      value={formData.discountType}
+                      onChange={e =>
+                        setFormData({
+                          ...formData,
+                          discountType: e.target.value as
+                            | "AMOUNT"
+                            | "PERCENTAGE",
+                        })
+                      }
+                      className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-900 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isSubmitting}
-                    />
+                    >
+                      <option value="AMOUNT">Rp</option>
+                      <option value="PERCENTAGE">%</option>
+                    </select>
                   </div>
-                  <select
-                    name="discountType"
-                    value={formData.discountType}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        discountType: e.target.value as "AMOUNT" | "PERCENTAGE",
-                      })
-                    }
-                    className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-                    disabled={isSubmitting}
-                  >
-                    <option value="AMOUNT">Rp</option>
-                    <option value="PERCENTAGE">%</option>
-                  </select>
+                </FormField>
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Detail Potongan
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Total Potongan Item:
+                      </span>
+                      <span className="font-medium text-red-600 dark:text-red-400">
+                        -Rp{" "}
+                        {formData.items
+                          .reduce((sum, item) => {
+                            const discountAmount = calculateItemDiscount(
+                              item.price,
+                              item.discount,
+                              item.discountType
+                            );
+                            return sum + discountAmount * item.quantity;
+                          }, 0)
+                          .toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Potongan Keseluruhan:
+                      </span>
+                      <span className="font-medium text-red-600 dark:text-red-400">
+                        -
+                        {formatRupiah(
+                          formData.discountType === "PERCENTAGE"
+                            ? (formData.subtotal * formData.discount) / 100
+                            : formData.discount
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </FormField>
-
-              <FormField label="Ongkos Kirim">
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                    Rp
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Total Potongan:
                   </span>
-                  <Input
-                    type="text"
-                    name="shippingCost"
-                    value={formData.shippingCost.toLocaleString("id-ID")}
-                    onChange={e => {
-                      const value =
-                        parseFloat(e.target.value.replace(/\D/g, "")) || 0;
-                      setFormData({ ...formData, shippingCost: value });
-                    }}
-                    className="pl-6 pr-1 text-right"
-                    placeholder="0"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </FormField>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Subtotal:
-                    </span>
-                    <span className="font-medium">
-                      {formatRupiah(formData.subtotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Pajak ({formData.taxPercentage}%):
-                    </span>
-                    <span className="font-medium">
-                      {formatRupiah(formData.tax)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Potongan:
-                    </span>
-                    <span className="font-medium">
-                      {formatRupiah(
-                        formData.discountType === "PERCENTAGE"
+                  <span className="font-medium text-red-600 dark:text-red-400">
+                    -
+                    {formatRupiah(
+                      formData.items.reduce((sum, item) => {
+                        const discountAmount = calculateItemDiscount(
+                          item.price,
+                          item.discount,
+                          item.discountType
+                        );
+                        return sum + discountAmount * item.quantity;
+                      }, 0) +
+                        (formData.discountType === "PERCENTAGE"
                           ? (formData.subtotal * formData.discount) / 100
-                          : formData.discount
-                      )}
-                    </span>
+                          : formData.discount)
+                    )}
+                  </span>
+                </div>
+                {/* Sub setelah potongan */}
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Total Setelah potongan:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {formatRupiah(
+                      formData.subtotal -
+                        (formData.items.reduce((sum, item) => {
+                          const discountAmount = calculateItemDiscount(
+                            item.price,
+                            item.discount,
+                            item.discountType
+                          );
+                          return sum + discountAmount * item.quantity;
+                        }, 0) +
+                          (formData.discountType === "PERCENTAGE"
+                            ? (formData.subtotal * formData.discount) / 100
+                            : formData.discount))
+                    )}
+                  </span>
+                </div>
+                {/* Pajak */}
+                <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <span>Pajak</span>
+                      <TaxSelect
+                        value={formData.taxPercentage?.toString() || ""}
+                        onChange={value => {
+                          const taxPercentage =
+                            value === "" ? 0 : parseFloat(value);
+                          setFormData({
+                            ...formData,
+                            taxPercentage: taxPercentage,
+                          });
+                        }}
+                        name="taxPercentage"
+                        returnValue="percentage"
+                        className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    {formErrors.taxPercentage && (
+                      <div className="text-xs text-red-500">
+                        {formErrors.taxPercentage}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Ongkos Kirim:
-                    </span>
-                    <span className="font-medium">
-                      {formatRupiah(formData.shippingCost)}
-                    </span>
-                  </div>
-                  <hr className="border-gray-300 dark:border-gray-600" />
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total:</span>
-                    <span>{formatRupiah(formData.totalAmount)}</span>
-                  </div>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {formatRupiah(formData.tax)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Biaya Pengiriman:
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {formatRupiah(formData.shippingCost)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-t pt-2 border-gray-200 dark:border-gray-600">
+                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Total Pembayaran:
+                  </span>
+                  <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {formatRupiah(formData.totalAmount)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -875,7 +922,7 @@ export default function EditExpensePage() {
           {/* Notes */}
           <div className="mt-6">
             <FormField label="Catatan">
-              <textarea
+              <InputTextArea
                 name="notes"
                 value={formData.notes}
                 onChange={e =>
@@ -883,8 +930,6 @@ export default function EditExpensePage() {
                 }
                 placeholder="Masukkan catatan pengeluaran..."
                 rows={3}
-                disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </FormField>
           </div>
