@@ -384,10 +384,6 @@ export default function EditInvoicePage() {
       errors.invoiceDate = "Tanggal invoice wajib diisi";
     }
 
-    if (!formData.dueDate) {
-      errors.dueDate = "Tanggal jatuh tempo wajib diisi";
-    }
-
     // Tax percentage validation - allow 0 as valid value
     if (
       formData.taxPercentage === undefined ||
@@ -748,27 +744,6 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
-          {/* Use Delivery Note */}
-          <FormField label="Gunakan Surat Jalan">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="useDeliveryNote"
-                checked={formData.useDeliveryNote}
-                onChange={e =>
-                  handleInputChange("useDeliveryNote", e.target.checked)
-                }
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <label
-                htmlFor="useDeliveryNote"
-                className="text-sm font-medium text-gray-900 dark:text-gray-300"
-              >
-                Gunakan Surat Jalan
-              </label>
-            </div>
-          </FormField>
-
           {/* Biaya Pengiriman */}
           <FormField label="Biaya Pengiriman">
             <div className="relative">
@@ -786,6 +761,27 @@ export default function EditInvoicePage() {
                 placeholder="0"
                 className="pl-10"
               />
+            </div>
+          </FormField>
+
+          {/* Use Delivery Note */}
+          <FormField label="Gunakan Surat Jalan">
+            <div className="flex items-center space-x-2 pt-2">
+              <input
+                type="checkbox"
+                id="useDeliveryNote"
+                checked={formData.useDeliveryNote}
+                onChange={e =>
+                  handleInputChange("useDeliveryNote", e.target.checked)
+                }
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <label
+                htmlFor="useDeliveryNote"
+                className="text-sm font-medium text-gray-900 dark:text-gray-300"
+              >
+                Gunakan Surat Jalan
+              </label>
             </div>
           </FormField>
         </div>

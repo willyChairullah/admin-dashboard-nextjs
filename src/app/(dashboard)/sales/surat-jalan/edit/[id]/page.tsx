@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { DeliveryStatus } from "@prisma/client";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
+import { formatRupiah } from "@/utils/formatRupiah";
 
 interface DeliveryNoteFormData {
   deliveryDate: string;
@@ -96,11 +97,11 @@ export default function EditDeliveryNotePage() {
     field: keyof DeliveryNoteFormData,
     value: string
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
 
     // Clear error when user starts typing
     if (formErrors[field as keyof DeliveryNoteFormErrors]) {
-      setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+      setFormErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -172,9 +173,7 @@ export default function EditDeliveryNotePage() {
 
       if (result.success) {
         toast.success("Status berhasil diperbarui");
-        setDeliveryNote((prev) =>
-          prev ? { ...prev, status: newStatus } : null
-        );
+        setDeliveryNote(prev => (prev ? { ...prev, status: newStatus } : null));
       } else {
         toast.error(result.error || "Gagal memperbarui status");
       }
@@ -314,6 +313,31 @@ export default function EditDeliveryNotePage() {
                 </div>
               </div>
               <div>
+                <h3 className="font-medium mb-2">Detail Invoice</h3>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <strong>Subtotal:</strong>{" "}
+                    {formatRupiah(deliveryNote.invoices.subtotal)}
+                  </p>
+                  <p>
+                    <strong>Potongan:</strong>{" "}
+                    {formatRupiah(deliveryNote.invoices.discount)}
+                    {deliveryNote.invoices.discountType === "PERCENTAGE" &&
+                      " (%)"}
+                  </p>
+                  <p>
+                    <strong>
+                      Pajak ({deliveryNote.invoices.taxPercentage}%):
+                    </strong>{" "}
+                    {formatRupiah(deliveryNote.invoices.tax)}
+                  </p>
+                  <p>
+                    <strong>Total:</strong>{" "}
+                    {formatRupiah(deliveryNote.invoices.totalAmount)}
+                  </p>
+                </div>
+              </div>
+              <div>
                 <h3 className="font-medium mb-2">Status</h3>
                 <div className="flex items-center gap-2">
                   <span
@@ -376,7 +400,7 @@ export default function EditDeliveryNotePage() {
             >
               <InputDate
                 value={new Date(formData.deliveryDate)}
-                onChange={(value) =>
+                onChange={value =>
                   value &&
                   handleInputChange(
                     "deliveryDate",
@@ -387,44 +411,124 @@ export default function EditDeliveryNotePage() {
               />
             </FormField>
 
-            <FormField label="Nama Driver" errorMessage={formErrors.driverName}>
+            <FormField
+              label="Nama Driver"
+              errorMessage={formErrors.driverName}
+              required
+            >
               <Input
                 name="driverName"
                 type="text"
                 value={formData.driverName}
-                onChange={(e) =>
-                  handleInputChange("driverName", e.target.value)
-                }
+                onChange={e => handleInputChange("driverName", e.target.value)}
                 placeholder="Masukkan nama driver"
                 disabled={deliveryNote.status === DeliveryStatus.DELIVERED}
               />
             </FormField>
           </div>
 
+          {/* Item Surat Jalan */}
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">
+                Item Surat Jalan
+              </h3>
+            </div>
+
+            {!deliveryNote.delivery_note_items ||
+            deliveryNote.delivery_note_items.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Belum ada item untuk surat jalan ini.
+              </div>
+            ) : (
+              <div className="overflow-x-auto shadow-sm">
+                <div className="min-w-[800px]">
+                  <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-800">
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
+                          Produk
+                        </th>
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
+                          Qty
+                        </th>
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
+                          Terkirim
+                        </th>
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                          Harga
+                        </th>
+                        <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deliveryNote.delivery_note_items.map((item, index) => (
+                        <tr
+                          key={index}
+                          className="border-t border-gray-200 dark:border-gray-600"
+                        >
+                          {/* Product */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="text-m text-gray-700 dark:text-gray-300">
+                              {item.products.name}
+                            </div>
+                          </td>
+
+                          {/* Quantity */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                              {item.quantity}
+                            </div>
+                          </td>
+
+                          {/* Delivered Quantity */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="text-m text-center text-gray-700 dark:text-gray-300">
+                              {item.deliveredQty}
+                            </div>
+                          </td>
+
+                          {/* Price */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="text-m text-right text-gray-700 dark:text-gray-300">
+                              {formatRupiah(item.products.price)}
+                            </div>
+                          </td>
+
+                          {/* Total Price */}
+                          <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate">
+                              {formatRupiah(
+                                item.quantity * item.products.price
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               label="Nomor Kendaraan"
               errorMessage={formErrors.vehicleNumber}
+              required
             >
               <Input
                 name="vehicleNumber"
                 type="text"
                 value={formData.vehicleNumber}
-                onChange={(e) =>
+                onChange={e =>
                   handleInputChange("vehicleNumber", e.target.value)
                 }
                 placeholder="Masukkan nomor kendaraan"
                 disabled={deliveryNote.status === DeliveryStatus.DELIVERED}
-              />
-            </FormField>
-
-            <FormField label="Dibuat Oleh">
-              <Input
-                name="createdBy"
-                type="text"
-                value={deliveryNote.users.name}
-                readOnly
-                className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
               />
             </FormField>
           </div>
@@ -433,7 +537,7 @@ export default function EditDeliveryNotePage() {
             <InputTextArea
               name="notes"
               value={formData.notes}
-              onChange={(e) => handleInputChange("notes", e.target.value)}
+              onChange={e => handleInputChange("notes", e.target.value)}
               placeholder="Tambahkan catatan"
             />
           </FormField>

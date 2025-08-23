@@ -31,23 +31,61 @@ export type DeliveryNoteWithDetails = DeliveryNotes & {
   invoices: {
     id: string;
     code: string;
+    subtotal: number;
+    tax: number;
+    taxPercentage: number;
+    discount: number;
+    discountType: string;
     totalAmount: number;
+    invoiceItems?: {
+      id: string;
+      quantity: number;
+      price: number;
+      discount: number;
+      discountType: string;
+      totalPrice: number;
+      productId: string;
+      products: {
+        id: string;
+        name: string;
+        unit: string;
+        price: number;
+      };
+    }[];
   };
   users: {
     id: string;
     name: string;
     role: string;
   };
-  userPreparation: {
+  userPreparation?: {
     id: string;
     name: string;
   } | null;
+  delivery_note_items?: {
+    id: string;
+    quantity: number;
+    deliveredQty: number;
+    notes?: string | null;
+    productId: string;
+    products: {
+      id: string;
+      name: string;
+      unit: string;
+      price: number;
+    };
+  }[];
 };
 
 export type EligibleInvoice = {
   id: string;
   code: string;
   invoiceDate: Date;
+  subtotal: number;
+  tax: number;
+  taxPercentage: number;
+  discount: number;
+  discountType: string;
   totalAmount: number;
   customer: {
     id: string;
@@ -62,6 +100,21 @@ export type EligibleInvoice = {
       orderNumber: string;
     };
   } | null;
+  invoiceItems?: {
+    id: string;
+    quantity: number;
+    price: number;
+    discount: number;
+    discountType: string;
+    totalPrice: number;
+    productId: string;
+    products: {
+      id: string;
+      name: string;
+      unit: string;
+      price: number;
+    };
+  }[];
 };
 
 // Get all delivery notes
@@ -81,6 +134,11 @@ export async function getDeliveryNotes(): Promise<DeliveryNoteWithDetails[]> {
           select: {
             id: true,
             code: true,
+            subtotal: true,
+            tax: true,
+            taxPercentage: true,
+            discount: true,
+            discountType: true,
             totalAmount: true,
           },
         },
@@ -89,6 +147,18 @@ export async function getDeliveryNotes(): Promise<DeliveryNoteWithDetails[]> {
             id: true,
             name: true,
             role: true,
+          },
+        },
+        delivery_note_items: {
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                price: true,
+              },
+            },
           },
         },
       },
@@ -124,7 +194,24 @@ export async function getDeliveryNoteById(
           select: {
             id: true,
             code: true,
+            subtotal: true,
+            tax: true,
+            taxPercentage: true,
+            discount: true,
+            discountType: true,
             totalAmount: true,
+            invoiceItems: {
+              include: {
+                products: {
+                  select: {
+                    id: true,
+                    name: true,
+                    unit: true,
+                    price: true,
+                  },
+                },
+              },
+            },
           },
         },
         users: {
@@ -132,6 +219,18 @@ export async function getDeliveryNoteById(
             id: true,
             name: true,
             role: true,
+          },
+        },
+        delivery_note_items: {
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                price: true,
+              },
+            },
           },
         },
       },
@@ -152,11 +251,22 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
         type: InvoiceType.PRODUCT,
         // paymentStatus: PaymentStatus.PAID,
         // statusPreparation field removed - all paid invoices are eligible for delivery
+        useDeliveryNote: true,
+        status: "SENT",
         purchaseOrder: {
           isNot: null,
         },
       },
-      include: {
+      select: {
+        id: true,
+        code: true,
+        invoiceDate: true,
+        subtotal: true,
+        tax: true,
+        taxPercentage: true,
+        discount: true,
+        discountType: true,
+        totalAmount: true,
         customer: {
           select: {
             id: true,
@@ -176,6 +286,18 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
             },
           },
         },
+        invoiceItems: {
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                price: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         invoiceDate: "desc",
@@ -190,11 +312,11 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
     });
 
     const existingInvoiceIds = new Set(
-      existingDeliveryNotes.map((dn) => dn.invoiceId)
+      existingDeliveryNotes.map(dn => dn.invoiceId)
     );
 
     return invoices.filter(
-      (invoice) => !existingInvoiceIds.has(invoice.id)
+      invoice => !existingInvoiceIds.has(invoice.id)
     ) as EligibleInvoice[];
   } catch (error) {
     console.error("Error fetching eligible invoices:", error);
@@ -205,7 +327,7 @@ export async function getEligibleInvoices(): Promise<EligibleInvoice[]> {
 // Create new delivery note
 export async function createDeliveryNote(data: DeliveryNoteFormData) {
   try {
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async tx => {
       // Get invoice details with all related data
       const invoice = await tx.invoices.findUnique({
         where: { id: data.invoiceId },
@@ -232,8 +354,8 @@ export async function createDeliveryNote(data: DeliveryNoteFormData) {
         throw new Error("Only PRODUCT type invoices can have delivery notes");
       }
 
-      if (invoice.paymentStatus !== PaymentStatus.PAID) {
-        throw new Error("Only paid invoices can have delivery notes");
+      if (!invoice.useDeliveryNote) {
+        throw new Error("This invoice is not marked for delivery note usage");
       }
 
       // statusPreparation validation removed - all paid invoices are ready for delivery
@@ -261,6 +383,27 @@ export async function createDeliveryNote(data: DeliveryNoteFormData) {
           warehouseUserId: data.warehouseUserId,
         },
       });
+
+      // Create delivery note items for each invoice item
+      for (const invoiceItem of invoice.invoiceItems) {
+        if (!invoiceItem.productId || !invoiceItem.products) {
+          continue;
+        }
+
+        // Create delivery note item
+        await tx.delivery_note_items.create({
+          data: {
+            id: `dni_${Date.now()}_${Math.random()
+              .toString(36)
+              .substring(2, 9)}`,
+            quantity: invoiceItem.quantity,
+            deliveredQty: 0, // Initial value, will be updated when delivery is confirmed
+            productId: invoiceItem.productId,
+            deliveryNoteId: deliveryNote.id,
+            updatedAt: new Date(),
+          },
+        });
+      }
 
       // Create stock movements for all invoice items (SALES_OUT)
       for (const invoiceItem of invoice.invoiceItems) {
@@ -393,7 +536,7 @@ export async function updateDeliveryNote(
 // Delete delivery note (with stock reversal)
 export async function deleteDeliveryNote(id: string) {
   try {
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async tx => {
       // Get delivery note with related data
       const deliveryNote = await tx.deliveryNotes.findUnique({
         where: { id },
