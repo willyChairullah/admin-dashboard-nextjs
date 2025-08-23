@@ -196,6 +196,7 @@ export async function getAvailableOrders(currentPoId?: string) {
             quantity: true,
             price: true,
             discount: true,
+            discountType: true, // ✅ Add discountType field
             totalPrice: true,
             orderId: true,
             productId: true,

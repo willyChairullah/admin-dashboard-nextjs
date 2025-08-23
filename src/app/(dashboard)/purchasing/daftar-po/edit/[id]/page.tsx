@@ -90,6 +90,7 @@ interface Order {
   orderNumber: string;
   paymentDeadline?: Date | null;
   discount: number;
+  discountUnit?: "AMOUNT" | "PERCENTAGE" | null;
   shippingCost: number;
   customer: {
     id: string;
@@ -103,6 +104,7 @@ interface Order {
     quantity: number;
     price: number;
     discount: number;
+    discountType?: "AMOUNT" | "PERCENTAGE" | null;
     totalPrice: number;
     orderId: string;
     productId: string;
@@ -249,7 +251,7 @@ export default function EditPurchaseOrderPage() {
           paymentDeadline: purchaseOrder.paymentDeadline
             ? new Date(purchaseOrder.paymentDeadline)
             : null,
-          items: purchaseOrder.items.map((item) => ({
+          items: purchaseOrder.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.price,
@@ -335,7 +337,7 @@ export default function EditPurchaseOrderPage() {
 
   // Update formData when calculations change
   useEffect(() => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       totalAmount: calculations.subtotal,
       totalDiscount: calculations.totalDiscount,
@@ -382,9 +384,7 @@ export default function EditPurchaseOrderPage() {
 
         // Validasi stok
         if (item.productId && item.quantity > 0) {
-          const product = availableProducts.find(
-            (p) => p.id === item.productId
-          );
+          const product = availableProducts.find(p => p.id === item.productId);
           if (product && product.currentStock < item.quantity) {
             itemError.quantity = `Stok tidak mencukupi`;
           }
@@ -401,40 +401,38 @@ export default function EditPurchaseOrderPage() {
 
   const handleInputChange = useCallback(
     (field: keyof PurchaseOrderFormData, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData(prev => ({ ...prev, [field]: value }));
       if (formErrors[field as keyof PurchaseOrderFormErrors]) {
-        setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+        setFormErrors(prev => ({ ...prev, [field]: undefined }));
       }
     },
     [formErrors]
   );
 
   const handleOrderChange = (orderId: string) => {
-    const order = availableOrders.find((o) => o.id === orderId);
+    const order = availableOrders.find(o => o.id === orderId);
     setSelectedOrder(order || null);
 
     if (order) {
-      const items: PurchaseOrderItemFormData[] = order.orderItems.map(
-        (item) => {
-          const price = item.products.price;
-          const quantity = item.quantity;
-          const discount = item.discount || 0;
-          const priceAfterDiscount = price - discount;
-          const totalPrice = priceAfterDiscount * quantity;
-          return {
-            productId: item.products.id,
-            quantity,
-            price,
-            discount,
-            discountType: "AMOUNT" as const,
-            totalPrice,
-          };
-        }
-      );
+      const items: PurchaseOrderItemFormData[] = order.orderItems.map(item => {
+        const price = item.products.price;
+        const quantity = item.quantity;
+        const discount = item.discount || 0;
+        const priceAfterDiscount = price - discount;
+        const totalPrice = priceAfterDiscount * quantity;
+        return {
+          productId: item.products.id,
+          quantity,
+          price,
+          discount,
+          discountType: "AMOUNT" as const,
+          totalPrice,
+        };
+      });
 
       console.log(order);
 
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         orderId,
         items,
@@ -443,7 +441,7 @@ export default function EditPurchaseOrderPage() {
         paymentDeadline: order.paymentDeadline || null,
       }));
     } else {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         orderId: "",
         items: [],
@@ -477,7 +475,7 @@ export default function EditPurchaseOrderPage() {
     }
 
     if (field === "productId") {
-      const product = availableProducts.find((p) => p.id === value);
+      const product = availableProducts.find(p => p.id === value);
       if (product) {
         currentItem.price = product.price;
         const itemDiscountAmount = calculateItemDiscount(
@@ -497,7 +495,7 @@ export default function EditPurchaseOrderPage() {
       const quantity = field === "quantity" ? value : currentItem.quantity;
 
       if (productId && quantity) {
-        const product = availableProducts.find((p) => p.id === productId);
+        const product = availableProducts.find(p => p.id === productId);
         if (product && product.currentStock < quantity) {
           // Set error untuk item ini
           const newErrors = { ...formErrors };
@@ -664,7 +662,7 @@ export default function EditPurchaseOrderPage() {
           <FormField label="Tanggal PO" errorMessage={formErrors.poDate}>
             <InputDate
               value={new Date(formData.poDate)}
-              onChange={(value) =>
+              onChange={value =>
                 value &&
                 handleInputChange("poDate", value.toISOString().split("T")[0])
               }
@@ -697,7 +695,7 @@ export default function EditPurchaseOrderPage() {
             <Select
               value={formData.orderId || ""}
               onChange={handleOrderChange}
-              options={availableOrders.map((order) => ({
+              options={availableOrders.map(order => ({
                 value: order.id,
                 label: `${order.orderNumber} - ${order.customer.name}`,
               }))}
@@ -718,15 +716,12 @@ export default function EditPurchaseOrderPage() {
             />
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                label="Net"
-                errorMessage={formErrors.paymentDeadline}
-              >
+              <FormField label="Net" errorMessage={formErrors.paymentDeadline}>
                 <InputDate
                   value={formData.paymentDeadline}
                   showClearButton={true}
                   showNullAsText="Bayar Langsung"
-                  onChange={(value) =>
+                  onChange={value =>
                     handleInputChange("paymentDeadline", value)
                   }
                 />
@@ -743,7 +738,7 @@ export default function EditPurchaseOrderPage() {
                     type="text"
                     name="shippingCost"
                     value={formData.shippingCost.toLocaleString("id-ID")}
-                    onChange={(e) => {
+                    onChange={e => {
                       const value =
                         parseFloat(e.target.value.replace(/\D/g, "")) || 0;
                       handleInputChange("shippingCost", value);
@@ -762,7 +757,7 @@ export default function EditPurchaseOrderPage() {
             <InputTextArea
               name="notes"
               value={formData.notes}
-              onChange={(e) => handleInputChange("notes", e.target.value)}
+              onChange={e => handleInputChange("notes", e.target.value)}
               placeholder="Catatan tambahan (opsional)"
             />
           </FormField>
@@ -822,7 +817,7 @@ export default function EditPurchaseOrderPage() {
                 <tbody>
                   {formData.items.map((item, index) => {
                     const product = availableProducts.find(
-                      (p) => p.id === item.productId
+                      p => p.id === item.productId
                     );
 
                     return (
@@ -833,7 +828,7 @@ export default function EditPurchaseOrderPage() {
                         <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                           <select
                             value={item.productId}
-                            onChange={(e) =>
+                            onChange={e =>
                               handleItemChange(
                                 index,
                                 "productId",
@@ -849,7 +844,7 @@ export default function EditPurchaseOrderPage() {
                             <option value="">Pilih Produk</option>
                             {availableProducts
                               .filter(
-                                (product) =>
+                                product =>
                                   // Show current product or products not selected in other rows
                                   product.id === item.productId ||
                                   !formData.items.some(
@@ -858,7 +853,7 @@ export default function EditPurchaseOrderPage() {
                                       otherItem.productId === product.id
                                   )
                               )
-                              .map((product) => (
+                              .map(product => (
                                 <option key={product.id} value={product.id}>
                                   {product.name}
                                 </option>
@@ -889,7 +884,7 @@ export default function EditPurchaseOrderPage() {
                             type="number"
                             name={`quantity_${index}`}
                             value={item.quantity.toString()}
-                            onChange={(e) =>
+                            onChange={e =>
                               handleItemChange(
                                 index,
                                 "quantity",
@@ -910,7 +905,7 @@ export default function EditPurchaseOrderPage() {
                               type="text"
                               name={`price_${index}`}
                               value={item.price.toLocaleString("id-ID")}
-                              onChange={(e) => {
+                              onChange={e => {
                                 const value =
                                   parseFloat(
                                     e.target.value.replace(/\D/g, "")
@@ -941,7 +936,7 @@ export default function EditPurchaseOrderPage() {
                                 type="text"
                                 name={`discount_${index}`}
                                 value={item.discount.toLocaleString("id-ID")}
-                                onChange={(e) => {
+                                onChange={e => {
                                   const value =
                                     parseFloat(
                                       e.target.value.replace(/\D/g, "")
@@ -961,7 +956,7 @@ export default function EditPurchaseOrderPage() {
                             </div>
                             <select
                               value={item.discountType}
-                              onChange={(e) =>
+                              onChange={e =>
                                 handleItemChange(
                                   index,
                                   "discountType",
@@ -1040,7 +1035,7 @@ export default function EditPurchaseOrderPage() {
                       value={formData.orderLevelDiscount.toLocaleString(
                         "id-ID"
                       )}
-                      onChange={(e) => {
+                      onChange={e => {
                         const value =
                           parseFloat(e.target.value.replace(/\D/g, "")) || 0;
                         handleInputChange("orderLevelDiscount", value);
@@ -1052,7 +1047,7 @@ export default function EditPurchaseOrderPage() {
                   <select
                     name="orderLevelDiscountType"
                     value={formData.orderLevelDiscountType}
-                    onChange={(e) =>
+                    onChange={e =>
                       handleInputChange(
                         "orderLevelDiscountType",
                         e.target.value as "AMOUNT" | "PERCENTAGE"
@@ -1119,7 +1114,7 @@ export default function EditPurchaseOrderPage() {
                     <span>Pajak</span>
                     <TaxSelect
                       value={formData.taxPercentage?.toString() || ""}
-                      onChange={(value) => {
+                      onChange={value => {
                         const taxPercentage =
                           value === "" ? null : parseFloat(value);
                         handleInputChange("taxPercentage", taxPercentage);

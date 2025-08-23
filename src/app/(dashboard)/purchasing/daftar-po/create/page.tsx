@@ -89,6 +89,7 @@ interface Order {
   orderNumber: string;
   paymentDeadline?: Date | null;
   discount: number;
+  discountUnit?: "AMOUNT" | "PERCENTAGE" | null; // ✅ Add discountUnit for order-level discount
   shippingCost: number;
   customer: {
     id: string;
@@ -102,6 +103,7 @@ interface Order {
     quantity: number;
     price: number;
     discount: number;
+    discountType?: "AMOUNT" | "PERCENTAGE" | null;
     totalPrice: number;
     orderId: string;
     productId: string;
@@ -362,14 +364,26 @@ export default function CreatePurchaseOrderPage() {
         const price = item.products.price;
         const quantity = item.quantity;
         const discount = item.discount || 0;
-        const priceAfterDiscount = price - discount;
+        const discountType =
+          (item.discountType as "AMOUNT" | "PERCENTAGE") || "AMOUNT"; // ✅ Use discountType from sales data with fallback
+
+        // Calculate discount properly based on type
+        let discountAmount = 0;
+        if (discountType === "PERCENTAGE") {
+          discountAmount = (price * discount) / 100;
+        } else {
+          discountAmount = discount;
+        }
+
+        const priceAfterDiscount = price - discountAmount;
         const totalPrice = priceAfterDiscount * quantity;
+
         return {
           productId: item.products.id,
           quantity,
           price,
           discount,
-          discountType: "AMOUNT" as const,
+          discountType, // ✅ Set discountType from sales data
           totalPrice,
         };
       });
@@ -381,6 +395,8 @@ export default function CreatePurchaseOrderPage() {
         orderId,
         items,
         orderLevelDiscount: order.discount || 0,
+        orderLevelDiscountType:
+          (order.discountUnit as "AMOUNT" | "PERCENTAGE") || "AMOUNT", // ✅ Set orderLevelDiscountType from sales data with fallback
         shippingCost: order.shippingCost || 0,
         paymentDeadline: order.paymentDeadline || null,
       }));
@@ -390,6 +406,7 @@ export default function CreatePurchaseOrderPage() {
         orderId: "",
         items: [],
         orderLevelDiscount: 0,
+        orderLevelDiscountType: "AMOUNT", // ✅ Reset to default
         shippingCost: 0,
         paymentDeadline: null,
       }));
@@ -618,10 +635,7 @@ export default function CreatePurchaseOrderPage() {
             />
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                label="Net"
-                errorMessage={formErrors.paymentDeadline}
-              >
+              <FormField label="Net" errorMessage={formErrors.paymentDeadline}>
                 <InputDate
                   value={formData.paymentDeadline}
                   showClearButton={true}

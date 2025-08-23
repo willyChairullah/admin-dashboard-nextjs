@@ -290,6 +290,7 @@ model DeliveryNotes {
 
 model Invoices {
   id                String            @id @default(cuid())
+  code              String            @unique
   invoiceDate       DateTime          @default(now())
   dueDate           DateTime?
   status            InvoiceStatus     @default(DRAFT)
@@ -299,11 +300,7 @@ model Invoices {
   paidAmount        Float             @default(0)
   remainingAmount   Float             @default(0)
   notes             String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
   customerId        String?
-  code              String            @unique
-  createdBy         String?
   discount          Float             @default(0)
   paymentStatus     PaymentStatus     @default(UNPAID)
   updatedBy         String?
@@ -313,6 +310,10 @@ model Invoices {
   taxPercentage     Float             @default(0)
   type              InvoiceType       @default(PRODUCT)
   statusPreparation PreparationStatus @default(WAITING_PREPARATION)
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdBy         String?
   delivery_notes    DeliveryNotes?
   payments          Payments[]
   salesReturns      SalesReturns[]

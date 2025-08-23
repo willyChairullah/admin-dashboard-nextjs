@@ -483,14 +483,14 @@ export default function OrdersPage() {
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
                 Buat Order Baru
               </h1>
-              <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-300">
+              {/* <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-300">
                 Form pembuatan order untuk sales lapangan -{" "}
                 <span className="font-semibold text-blue-600 dark:text-blue-400">
                   {user.name}
                 </span>
-              </p>
+              </p> */}
             </div>
-            <div className="flex items-center justify-between sm:justify-end">
+            {/* <div className="flex items-center justify-between sm:justify-end">
               <div className="flex items-center space-x-4">
                 <div className="text-left sm:text-right">
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
@@ -507,7 +507,7 @@ export default function OrdersPage() {
                   <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
