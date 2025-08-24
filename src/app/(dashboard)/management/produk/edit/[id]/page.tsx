@@ -522,7 +522,7 @@ export default function EditProductPage() {
       </ManagementForm>
 
       {/* Tabel Riwayat Pergerakan Stok */}
-      <StockMovementsTable data={stockMovements} />
+      <StockMovementsTable data={stockMovements} productName={formData.name} />
 
       {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
       <ConfirmationModal
