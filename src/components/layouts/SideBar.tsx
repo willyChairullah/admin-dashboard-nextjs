@@ -47,7 +47,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some(child => pathname.startsWith(child.href))
+      item.children.some((child) => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -66,7 +66,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some(child => pathname.startsWith(child.href))
+      item.children.some((child) => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -134,7 +134,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map(child => {
+          {item.children?.map((child) => {
             const isChildActive =
               pathname === child.href || pathname.startsWith(child.href + "/");
             return (
@@ -352,6 +352,14 @@ export default function SideBar({
             label: "Expenses",
             icon: "💸",
             href: "/management/finance/expenses",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
+            id: "detailed-transactions",
+            label: "Detailed Transactions",
+            icon: "📜",
+            href: "/management/finance/detailed",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },

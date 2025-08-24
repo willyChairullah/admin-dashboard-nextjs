@@ -6,6 +6,7 @@ import {
   Productions,
   ProductionItems,
   StockMovementType,
+  TransactionType,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -131,11 +132,14 @@ export async function createProductionLog(data: ProductionLogFormData) {
       });
 
       // Create production log items and update stock
+      let totalSalaryExpense = 0;
+      const salaryItems: { description: string; quantity: number; price: number; totalPrice: number }[] = [];
+
       for (const item of data.items) {
-        // Get current product stock
+        // Get current product stock and product details
         const product = await tx.products.findUnique({
           where: { id: item.productId },
-          select: { currentStock: true },
+          select: { currentStock: true, name: true },
         });
 
         if (!product) {
@@ -176,6 +180,48 @@ export async function createProductionLog(data: ProductionLogFormData) {
             notes: item.notes || null,
           },
         });
+
+        // Calculate salary expense for this item
+        const salaryPerBottle = item.salaryPerBottle || 0;
+        if (salaryPerBottle > 0 && item.quantity > 0) {
+          const itemSalaryTotal = item.quantity * salaryPerBottle;
+          totalSalaryExpense += itemSalaryTotal;
+          
+          salaryItems.push({
+            description: `Gaji produksi ${product.name}`,
+            quantity: item.quantity,
+            price: salaryPerBottle,
+            totalPrice: itemSalaryTotal,
+          });
+        }
+      }
+
+      // Create salary expense transaction if there's any salary to record
+      if (totalSalaryExpense > 0) {
+        const salaryTransaction = await tx.transactions.create({
+          data: {
+            transactionDate: data.productionDate,
+            type: "EXPENSE",
+            amount: totalSalaryExpense,
+            description: `Gaji Karyawan Produksi - ${data.code}`,
+            category: "Beban Gaji",
+            reference: data.code, // Use production code as reference
+            userId: data.producedById,
+          },
+        });
+
+        // Create transaction items for detailed salary breakdown
+        for (const salaryItem of salaryItems) {
+          await tx.transactionItems.create({
+            data: {
+              transactionId: salaryTransaction.id,
+              description: salaryItem.description,
+              quantity: salaryItem.quantity,
+              price: salaryItem.price,
+              totalPrice: salaryItem.totalPrice,
+            },
+          });
+        }
       }
 
       return productionLog;
@@ -236,6 +282,15 @@ export async function updateProductionLog(
         });
       }
 
+      // Delete old salary transactions related to this production log
+      await tx.transactions.deleteMany({
+        where: {
+          reference: existingLog.code, // Use production code for reference
+          type: "EXPENSE",
+          category: "Beban Gaji",
+        },
+      });
+
       // Delete existing items
       await tx.productionItems.deleteMany({
         where: { productionLogId: id },
@@ -252,10 +307,13 @@ export async function updateProductionLog(
       });
 
       // Create new production log items and update stock
+      let totalSalaryExpense = 0;
+      const salaryItems: { description: string; quantity: number; price: number; totalPrice: number }[] = [];
+
       for (const item of data.items) {
         const product = await tx.products.findUnique({
           where: { id: item.productId },
-          select: { currentStock: true },
+          select: { currentStock: true, name: true },
         });
 
         if (!product) {
@@ -293,6 +351,48 @@ export async function updateProductionLog(
             notes: item.notes || null,
           },
         });
+
+        // Calculate salary expense for this item
+        const salaryPerBottle = item.salaryPerBottle || 0;
+        if (salaryPerBottle > 0 && item.quantity > 0) {
+          const itemSalaryTotal = item.quantity * salaryPerBottle;
+          totalSalaryExpense += itemSalaryTotal;
+          
+          salaryItems.push({
+            description: `Gaji produksi ${product.name}`,
+            quantity: item.quantity,
+            price: salaryPerBottle,
+            totalPrice: itemSalaryTotal,
+          });
+        }
+      }
+
+      // Create salary expense transaction if there's any salary to record
+      if (totalSalaryExpense > 0) {
+        const salaryTransaction = await tx.transactions.create({
+          data: {
+            transactionDate: data.productionDate,
+            type: "EXPENSE",
+            amount: totalSalaryExpense,
+            description: `Gaji Karyawan Produksi - ${data.code}`,
+            category: "Beban Gaji",
+            reference: data.code, // Use production code as reference
+            userId: data.producedById,
+          },
+        });
+
+        // Create transaction items for detailed salary breakdown
+        for (const salaryItem of salaryItems) {
+          await tx.transactionItems.create({
+            data: {
+              transactionId: salaryTransaction.id,
+              description: salaryItem.description,
+              quantity: salaryItem.quantity,
+              price: salaryItem.price,
+              totalPrice: salaryItem.totalPrice,
+            },
+          });
+        }
       }
 
       return updatedLog;
@@ -329,7 +429,7 @@ export async function deleteProductionLog(id: string) {
         throw new Error("Productions log not found");
       }
 
-      // Reverse stock changes
+      // Delete related stock movements
       for (const item of productionLog.items) {
         const product = await tx.products.findUnique({
           where: { id: item.productId },
@@ -348,6 +448,15 @@ export async function deleteProductionLog(id: string) {
           where: { productionItemsId: item.id },
         });
       }
+
+      // Delete salary transactions related to this production log
+      await tx.transactions.deleteMany({
+        where: {
+          reference: productionLog.code, // Use production code for reference
+          type: "EXPENSE",
+          category: "Beban Gaji",
+        },
+      });
 
       // Delete production log (items will be cascade deleted)
       await tx.productions.delete({

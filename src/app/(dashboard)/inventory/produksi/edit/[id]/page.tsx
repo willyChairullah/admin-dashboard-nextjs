@@ -514,7 +514,7 @@ export default function EditProductionLogPage() {
                     type="number"
                     name={`salaryPerBottle-${index}`}
                     min="0"
-                    step="100"
+                    step="1"
                     value={item.salaryPerBottle?.toString() || ""}
                     onChange={(e) => {
                       const value = e.target.value;
