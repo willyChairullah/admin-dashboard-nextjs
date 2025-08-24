@@ -312,10 +312,7 @@ export default function EditPurchaseOrderPage() {
 
     // Total pembayaran
     const totalPayment =
-      subtotal -
-      orderLevelDiscountAmount +
-      totalTax +
-      (formData.shippingCost || 0);
+      subtotal - totalDiscount + totalTax + (formData.shippingCost || 0);
 
     return {
       subtotal,
@@ -801,7 +798,7 @@ export default function EditPurchaseOrderPage() {
                       Qty
                     </th>
                     <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
-                      Harga
+                      Harga Per Krat
                     </th>
                     <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
                       Potongan

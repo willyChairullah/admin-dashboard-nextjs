@@ -9,6 +9,7 @@ import {
   InvoiceType,
   PurchaseOrderStatus,
   DiscountValueType,
+  StockMovementType,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -269,6 +270,69 @@ export async function getAvailablePurchaseOrders() {
   }
 }
 
+// Get available purchase orders for editing (includes currently used PO)
+export async function getAvailablePurchaseOrdersForEdit(
+  currentInvoiceId?: string
+) {
+  try {
+    const purchaseOrders = await db.purchaseOrders.findMany({
+      where: {
+        OR: [
+          // PO should not already have an invoice
+          {
+            invoices: {
+              is: null,
+            },
+          },
+          // OR PO is used by current invoice being edited
+          ...(currentInvoiceId
+            ? [
+                {
+                  invoices: {
+                    id: currentInvoiceId,
+                  },
+                },
+              ]
+            : []),
+        ],
+        // PO status should be PROCESSING
+        status: PurchaseOrderStatus.PROCESSING,
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                price: true,
+              },
+            },
+          },
+        },
+        order: {
+          include: {
+            customer: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return purchaseOrders;
+  } catch (error) {
+    console.error("Error getting available purchase orders for edit:", error);
+    throw new Error("Failed to fetch purchase orders");
+  }
+}
+
 // Get available products for invoice items
 export async function getAvailableProducts() {
   try {
@@ -322,9 +386,155 @@ export async function getAvailableUsers() {
   }
 }
 
+// Get product stock information
+export async function getProductStock(productId: string) {
+  try {
+    const product = await db.products.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        currentStock: true,
+        minStock: true,
+        unit: true,
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    return {
+      success: true,
+      data: {
+        ...product,
+        isLowStock: product.currentStock <= product.minStock,
+        stockStatus:
+          product.currentStock <= product.minStock
+            ? "low"
+            : product.currentStock <= product.minStock * 2
+            ? "medium"
+            : "high",
+      },
+    };
+  } catch (error) {
+    console.error("Error getting product stock:", error);
+    throw new Error("Failed to get product stock");
+  }
+}
+
+// Helper function to validate stock availability
+export async function validateStockAvailability(items: InvoiceItemFormData[]) {
+  const stockValidation = await Promise.all(
+    items.map(async item => {
+      const product = await db.products.findUnique({
+        where: { id: item.productId },
+        select: { id: true, name: true, currentStock: true, code: true },
+      });
+
+      if (!product) {
+        return {
+          productId: item.productId,
+          valid: false,
+          error: `Product not found`,
+        };
+      }
+
+      if (product.currentStock < item.quantity) {
+        return {
+          productId: item.productId,
+          productName: product.name,
+          productCode: product.code,
+          valid: false,
+          error: `Insufficient stock. Available: ${product.currentStock}, Required: ${item.quantity}`,
+          currentStock: product.currentStock,
+          requiredQuantity: item.quantity,
+        };
+      }
+
+      return {
+        productId: item.productId,
+        productName: product.name,
+        productCode: product.code,
+        valid: true,
+        currentStock: product.currentStock,
+        requiredQuantity: item.quantity,
+      };
+    })
+  );
+
+  const invalidItems = stockValidation.filter(item => !item.valid);
+
+  return {
+    isValid: invalidItems.length === 0,
+    invalidItems,
+    validationResults: stockValidation,
+  };
+}
+
+// Helper function to create stock movements for invoice items
+async function createStockMovements(
+  tx: any,
+  invoiceId: string,
+  items: InvoiceItemFormData[],
+  userId: string
+) {
+  const stockMovements = [];
+
+  for (const item of items) {
+    // Get current product stock
+    const product = await tx.products.findUnique({
+      where: { id: item.productId },
+      select: { currentStock: true },
+    });
+
+    if (!product) {
+      throw new Error(`Product ${item.productId} not found`);
+    }
+
+    const previousStock = product.currentStock;
+    const newStock = previousStock - item.quantity;
+
+    // Create stock movement record
+    const stockMovement = await tx.stockMovements.create({
+      data: {
+        type: StockMovementType.SALES_OUT,
+        quantity: item.quantity,
+        previousStock: previousStock,
+        newStock: newStock,
+        reference: `Invoice: ${invoiceId}`,
+        notes: `Stock reduction for invoice creation`,
+        productId: item.productId,
+        userId: userId,
+      },
+    });
+
+    stockMovements.push(stockMovement);
+
+    // Update product stock
+    await tx.products.update({
+      where: { id: item.productId },
+      data: { currentStock: newStock },
+    });
+  }
+
+  return stockMovements;
+}
+
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
+    // First, validate stock availability
+    const stockValidation = await validateStockAvailability(data.items);
+
+    if (!stockValidation.isValid) {
+      const errorMessages = stockValidation.invalidItems
+        .map(item => item.error)
+        .join(", ");
+      throw new Error(`Stock validation failed: ${errorMessages}`);
+    }
+
     const remainingAmount = data.totalAmount - 0; // paidAmount starts at 0
 
     const result = await db.$transaction(async tx => {
@@ -370,7 +580,15 @@ export async function createInvoice(data: InvoiceFormData) {
         )
       );
 
-      return { invoice, invoiceItems };
+      // Create stock movements and update product stocks
+      const stockMovements = await createStockMovements(
+        tx,
+        invoice.id,
+        data.items,
+        data.createdBy
+      );
+
+      return { invoice, invoiceItems, stockMovements };
     });
 
     revalidatePath("/sales/invoice");

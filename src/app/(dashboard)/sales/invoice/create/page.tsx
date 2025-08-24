@@ -305,12 +305,11 @@ export default function CreateInvoicePage() {
 
     const totalDiscount = totalItemDiscount + orderLevelDiscountAmount;
     const taxableAmount = subtotal - totalDiscount;
-    console.log(taxableAmount);
 
     const tax = (taxableAmount * (formData.taxPercentage || 0)) / 100;
 
     const totalAmount = Math.round(
-      subtotal - orderLevelDiscountAmount + tax + formData.shippingCost
+      subtotal - totalDiscount + tax + formData.shippingCost
     );
 
     setFormData(prev => ({
@@ -362,6 +361,40 @@ export default function CreateInvoicePage() {
       // formData.items.every(item => !item.productId)
     ) {
       errors.items = "Minimal harus ada satu item";
+    }
+
+    // Validate stock availability for each item
+    const itemErrors: any[] = [];
+    formData.items.forEach((item, index) => {
+      const itemError: any = {};
+
+      if (!item.productId) {
+        itemError.productId = "Produk wajib dipilih";
+      }
+
+      if (item.quantity <= 0) {
+        itemError.quantity = "Quantity harus lebih dari 0";
+      }
+
+      if (item.price <= 0) {
+        itemError.price = "Harga harus lebih dari 0";
+      }
+
+      // Check stock availability
+      if (item.productId) {
+        const product = availableProducts.find(p => p.id === item.productId);
+        if (product && item.quantity > product.currentStock) {
+          itemError.quantity = `Stok tidak mencukupi. Tersedia: ${product.currentStock}`;
+        }
+      }
+
+      if (Object.keys(itemError).length > 0) {
+        itemErrors[index] = itemError;
+      }
+    });
+
+    if (itemErrors.length > 0) {
+      errors.items = itemErrors;
     }
 
     setFormErrors(errors);
@@ -749,7 +782,7 @@ export default function CreateInvoicePage() {
                         Qty
                       </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
-                        Harga
+                        Harga Per Krat
                       </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
                         Potongan
@@ -848,8 +881,15 @@ export default function CreateInvoicePage() {
 
                           <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
                             {product && (
-                              <div className="text-m text-center text-gray-700 dark:text-gray-300">
-                                {product.currentStock}
+                              <div className="text-center">
+                                <div className="text-m text-gray-700 dark:text-gray-300">
+                                  {product.currentStock}
+                                </div>
+                                {item.quantity > product.currentStock && (
+                                  <div className="text-xs text-red-500 mt-1">
+                                    Stok tidak mencukupi
+                                  </div>
+                                )}
                               </div>
                             )}
                             {formErrors.items?.[index] &&
@@ -867,15 +907,32 @@ export default function CreateInvoicePage() {
                               type="number"
                               name={`quantity_${index}`}
                               value={item.quantity.toString()}
-                              onChange={e =>
+                              onChange={e => {
+                                const newQuantity =
+                                  parseFloat(e.target.value) || 0;
                                 handleItemChange(
                                   index,
                                   "quantity",
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
+                                  newQuantity
+                                );
+
+                                // Show toast warning if quantity exceeds stock
+                                if (
+                                  product &&
+                                  newQuantity > product.currentStock
+                                ) {
+                                  toast.warning(
+                                    `Stok ${product.name} tidak mencukupi. Tersedia: ${product.currentStock}`
+                                  );
+                                }
+                              }}
                               placeholder="0"
-                              className="w-full text-m px-2 py-1"
+                              className={`w-full text-m px-2 py-1 ${
+                                product && item.quantity > product.currentStock
+                                  ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                                  : ""
+                              }`}
+                              max={product ? product.currentStock : undefined}
                             />
                           </td>
 

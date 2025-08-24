@@ -17,7 +17,7 @@ import {
   updateInvoice,
   getInvoiceById,
   getAvailableCustomers,
-  getAvailablePurchaseOrders,
+  getAvailablePurchaseOrdersForEdit,
   getAvailableProducts,
   getPurchaseOrderForInvoice,
   deleteInvoice,
@@ -112,6 +112,7 @@ export default function EditInvoicePage() {
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // Flag untuk menandai data sudah di-load
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -180,34 +181,44 @@ export default function EditInvoicePage() {
 
   // Recalculate totals when items change
   useEffect(() => {
+    // Skip calculation jika data baru saja di-load dari database
+    if (!isDataLoaded) {
+      return;
+    }
+
+    console.log("=== RECALCULATING TOTALS ===");
+
     const subtotal = formData.items.reduce(
       (sum, item) => sum + item.totalPrice,
       0
     );
 
-    // Hitung total potongan item
+    // Calculate total discount from items (already calculated in totalPrice)
     const totalItemDiscount = formData.items.reduce((sum, item) => {
       const itemDiscountAmount = calculateItemDiscount(
-        item.price,
-        item.discount,
-        item.discountType
+        item.price || 0,
+        item.discount || 0,
+        item.discountType || "AMOUNT"
       );
       return sum + itemDiscountAmount * (item.quantity || 0);
     }, 0);
 
+    // Calculate tax from percentage (applied to subtotal minus overall discount)
     const orderLevelDiscountAmount = calculateOrderLevelDiscount(
       subtotal,
       formData.discount,
       formData.discountType
     );
 
-    const taxableAmount =
-      subtotal - (orderLevelDiscountAmount + totalItemDiscount);
+    const totalDiscount = totalItemDiscount + orderLevelDiscountAmount;
+    const taxableAmount = subtotal - totalDiscount;
+
     const tax = (taxableAmount * (formData.taxPercentage || 0)) / 100;
 
-    const totalAmount = Math.round(taxableAmount + tax + formData.shippingCost);
+    const totalAmount = Math.round(
+      subtotal - totalDiscount + tax + formData.shippingCost
+    );
 
-    // Use a functional update to avoid stale state, especially if calculations are rapid
     setFormData(prev => ({
       ...prev,
       subtotal,
@@ -221,6 +232,7 @@ export default function EditInvoicePage() {
     formData.taxPercentage,
     formData.shippingCost,
     calculateOrderLevelDiscount,
+    isDataLoaded, // Tambahkan dependency
   ]);
 
   useEffect(() => {
@@ -232,7 +244,7 @@ export default function EditInvoicePage() {
         const [invoice, customers, orders, products] = await Promise.all([
           getInvoiceById(invoiceId),
           getAvailableCustomers(),
-          getAvailablePurchaseOrders(),
+          getAvailablePurchaseOrdersForEdit(invoiceId),
           getAvailableProducts(),
         ]);
 
@@ -267,7 +279,7 @@ export default function EditInvoicePage() {
           createdBy: invoice.createdBy || "",
           useDeliveryNote: invoice.useDeliveryNote || false,
           discountType: invoice.discountType || "AMOUNT",
-          items: invoice.invoiceItems.map(item => {
+          items: invoice.invoiceItems.map((item: any) => {
             const discountAmount = calculateItemDiscount(
               item.price,
               item.discount || 0,
@@ -284,8 +296,19 @@ export default function EditInvoicePage() {
           }),
         }));
 
-        const customer = customers.find(c => c.id === invoice.customerId);
+        console.log("=== LOADED INVOICE DATA ===");
+        console.log("Invoice from database:", invoice);
+        console.log("Purchase Order ID:", invoice.purchaseOrderId);
+        console.log("Total Amount from DB:", invoice.totalAmount);
+        console.log("Available Purchase Orders:", orders);
+
+        const customer = customers.find(
+          (c: any) => c.id === invoice.customerId
+        );
         setSelectedCustomer(customer || null);
+
+        // Set flag bahwa data sudah di-load untuk mencegah override totalAmount
+        setIsDataLoaded(true);
       } catch (error: any) {
         console.error("Error fetching data:", error);
         setErrorLoadingData(error.message || "Gagal memuat data invoice.");
@@ -339,10 +362,7 @@ export default function EditInvoicePage() {
 
     // Total pembayaran
     const totalAmount =
-      subtotal -
-      orderLevelDiscountAmount +
-      totalTax +
-      (formData.shippingCost || 0);
+      subtotal - totalDiscount + totalTax + (formData.shippingCost || 0);
 
     return {
       subtotal,
@@ -660,19 +680,43 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
-          {/* Purchase Order (Read-only in edit) */}
+          {/* Purchase Order - Editable if status is DRAFT */}
           <FormField label="Purchase Order">
-            <Input
-              type="text"
-              name="purchaseOrderDisplay"
-              value={
-                availablePurchaseOrders.find(
-                  po => po.id === formData.purchaseOrderId
-                )?.code || "Tidak ada"
-              }
-              readOnly
-              className="cursor-default bg-gray-100 dark:bg-gray-700"
-            />
+            {formData.status === "DRAFT" ? (
+              <Select
+                value={formData.purchaseOrderId || ""}
+                onChange={(value: string) =>
+                  handleInputChange("purchaseOrderId", value)
+                }
+                placeholder="Pilih Purchase Order"
+                options={[
+                  { value: "", label: "Tidak menggunakan PO" },
+                  ...availablePurchaseOrders.map(po => ({
+                    value: po.id,
+                    label: `${po.code} - ${
+                      po.order?.customer?.name || "Customer tidak diketahui"
+                    }`,
+                  })),
+                ]}
+              />
+            ) : (
+              <>
+                <Input
+                  type="text"
+                  name="purchaseOrderDisplay"
+                  value={
+                    availablePurchaseOrders.find(
+                      po => po.id === formData.purchaseOrderId
+                    )?.code || "Tidak ada"
+                  }
+                  readOnly
+                  className="cursor-default bg-gray-100 dark:bg-gray-700"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Purchase Order hanya dapat diubah saat status DRAFT
+                </div>
+              </>
+            )}
           </FormField>
 
           {/* Tanggal Invoice */}
@@ -726,22 +770,40 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
-          {/* Customer */}
+          {/* Customer - Editable if status is DRAFT */}
           <FormField label="Customer" errorMessage={formErrors.customerId}>
-            <Select
-              value={formData.customerId || ""}
-              onChange={(value: string) =>
-                handleInputChange("customerId", value)
-              }
-              placeholder="Pilih Customer"
-              options={[
-                { value: "", label: "Pilih Customer" },
-                ...availableCustomers.map(customer => ({
-                  value: customer.id,
-                  label: customer.name,
-                })),
-              ]}
-            />
+            {formData.status === "DRAFT" ? (
+              <Select
+                value={formData.customerId || ""}
+                onChange={(value: string) =>
+                  handleInputChange("customerId", value)
+                }
+                placeholder="Pilih Customer"
+                options={[
+                  { value: "", label: "Pilih Customer" },
+                  ...availableCustomers.map(customer => ({
+                    value: customer.id,
+                    label: customer.name,
+                  })),
+                ]}
+              />
+            ) : (
+              <>
+                <Input
+                  type="text"
+                  name="customerDisplay"
+                  value={
+                    availableCustomers.find(c => c.id === formData.customerId)
+                      ?.name || "Tidak ada"
+                  }
+                  readOnly
+                  className="cursor-default bg-gray-100 dark:bg-gray-700"
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Customer hanya dapat diubah saat status DRAFT
+                </div>
+              </>
+            )}
           </FormField>
 
           {/* Biaya Pengiriman */}
@@ -851,7 +913,7 @@ export default function EditInvoicePage() {
                         Qty
                       </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
-                        Harga
+                        Harga Per Krat
                       </th>
                       <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[160px]">
                         Potongan
