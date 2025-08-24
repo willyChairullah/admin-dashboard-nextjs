@@ -42,13 +42,13 @@ interface TargetData {
 interface RevenueTrendChartProps {
   data: RevenueTrendData[];
   targets?: TargetData[];
-  timeRange?: "month" | "quarter" | "year";
+  viewType?: "gross" | "net";
 }
 
 export function RevenueTrendChart({
   data,
   targets = [],
-  timeRange = "month",
+  viewType = "gross",
 }: RevenueTrendChartProps) {
   // Generate target revenue line based on average growth
   const avgGrowth =
@@ -57,50 +57,32 @@ export function RevenueTrendChart({
 
   // Use actual targets if provided, otherwise generate based on growth
   const targetData = data.map((item, index) => {
-    let periodFormat: string;
     const currentYear = new Date().getFullYear();
 
-    if (timeRange === "month") {
-      // Convert month name to YYYY-MM format for matching
-      const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
+    // Convert month name to YYYY-MM format for matching
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
 
-      const monthIndex = monthNames.findIndex(
-        (name) => name.toLowerCase() === item.month.toLowerCase()
-      );
-      if (monthIndex !== -1) {
-        periodFormat = `${currentYear}-${(monthIndex + 1)
-          .toString()
-          .padStart(2, "0")}`;
-      }
-    } else if (timeRange === "quarter") {
-      // Convert quarter name to YYYY-Q1 format for matching
-      // item.month should be like "Q1 2025", "Q2 2025", etc.
-      const quarterMatch = item.month.match(/Q(\d+)\s+(\d+)/);
-      if (quarterMatch) {
-        const quarter = quarterMatch[1];
-        const year = quarterMatch[2];
-        periodFormat = `${year}-Q${quarter}`;
-      } else {
-        // Fallback: assume it's the current year and calculate quarter from index
-        const quarter = Math.floor(index / 1) + 1; // Each index is a quarter
-        periodFormat = `${currentYear}-Q${quarter}`;
-      }
-    } else if (timeRange === "year") {
-      // For yearly, item.month should be just the year like "2025"
-      periodFormat = item.month.toString();
+    const monthIndex = monthNames.findIndex(
+      (name) => name.toLowerCase() === item.month.toLowerCase()
+    );
+    let periodFormat = "";
+    if (monthIndex !== -1) {
+      periodFormat = `${currentYear}-${(monthIndex + 1)
+        .toString()
+        .padStart(2, "0")}`;
     }
 
     // Find matching target
@@ -255,7 +237,7 @@ export function RevenueTrendChart({
       link.setAttribute("href", url);
       link.setAttribute(
         "download",
-        `revenue_trend_${timeRange}_${
+        `revenue_trend_monthly_${
           new Date().toISOString().split("T")[0]
         }.csv`
       );
@@ -376,8 +358,7 @@ export function RevenueTrendChart({
       {/* Chart Controls */}
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Revenue Trend Analysis -{" "}
-          {timeRange.charAt(0).toUpperCase() + timeRange.slice(1)}ly View
+          Revenue Trend Analysis - {viewType === "net" ? "Net Profit" : "Gross Revenue"}
         </h4>
         <button
           onClick={handleExportData}

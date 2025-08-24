@@ -15,6 +15,12 @@ const columns = [
     // Tambahkan fungsi cell untuk memformat harga
     cell: (info: { getValue: () => number }) => formatRupiah(info.getValue()),
   },
+  {
+    header: "HPP",
+    accessor: "cost",
+    // Tambahkan fungsi cell untuk memformat HPP
+    cell: (info: { getValue: () => number }) => formatRupiah(info.getValue()),
+  },
   { header: "Min Stok", accessor: "minStock" },
   { header: "Stok", accessor: "currentStock" },
   {

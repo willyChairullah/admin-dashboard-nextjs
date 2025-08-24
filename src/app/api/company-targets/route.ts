@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const targetType = searchParams.get("targetType") as TargetType | null;
+    const viewType = searchParams.get("viewType") || "gross"; // Default to gross
 
     const where = {
       isActive: true,
@@ -119,10 +120,57 @@ export async function GET(request: NextRequest) {
             },
           });
 
-          achievedAmount = paidInvoices.reduce(
+          let grossRevenue = paidInvoices.reduce(
             (sum, invoice) => sum + invoice.totalAmount,
             0
           );
+
+          achievedAmount = grossRevenue;
+
+          // If net view, subtract expenses and COGS for the period
+          if (viewType === "net") {
+            // Get total expenses for the period
+            const expenses = await db.expenses.aggregate({
+              where: {
+                expenseDate: {
+                  gte: startDate,
+                  lte: endDate,
+                },
+                status: "PAID", // Only count paid expenses
+              },
+              _sum: {
+                totalAmount: true,
+              },
+            });
+
+            // Get COGS (cost of goods sold) for the period
+            const invoiceItemsWithProducts = await db.invoiceItems.findMany({
+              where: {
+                invoices: {
+                  invoiceDate: {
+                    gte: startDate,
+                    lte: endDate,
+                  },
+                  paymentStatus: "PAID",
+                },
+              },
+              include: {
+                products: {
+                  select: {
+                    cost: true,
+                  },
+                },
+              },
+            });
+
+            const totalCOGS = invoiceItemsWithProducts.reduce((sum, item) => {
+              const itemCOGS = (item.products?.cost || 0) * item.quantity;
+              return sum + itemCOGS;
+            }, 0);
+
+            // Calculate net profit = gross revenue - expenses - COGS
+            achievedAmount = grossRevenue - (expenses._sum.totalAmount || 0) - totalCOGS;
+          }
 
           // Update the target's achieved amount in the database
           await db.companyTargets.update({

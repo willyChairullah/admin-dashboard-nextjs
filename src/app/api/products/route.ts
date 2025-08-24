@@ -12,7 +12,13 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         unit: true,
+        price: true,
+        cost: true,
+        minStock: true,
         currentStock: true,
+        bottlesPerCrate: true,
+        isActive: true,
+        createdAt: true,
         code: true,
         category: {
           select: {
