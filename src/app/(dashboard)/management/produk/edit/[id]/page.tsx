@@ -18,6 +18,8 @@ import {
 import { getCategories } from "@/lib/actions/categories";
 import { useRouter, useParams } from "next/navigation";
 import { Products } from "@prisma/client";
+import StockMovementsTable from "@/components/ui/StockMovementsTable";
+import { getStockMovements } from "@/lib/actions/stockMovements";
 import { useSharedData } from "@/contexts/StaticData";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { toast } from "sonner";
@@ -63,6 +65,7 @@ export default function EditProductPage() {
   const [product, setProduct] = useState<Products | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
   const [formData, setFormData] = useState<ProductFormData>({
     code: "",
     name: "",
@@ -106,6 +109,9 @@ export default function EditProductPage() {
             isActive: productData.isActive,
             categoryId: productData.categoryId,
           });
+          // Fetch stock movements for this product
+          const stockMovementsRes = await getStockMovements(1, 100, { productId: productData.id });
+          setStockMovements(stockMovementsRes.data || []);
         } else {
           toast.error("Produk tidak ditemukan.");
           router.push(`/${data.module}/${data.subModule}`);
@@ -300,6 +306,7 @@ export default function EditProductPage() {
         hideDeleteButton={false}
         handleDelete={() => setIsDeleteModalOpen(true)}
       >
+        {/* ...existing code for form fields... */}
         <FormField label="Kode Kategori" htmlFor="code" required>
           <Input
             type="text"
@@ -459,6 +466,9 @@ export default function EditProductPage() {
           />
         </FormField>
       </ManagementForm>
+
+      {/* Tabel Riwayat Pergerakan Stok */}
+      <StockMovementsTable data={stockMovements} />
 
       {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
       <ConfirmationModal
