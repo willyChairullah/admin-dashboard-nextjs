@@ -263,120 +263,144 @@ export default function CreateDeliveryPage() {
             {selectedInvoice.invoiceItems &&
               selectedInvoice.invoiceItems.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Item Invoice
+                  <h3 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200">
+                    Detail Item Invoice
                   </h3>
-                  <div className="overflow-x-auto shadow-sm">
-                    <div className="min-w-[800px]">
-                      <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
-                        <thead>
-                          <tr className="bg-gray-50 dark:bg-gray-800">
-                            <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
-                              Produk
-                            </th>
-                            <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
-                              Qty
-                            </th>
-                            <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[120px]">
-                              Harga
-                            </th>
-                            <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[120px]">
-                              Potongan
-                            </th>
-                            <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
-                              Total
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedInvoice.invoiceItems.map((item, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-gray-200 dark:border-gray-600"
-                            >
-                              {/* Product */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-gray-700 dark:text-gray-300">
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table className="w-full min-w-[700px] table-auto bg-white dark:bg-gray-900">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Produk
+                          </th>
+                          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 w-20">
+                            Qty
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-28">
+                            Harga
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-28">
+                            Diskon
+                          </th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-32">
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {selectedInvoice.invoiceItems.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            {/* Product */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                   {item.products.name}
-                                </div>
-                              </td>
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  Kode: {item.products.id || "-"}
+                                </span>
+                              </div>
+                            </td>
 
-                              {/* Quantity */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-center text-gray-700 dark:text-gray-300">
-                                  {item.quantity} {item.products.unit}
-                                </div>
-                              </td>
+                            {/* Quantity */}
+                            <td className="px-4 py-3 text-center">
+                              <div className="text-sm text-gray-700 dark:text-gray-300">
+                                <span className="font-medium">
+                                  {item.quantity}
+                                </span>
+                                <span className="text-xs ml-1 text-gray-500 dark:text-gray-400">
+                                  {item.products.unit}
+                                </span>
+                              </div>
+                            </td>
 
-                              {/* Price */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-right text-gray-700 dark:text-gray-300">
-                                  {formatRupiah(item.price)}
-                                </div>
-                              </td>
+                            {/* Price */}
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {formatRupiah(item.price)}
+                              </span>
+                            </td>
 
-                              {/* Discount */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-right text-gray-700 dark:text-gray-300">
-                                  {item.discountType === "PERCENTAGE"
-                                    ? `${item.discount}%`
-                                    : formatRupiah(item.discount)}
-                                </div>
-                              </td>
+                            {/* Discount */}
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-sm text-red-600 dark:text-red-400">
+                                {item.discount > 0 ? (
+                                  item.discountType === "PERCENTAGE" ? (
+                                    `${item.discount}%`
+                                  ) : (
+                                    formatRupiah(item.discount)
+                                  )
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </span>
+                            </td>
 
-                              {/* Total Price */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate">
-                                  {formatRupiah(item.totalPrice)}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                            {/* Total Price */}
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                {formatRupiah(item.totalPrice)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   {/* Financial Summary */}
-                  <div className="mt-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <h4 className="font-medium mb-3 text-gray-800 dark:text-gray-200">
+                  <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold text-lg mb-4 text-blue-800 dark:text-blue-200 flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                      </svg>
                       Ringkasan Keuangan
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center py-2 border-b border-blue-200/50 dark:border-blue-700/50">
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
                             Subtotal:
                           </span>
-                          <span className="font-medium">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
                             {formatRupiah(selectedInvoice.subtotal)}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Potongan:
+                        <div className="flex justify-between items-center py-2">
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            Diskon:
                           </span>
-                          <span className="font-medium text-red-600">
-                            {formatRupiah(selectedInvoice.discount)}
-                            {selectedInvoice.discountType === "PERCENTAGE" &&
-                              " (%)"}
+                          <span className="font-semibold text-red-600 dark:text-red-400">
+                            -{formatRupiah(selectedInvoice.discount)}
+                            {selectedInvoice.discountType === "PERCENTAGE" && (
+                              <span className="text-xs ml-1">
+                                ({selectedInvoice.discount}%)
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center py-2 border-b border-blue-200/50 dark:border-blue-700/50">
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
                             Pajak ({selectedInvoice.taxPercentage}%):
                           </span>
-                          <span className="font-medium">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
                             {formatRupiah(selectedInvoice.tax)}
                           </span>
                         </div>
-                        <div className="flex justify-between border-t pt-2 border-gray-300 dark:border-gray-600">
-                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                        <div className="flex justify-between items-center py-3 px-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-300 dark:border-blue-600">
+                          <span className="font-bold text-lg text-blue-800 dark:text-blue-200">
                             Total Amount:
                           </span>
-                          <span className="font-semibold text-lg text-blue-600 dark:text-blue-400">
+                          <span className="font-bold text-xl text-blue-600 dark:text-blue-400">
                             {formatRupiah(selectedInvoice.totalAmount)}
                           </span>
                         </div>
@@ -387,15 +411,13 @@ export default function CreateDeliveryPage() {
               )}
           </div>
         )}{" "}
-        <FormField label="Helper" required>
-          <Input
-            name="helper"
-            type="text"
-            value={user?.name || ""}
-            readOnly
-            className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
-          />
-        </FormField>
+        <Input
+          name="helper"
+          type="hidden"
+          value={user?.name || ""}
+          readOnly
+          className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
+        />
         <FormField
           label="Tanggal Pengiriman"
           errorMessage={formErrors.deliveryDate}

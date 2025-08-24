@@ -2,12 +2,9 @@
 
 import { ManagementHeader, ManagementContent } from "@/components/ui";
 import { useSharedData } from "@/contexts/StaticData";
-import React, { useState } from "react"; // Essential for JSX
+import React from "react"; // Essential for JSX
 import { formatDate } from "@/utils/formatDate";
-import { Button } from "@/components/ui/common";
 import { Badge } from "@/components/ui/common";
-import { updateDeliveryStatus } from "@/lib/actions/deliveries";
-import { toast } from "sonner";
 
 const columns = [
   { header: "Kode Pengiriman", accessor: "code" },
@@ -41,7 +38,7 @@ const columns = [
   {
     header: "Status",
     accessor: "status",
-    render: (value: string, row: any) => {
+    render: (value: string) => {
       const statusLabels = {
         PENDING: "Menunggu",
         IN_TRANSIT: "Dalam Perjalanan",
@@ -51,24 +48,21 @@ const columns = [
       };
 
       return (
-        <div className="flex items-center gap-2">
-          <Badge
-            colorScheme={
-              value === "PENDING"
-                ? "yellow"
-                : value === "IN_TRANSIT"
-                ? "blue"
-                : value === "DELIVERED"
-                ? "green"
-                : value === "RETURNED"
-                ? "red"
-                : "gray"
-            }
-          >
-            {statusLabels[value as keyof typeof statusLabels] || value}
-          </Badge>
-          {value === "PENDING" && <DeliveryStatusActions deliveryId={row.id} />}
-        </div>
+        <Badge
+          colorScheme={
+            value === "PENDING"
+              ? "yellow"
+              : value === "IN_TRANSIT"
+              ? "blue"
+              : value === "DELIVERED"
+              ? "green"
+              : value === "RETURNED"
+              ? "red"
+              : "gray"
+          }
+        >
+          {statusLabels[value as keyof typeof statusLabels] || value}
+        </Badge>
       );
     },
   },
@@ -89,65 +83,6 @@ const columns = [
     },
   },
 ];
-
-// Component for delivery status action buttons
-function DeliveryStatusActions({ deliveryId }: { deliveryId: string }) {
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleStatusUpdate = async (status: "DELIVERED" | "RETURNED") => {
-    setIsUpdating(true);
-    try {
-      let returnReason = "";
-
-      if (status === "RETURNED") {
-        returnReason = prompt("Alasan pengembalian:") || "";
-        if (!returnReason) {
-          setIsUpdating(false);
-          return;
-        }
-      }
-
-      // Since the actions aren't working yet due to missing migration,
-      // we'll show a placeholder success message
-      toast.success(
-        status === "DELIVERED"
-          ? "Status pengiriman berhasil diubah menjadi 'Berhasil Dikirim'"
-          : "Status pengiriman berhasil diubah menjadi 'Dikembalikan'"
-      );
-
-      // TODO: Uncomment this when migration is complete
-      // await updateDeliveryStatus(deliveryId, status, "", returnReason);
-    } catch (error) {
-      toast.error("Gagal mengubah status pengiriman");
-      console.error("Error updating delivery status:", error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  return (
-    <div className="flex gap-1">
-      <Button
-        size="small"
-        variant="outline"
-        className="text-green-600 border-green-300 hover:bg-green-50"
-        onClick={() => handleStatusUpdate("DELIVERED")}
-        disabled={isUpdating}
-      >
-        ✓ Dikirim
-      </Button>
-      <Button
-        size="small"
-        variant="outline"
-        className="text-red-600 border-red-300 hover:bg-red-50"
-        onClick={() => handleStatusUpdate("RETURNED")}
-        disabled={isUpdating}
-      >
-        ↩ Dikembalikan
-      </Button>
-    </div>
-  );
-}
 
 const excludedAccessors = ["deliveryDate", "status", "notes"];
 

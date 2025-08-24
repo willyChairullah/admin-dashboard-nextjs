@@ -8,13 +8,18 @@ import {
   InputDate,
   Button,
 } from "@/components/ui";
-import { getDeliveryById, deleteDelivery } from "@/lib/actions/deliveries";
+import {
+  getDeliveryById,
+  deleteDelivery,
+  updateDelivery,
+} from "@/lib/actions/deliveries";
 import { useRouter, useParams } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { formatRupiah } from "@/utils/formatRupiah";
+import { updateDeliveryStatus } from "@/lib/actions/deliveries";
 
 interface DeliveryFormData {
   deliveryDate: string;
@@ -36,6 +41,8 @@ export default function EditDeliveryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [delivery, setDelivery] = useState<any | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
 
   const [formData, setFormData] = useState<DeliveryFormData>({
     deliveryDate: "",
@@ -55,70 +62,17 @@ export default function EditDeliveryPage() {
           throw new Error("ID not found");
         }
 
-        // TODO: Uncomment this when migration is complete
-        // const data = await getDeliveryById(id);
-        // if (!data) {
-        //   throw new Error("Delivery not found");
-        // }
+        const data = await getDeliveryById(id);
+        if (!data) {
+          throw new Error("Delivery not found");
+        }
 
-        // Mock data for now
-        const mockDelivery = {
-          id: id,
-          code: "DEL/08/2025/0001",
-          deliveryDate: "2025-08-24",
-          status: "PENDING",
-          notes: "Mock delivery notes",
-          helper: {
-            id: "helper1",
-            name: "Helper Mock",
-          },
-          invoice: {
-            id: "1",
-            code: "INV/08/2025/0001",
-            totalAmount: 1500000,
-            invoiceDate: "2025-08-24",
-            customer: {
-              name: "PT. Contoh Jaya",
-              address: "Jl. Contoh No. 123, Jakarta",
-            },
-            invoiceItems: [
-              {
-                id: "1",
-                quantity: 10,
-                price: 100000,
-                discount: 0,
-                discountType: "FIXED",
-                totalPrice: 1000000,
-                products: {
-                  name: "Produk A",
-                  code: "PRD-001",
-                },
-              },
-              {
-                id: "2",
-                quantity: 5,
-                price: 100000,
-                discount: 0,
-                discountType: "FIXED",
-                totalPrice: 500000,
-                products: {
-                  name: "Produk B",
-                  code: "PRD-002",
-                },
-              },
-            ],
-            subtotal: 1500000,
-            discount: 0,
-            discountType: "FIXED",
-            tax: 0,
-            taxPercentage: 0,
-          },
-        };
-
-        setDelivery(mockDelivery);
+        setDelivery(data);
         setFormData({
-          deliveryDate: mockDelivery.deliveryDate,
-          notes: mockDelivery.notes || "",
+          deliveryDate: data.deliveryDate
+            ? new Date(data.deliveryDate).toISOString().split("T")[0]
+            : "",
+          notes: data.notes || "",
         });
       } catch (error) {
         console.error("Error fetching delivery:", error);
@@ -170,18 +124,13 @@ export default function EditDeliveryPage() {
         notes: formData.notes || undefined,
       };
 
-      // TODO: Uncomment this when migration is complete
-      // const result = await updateDelivery(delivery.id, submitData);
-      // if (result.success) {
-      //   toast.success("Pengiriman berhasil diperbarui");
-      //   router.push("/sales/pengiriman");
-      // } else {
-      //   toast.error(result.error || "Gagal memperbarui pengiriman");
-      // }
-
-      // Mock success for now
-      toast.success("Pengiriman berhasil diperbarui");
-      router.push("/sales/pengiriman");
+      const result = await updateDelivery(delivery.id, submitData);
+      if (result.success) {
+        toast.success("Pengiriman berhasil diperbarui");
+        router.push("/sales/pengiriman");
+      } else {
+        toast.error(result.error || "Gagal memperbarui pengiriman");
+      }
     } catch (error) {
       console.error("Error updating delivery:", error);
       toast.error("Terjadi kesalahan saat memperbarui pengiriman");
@@ -196,24 +145,57 @@ export default function EditDeliveryPage() {
     try {
       setIsDeleting(true);
 
-      // TODO: Uncomment this when migration is complete
-      // const result = await deleteDelivery(delivery.id);
-      // if (result.success) {
-      //   toast.success("Pengiriman berhasil dihapus");
-      //   router.push("/sales/pengiriman");
-      // } else {
-      //   toast.error(result.error || "Gagal menghapus pengiriman");
-      // }
-
-      // Mock success for now
-      toast.success("Pengiriman berhasil dihapus");
-      router.push("/sales/pengiriman");
+      const result = await deleteDelivery(delivery.id);
+      if (result.success) {
+        toast.success("Pengiriman berhasil dihapus");
+        router.push("/sales/pengiriman");
+      }
     } catch (error) {
       console.error("Error deleting delivery:", error);
       toast.error("Terjadi kesalahan saat menghapus pengiriman");
     } finally {
       setIsDeleting(false);
       setIsDeleteModalOpen(false);
+    }
+  };
+
+  const handleStatusUpdate = async (status: "DELIVERED" | "RETURNED") => {
+    if (status === "RETURNED" && !returnReason.trim()) {
+      toast.error("Alasan pengembalian harus diisi");
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    try {
+      await updateDeliveryStatus(
+        delivery.id,
+        status,
+        "",
+        status === "RETURNED" ? returnReason : ""
+      );
+
+      toast.success(
+        status === "DELIVERED"
+          ? "Status pengiriman berhasil diubah menjadi 'Berhasil Dikirim'"
+          : "Status pengiriman berhasil diubah menjadi 'Dikembalikan'"
+      );
+
+      // Update local state
+      setDelivery((prev: any) => ({
+        ...prev,
+        status: status,
+        returnReason: status === "RETURNED" ? returnReason : "",
+      }));
+
+      // Clear return reason after successful update
+      if (status === "RETURNED") {
+        setReturnReason("");
+      }
+    } catch (error) {
+      toast.error("Gagal mengubah status pengiriman");
+      console.error("Error updating delivery status:", error);
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -339,153 +321,284 @@ export default function EditDeliveryPage() {
 
           {/* Item Invoice */}
           {delivery.invoice.invoiceItems &&
-            delivery.invoice.invoiceItems.length > 0 && (
-              <div className="mt-4">
-                <h3 className="font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Item yang Dikirim
-                </h3>
-                <div className="overflow-x-auto shadow-sm">
-                  <div className="min-w-[800px]">
-                    <table className="w-full table-fixed border-collapse bg-white dark:bg-gray-900">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-800">
-                          <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[200px]">
-                            Produk
-                          </th>
-                          <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[80px]">
-                            Qty
-                          </th>
-                          <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[120px]">
-                            Harga
-                          </th>
-                          <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[120px]">
-                            Potongan
-                          </th>
-                          <th className="border border-gray-200 dark:border-gray-600 px-2 py-2 text-left text-m font-medium text-gray-700 dark:text-gray-300 w-[140px]">
-                            Total
-                          </th>
+          delivery.invoice.invoiceItems.length > 0 ? (
+            <div className="mt-4">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200">
+                Detail Item Invoice
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <table className="w-full min-w-[700px] table-auto bg-white dark:bg-gray-900">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Produk
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 w-20">
+                        Qty
+                      </th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-28">
+                        Harga
+                      </th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-28">
+                        Diskon
+                      </th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300 w-32">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {delivery.invoice.invoiceItems.map(
+                      (item: any, index: number) => (
+                        <tr
+                          key={index}
+                          className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          {/* Product */}
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {item.products.name}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Kode: {item.products.code || "-"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Quantity */}
+                          <td className="px-4 py-3 text-center">
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              <span className="font-medium">
+                                {item.quantity}
+                              </span>
+                              <span className="text-xs ml-1 text-gray-500 dark:text-gray-400">
+                                {item.products.unit}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Price */}
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {formatRupiah(item.price)}
+                            </span>
+                          </td>
+
+                          {/* Discount */}
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm text-red-600 dark:text-red-400">
+                              {item.discount > 0 ? (
+                                item.discountType === "PERCENTAGE" ? (
+                                  `${item.discount}%`
+                                ) : (
+                                  formatRupiah(item.discount)
+                                )
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </span>
+                          </td>
+
+                          {/* Total Price */}
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                              {formatRupiah(item.totalPrice)}
+                            </span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {delivery.invoice.invoiceItems.map(
-                          (item: any, index: number) => (
-                            <tr
-                              key={index}
-                              className="border-t border-gray-200 dark:border-gray-600"
-                            >
-                              {/* Product */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-gray-700 dark:text-gray-300">
-                                  {item.products.name}
-                                </div>
-                              </td>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-                              {/* Quantity */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-center text-gray-700 dark:text-gray-300">
-                                  {item.quantity}
-                                </div>
-                              </td>
-
-                              {/* Price */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-right text-gray-700 dark:text-gray-300">
-                                  {formatRupiah(item.price)}
-                                </div>
-                              </td>
-
-                              {/* Discount */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="text-m text-right text-gray-700 dark:text-gray-300">
-                                  {item.discountType === "PERCENTAGE"
-                                    ? `${item.discount}%`
-                                    : formatRupiah(item.discount)}
-                                </div>
-                              </td>
-
-                              {/* Total Price */}
-                              <td className="border border-gray-200 dark:border-gray-600 px-2 py-2">
-                                <div className="font-medium text-gray-900 dark:text-gray-100 text-right text-m truncate">
-                                  {formatRupiah(item.totalPrice)}
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Financial Summary */}
-                <div className="mt-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="font-medium mb-3 text-gray-800 dark:text-gray-200">
-                    Ringkasan Keuangan
-                  </h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Subtotal:
-                        </span>
-                        <span className="font-medium">
-                          {formatRupiah(delivery.invoice.subtotal)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Potongan:
-                        </span>
-                        <span className="font-medium text-red-600">
-                          {formatRupiah(delivery.invoice.discount)}
-                          {delivery.invoice.discountType === "PERCENTAGE" &&
-                            " (%)"}
-                        </span>
-                      </div>
+              {/* Financial Summary */}
+              <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-lg mb-4 text-blue-800 dark:text-blue-200 flex items-center">
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
+                  </svg>
+                  Ringkasan Keuangan
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200/50 dark:border-blue-700/50">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        Subtotal:
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {formatRupiah(delivery.invoice.subtotal)}
+                      </span>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Pajak ({delivery.invoice.taxPercentage}%):
-                        </span>
-                        <span className="font-medium">
-                          {formatRupiah(delivery.invoice.tax)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2 border-gray-300 dark:border-gray-600">
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">
-                          Total Amount:
-                        </span>
-                        <span className="font-semibold text-lg text-blue-600 dark:text-blue-400">
-                          {formatRupiah(delivery.invoice.totalAmount)}
-                        </span>
-                      </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        Diskon:
+                      </span>
+                      <span className="font-semibold text-red-600 dark:text-red-400">
+                        -{formatRupiah(delivery.invoice.discount)}
+                        {delivery.invoice.discountType === "PERCENTAGE" && (
+                          <span className="text-xs ml-1">
+                            ({delivery.invoice.discount}%)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-blue-200/50 dark:border-blue-700/50">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        Pajak ({delivery.invoice.taxPercentage}%):
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {formatRupiah(delivery.invoice.tax)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 px-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-300 dark:border-blue-600">
+                      <span className="font-bold text-lg text-blue-800 dark:text-blue-200">
+                        Total Amount:
+                      </span>
+                      <span className="font-bold text-xl text-blue-600 dark:text-blue-400">
+                        {formatRupiah(delivery.invoice.totalAmount)}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          ) : (
+            <div className="mt-4">
+              <h3 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200">
+                Detail Item Invoice
+              </h3>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                    Tidak ada item invoice yang ditemukan untuk pengiriman ini.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <FormField label="Helper">
-          <Input
-            name="helper"
-            type="text"
-            value={delivery.helper.name}
-            readOnly
-            className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
-          />
-        </FormField>
+        <Input
+          name="helper"
+          type="hidden"
+          value={delivery.helper.name}
+          readOnly
+          className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
+        />
 
         <FormField label="Status">
           <Input
             name="status"
             type="text"
-            value={delivery.status}
+            value={
+              delivery.status === "PENDING"
+                ? "Menunggu"
+                : delivery.status === "IN_TRANSIT"
+                ? "Dalam Perjalanan"
+                : delivery.status === "DELIVERED"
+                ? "Berhasil Dikirim"
+                : delivery.status === "RETURNED"
+                ? "Dikembalikan"
+                : delivery.status === "CANCELLED"
+                ? "Dibatalkan"
+                : delivery.status
+            }
             readOnly
             className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
           />
         </FormField>
+
+        {/* Status Actions - Only show if status is PENDING and user is HELPER */}
+        {delivery.status === "PENDING" && (
+          <FormField label="Aksi Status Pengiriman">
+            <div className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-900/20"
+                    onClick={() => handleStatusUpdate("DELIVERED")}
+                    disabled={isUpdatingStatus}
+                  >
+                    ✓ Berhasil Dikirim
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-600 dark:hover:bg-red-900/20"
+                    onClick={() => handleStatusUpdate("RETURNED")}
+                    disabled={isUpdatingStatus || !returnReason.trim()}
+                  >
+                    ↩ Dikembalikan
+                  </Button>
+                </div>
+              </div>
+
+              {/* Return Reason Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Alasan Pengembalian (wajib jika dikembalikan)
+                </label>
+                <InputTextArea
+                  name="returnReason"
+                  value={returnReason}
+                  onChange={e => setReturnReason(e.target.value)}
+                  placeholder="Masukkan alasan pengembalian jika barang tidak berhasil dikirim..."
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Contoh: Alamat tidak ditemukan, customer tidak ada di lokasi,
+                  barang rusak, dll.
+                </p>
+              </div>
+            </div>
+          </FormField>
+        )}
+
+        {/* Show info if not HELPER
+        {delivery.status === "PENDING" && user?.role !== "HELPER" && (
+          <FormField label="Status Pengiriman">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                Hanya helper yang dapat mengubah status pengiriman menjadi
+                "Berhasil Dikirim" atau "Dikembalikan".
+              </p>
+            </div>
+          </FormField>
+        )} */}
+
+        {/* Display return reason if status is RETURNED */}
+        {delivery.status === "RETURNED" && delivery.returnReason && (
+          <FormField label="Alasan Pengembalian">
+            <Input
+              name="returnReason"
+              type="text"
+              value={delivery.returnReason}
+              readOnly
+              className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
+            />
+          </FormField>
+        )}
 
         <FormField label="Catatan">
           <InputTextArea

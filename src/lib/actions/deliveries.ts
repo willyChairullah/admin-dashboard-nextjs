@@ -29,7 +29,13 @@ export type DeliveryWithDetails = {
   invoice: {
     id: string;
     code: string;
+    invoiceDate: Date;
     totalAmount: number;
+    subtotal: number;
+    tax: number;
+    taxPercentage: number;
+    discount: number;
+    discountType: string;
     status: string;
     customer: {
       id: string;
@@ -37,6 +43,21 @@ export type DeliveryWithDetails = {
       address: string;
       phone: string | null;
     } | null;
+    invoiceItems: {
+      id: string;
+      quantity: number;
+      price: number;
+      discount: number;
+      discountType: string;
+      totalPrice: number;
+      products: {
+        id: string;
+        name: string;
+        code: string | null;
+        unit: string;
+        price: number;
+      };
+    }[];
   };
   helper: {
     id: string;
@@ -99,6 +120,19 @@ export async function getDeliveries(): Promise<DeliveryWithDetails[]> {
                 name: true,
                 address: true,
                 phone: true,
+              },
+            },
+            invoiceItems: {
+              include: {
+                products: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    unit: true,
+                    price: true,
+                  },
+                },
               },
             },
           },
@@ -280,6 +314,19 @@ export async function getDeliveryById(
                 phone: true,
               },
             },
+            invoiceItems: {
+              include: {
+                products: {
+                  select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    unit: true,
+                    price: true,
+                  },
+                },
+              },
+            },
           },
         },
         helper: {
@@ -296,6 +343,45 @@ export async function getDeliveryById(
   } catch (error) {
     console.error("Error fetching delivery:", error);
     throw new Error("Failed to fetch delivery");
+  }
+}
+
+// Update delivery
+export async function updateDelivery(
+  id: string,
+  data: {
+    deliveryDate: Date;
+    notes?: string;
+  }
+) {
+  try {
+    const delivery = await db.deliveries.update({
+      where: { id },
+      data: {
+        deliveryDate: data.deliveryDate,
+        notes: data.notes,
+        updatedAt: new Date(),
+      },
+      include: {
+        invoice: {
+          include: {
+            customer: true,
+          },
+        },
+        helper: true,
+      },
+    });
+
+    revalidatePath("/sales/pengiriman");
+    revalidatePath(`/sales/pengiriman/edit/${id}`);
+    return { success: true, data: delivery };
+  } catch (error) {
+    console.error("Error updating delivery:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to update delivery",
+    };
   }
 }
 

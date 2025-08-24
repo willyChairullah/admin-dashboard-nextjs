@@ -11,12 +11,11 @@ import {
   Select,
 } from "@/components/ui";
 import { createProduct } from "@/lib/actions/products";
-// [PERBAIKAN] Impor getActiveCategories dengan benar
 import { getActiveCategories } from "@/lib/actions/categories";
 import { useRouter } from "next/navigation";
 import { useSharedData } from "@/contexts/StaticData";
 import { toast } from "sonner";
-import { generateCodeByTable } from "@/utils/getCode"; // Pastikan path ini benar
+import { generateCodeByTable } from "@/utils/getCode";
 
 interface ProductFormData {
   code: string;
@@ -49,14 +48,17 @@ interface ProductFormErrors {
 interface Category {
   id: string;
   name: string;
-  isActive: boolean; // Penting: Pastikan ini ada di interface Category jika Anda memfilter berdasarkan isActive
+  isActive: boolean;
 }
 
 export default function CreateProductPage() {
   const data = useSharedData();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+
   const [formData, setFormData] = useState<ProductFormData>({
     code: "",
     name: "",
@@ -72,56 +74,41 @@ export default function CreateProductPage() {
   });
 
   const [formErrors, setFormErrors] = useState<ProductFormErrors>({});
-  const [isLoadingCode, setIsLoadingCode] = useState(true);
-  const [errorGeneratingCode, setErrorGeneratingCode] = useState<string | null>(
-    null
-  );
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Categories
       try {
-        // [PERBAIKAN] Panggil getActiveCategories() langsung, karena sudah memfilter
+        setIsLoadingData(true);
+        setErrorLoadingData(null);
+
+        // Fetch Categories
         const categoriesData = await getActiveCategories();
-        // Anda tidak perlu lagi .filter(cat => cat.isActive) karena getActiveCategories sudah melakukannya
-        // Hanya perlu map jika Anda ingin mengubah format data sedikit
         const mappedCategories = categoriesData.map(cat => ({
           id: cat.id,
           name: cat.name,
-          isActive: cat.isActive, // Tambahkan ini jika Anda membutuhkannya di sini
+          isActive: cat.isActive,
         }));
         setCategories(mappedCategories);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        toast.error("Gagal memuat daftar kategori.");
-      }
 
-      // Generate Code
-      try {
-        setIsLoadingCode(true);
-        setErrorGeneratingCode(null);
+        // Generate Code
         const newCode = await generateCodeByTable("Products");
-
         setFormData(prevData => ({
           ...prevData,
           code: newCode,
         }));
       } catch (error: any) {
-        console.error("Error generating initial product code:", error);
-        setErrorGeneratingCode(
-          error.message || "Gagal menghasilkan kode produk awal."
+        console.error("Error loading initial data:", error);
+        setErrorLoadingData(
+          error.message || "Gagal memuat data initial. Harap muat ulang halaman."
         );
-        setFormData(prevData => ({
-          ...prevData,
-          code: "", // Kosongkan kode jika gagal
-        }));
+        toast.error("Gagal memuat data kategori atau menghasilkan kode produk.");
       } finally {
-        setIsLoadingCode(false);
+        setIsLoadingData(false);
       }
     };
 
     fetchData();
-  }, []); // Array dependensi kosong agar hanya berjalan sekali saat komponen mount
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: ProductFormErrors = {};
@@ -162,6 +149,10 @@ export default function CreateProductPage() {
 
     if (formData.description && formData.description.length > 500) {
       errors.description = "Deskripsi tidak boleh lebih dari 500 karakter";
+    }
+
+    if (formData.bottlesPerCrate !== null && formData.bottlesPerCrate <= 0) {
+      errors.bottlesPerCrate = "Jumlah botol per krat harus lebih dari 0 jika diisi";
     }
 
     setFormErrors(errors);
@@ -210,15 +201,11 @@ export default function CreateProductPage() {
       } else {
         const errorMessage = result.error || `Gagal membuat ${data.subModule}`;
         toast.error(errorMessage);
-        setFormErrors({
-          name: errorMessage,
-        });
       }
     } catch (error) {
       const errorMessage = "Terjadi kesalahan yang tidak terduga";
       toast.error(errorMessage);
       console.error(`Gagal membuat ${data.subModule}:`, error);
-      setFormErrors({ name: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -229,22 +216,40 @@ export default function CreateProductPage() {
     label: cat.name,
   }));
 
-  if (isLoadingCode) {
+  if (isLoadingData) {
     return (
-      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
-        <p className="text-gray-600 dark:text-gray-400">
-          Memuat formulir... Sedang menghasilkan kode produk...
-        </p>
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <ManagementHeader
+          headerTittle={`Buat ${data.subModule}`}
+          mainPageName={`/${data.module}/${data.subModule}`}
+          allowedRoles={data.allowedRole}
+        />
+        <div className="p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-500 dark:text-gray-400">
+              Memuat formulir... Sedang menghasilkan kode produk...
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (errorGeneratingCode) {
+  if (errorLoadingData) {
     return (
-      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
-        <p className="text-red-500">
-          Error: {errorGeneratingCode}. Harap muat ulang halaman.
-        </p>
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <ManagementHeader
+          headerTittle={`Buat ${data.subModule}`}
+          mainPageName={`/${data.module}/${data.subModule}`}
+          allowedRoles={data.allowedRole}
+        />
+        <div className="p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-red-500 dark:text-red-400">
+              Error: {errorLoadingData}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -261,6 +266,7 @@ export default function CreateProductPage() {
         moduleName={data.module}
         isSubmitting={isSubmitting}
         handleFormSubmit={handleFormSubmit}
+        hideDeleteButton={true}
       >
         <FormField
           label="Kode Produk"
@@ -292,6 +298,7 @@ export default function CreateProductPage() {
             maxLength={100}
           />
         </FormField>
+
         <FormField
           label="Deskripsi"
           htmlFor="description"
@@ -309,6 +316,7 @@ export default function CreateProductPage() {
             {formData.description.length}/500 karakter
           </p>
         </FormField>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Satuan"
@@ -325,6 +333,7 @@ export default function CreateProductPage() {
               maxLength={20}
             />
           </FormField>
+
           <FormField
             label="Botol per Krat"
             htmlFor="bottlesPerCrate"
@@ -342,21 +351,21 @@ export default function CreateProductPage() {
             />
           </FormField>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-          <FormField
-            label="Kategori"
-            htmlFor="categoryId"
-            required
-            errorMessage={formErrors.categoryId}
-          >
-            <Select
-              options={categoryOptions}
-              value={formData.categoryId}
-              onChange={value => handleInputChange("categoryId", value)}
-              placeholder="— Pilih Kategori —"
-            />
-          </FormField>
-        </div>
+
+        <FormField
+          label="Kategori"
+          htmlFor="categoryId"
+          required
+          errorMessage={formErrors.categoryId}
+        >
+          <Select
+            options={categoryOptions}
+            value={formData.categoryId}
+            onChange={value => handleInputChange("categoryId", value)}
+            placeholder="— Pilih Kategori —"
+          />
+        </FormField>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Harga Jual"
@@ -376,6 +385,7 @@ export default function CreateProductPage() {
               step="0.01"
             />
           </FormField>
+
           <FormField
             label="Harga Modal"
             htmlFor="cost"
@@ -384,7 +394,7 @@ export default function CreateProductPage() {
           >
             <Input
               format="rupiah"
-              type="text"
+              type="number"
               name="cost"
               value={formData.cost.toString()}
               onChange={e =>
@@ -395,6 +405,7 @@ export default function CreateProductPage() {
             />
           </FormField>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             label="Stok Minimum"
@@ -413,14 +424,14 @@ export default function CreateProductPage() {
               min="0"
             />
           </FormField>
+
           <FormField
-            label="Stok awal (Tambahkan di modul management)"
+            label="Stok Awal"
             htmlFor="currentStock"
             errorMessage={formErrors.currentStock}
           >
             <Input
               type="number"
-              readOnly
               name="currentStock"
               placeholder="0"
               value={formData.currentStock.toString()}
@@ -428,9 +439,15 @@ export default function CreateProductPage() {
                 handleInputChange("currentStock", parseInt(e.target.value) || 0)
               }
               min="0"
+              readOnly
+              className="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Stok awal akan diatur di modul manajemen stok
+            </p>
           </FormField>
         </div>
+
         <FormField
           label="Status"
           htmlFor="isActive"
