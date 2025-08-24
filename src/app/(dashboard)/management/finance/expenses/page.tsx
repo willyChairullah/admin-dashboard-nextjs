@@ -12,7 +12,9 @@ import {
   getAllTimeExpenseStatistics,
   deleteTransaction,
 } from "@/lib/actions/transactions";
-import { Plus, Edit, Trash2, TrendingUp, Calendar, DollarSign } from "lucide-react";
+import {
+  Plus, Edit, Trash2, TrendingUp, Calendar, DollarSign, Download,
+} from "lucide-react";
 import { Button } from "@/components/ui/common";
 import { toast } from "sonner";
 
@@ -107,6 +109,131 @@ export default function ExpensesPage() {
     } catch (error) {
       console.error("Error deleting expense:", error);
       toast.error("Terjadi kesalahan saat menghapus data");
+    }
+  };
+
+  // PDF Export function
+  const exportToPDF = async () => {
+    if (transformedData.length === 0) {
+      toast.error("Tidak ada data untuk di-export");
+      return;
+    }
+
+    try {
+      // Import jsPDF and autoTable
+      const { default: jsPDF } = await import('jspdf');
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
+      
+      // Create new jsPDF instance
+      const doc = new jsPDF();
+      
+      // Set title
+      const title = "Laporan Pengeluaran";
+      const subtitle = `Periode: ${selectedMonth ? `${selectedMonth}/${selectedYear}` : selectedYear || 'Semua'}`;
+      
+      // Header
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, 14, 22);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(subtitle, 14, 32);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 42);
+
+      // Summary Statistics
+      if (stats) {
+        const summaryData = [
+          ['Total Pengeluaran', formatRupiah(stats.totalAmount)],
+          ['Total Transaksi', `${stats.totalCount} transaksi`],
+          ['Rata-rata per Transaksi', formatRupiah(stats.averageAmount)],
+          ['Kategori Terbanyak', stats.categoryBreakdown.length > 0 ? stats.categoryBreakdown[0].category : '-'],
+        ];
+
+        autoTable(doc, {
+          startY: 55,
+          head: [['Ringkasan', 'Nilai']],
+          body: summaryData,
+          theme: 'plain',
+          headStyles: { 
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0]
+          },
+          styles: { 
+            fontSize: 9,
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0]
+          },
+          columnStyles: {
+            0: { cellWidth: 70, halign: 'left' },
+            1: { cellWidth: 70, halign: 'right' }
+          }
+        });
+      }
+
+      // Detail Table
+      const tableColumns = [
+        'No',
+        'Tanggal',
+        'Deskripsi',
+        'Kategori',
+        'Jumlah'
+      ];
+
+      const tableRows = transformedData.map((item, index) => [
+        (index + 1).toString(),
+        new Date(item.transactionDate).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        }),
+        item.description.length > 30 ? item.description.substring(0, 30) + '...' : item.description,
+        item.category,
+        formatRupiah(item.amount).replace('Rp ', '')
+      ]);
+
+      autoTable(doc, {
+        startY: stats ? 120 : 55,
+        head: [tableColumns],
+        body: tableRows,
+        theme: 'plain',
+        headStyles: { 
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0]
+        },
+        styles: { 
+          fontSize: 8,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0],
+          cellPadding: 2
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 70, halign: 'left' },
+          3: { cellWidth: 35, halign: 'left' },
+          4: { cellWidth: 35, halign: 'right' }
+        },
+        margin: { left: 14, right: 14 },
+        tableWidth: 'wrap'
+      });
+
+      // Save the PDF
+      const fileName = `Laporan_Pengeluaran_${selectedMonth ? `${selectedMonth}_${selectedYear}` : selectedYear || 'Semua'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast.success("PDF berhasil diunduh");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Gagal mengunduh PDF: ${errorMessage}`);
     }
   };
 
@@ -309,7 +436,16 @@ export default function ExpensesPage() {
       )}
 
       {/* Add Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        <Button 
+          onClick={exportToPDF}
+          disabled={transformedData.length === 0}
+          variant="outline"
+          className="disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export PDF
+        </Button>
         <Link href="/management/finance/expenses/create">
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="h-4 w-4 mr-2" />

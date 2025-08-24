@@ -18,6 +18,8 @@ import {
 import { getActiveCategories } from "@/lib/actions/categories";
 import { useRouter, useParams } from "next/navigation";
 import { Products } from "@prisma/client";
+import StockMovementsTable from "@/components/ui/StockMovementsTable";
+import { getStockMovements } from "@/lib/actions/stockMovements";
 import { useSharedData } from "@/contexts/StaticData";
 import { ConfirmationModal } from "@/components/ui/common/ConfirmationModal";
 import { toast } from "sonner";
@@ -68,6 +70,7 @@ export default function EditProductPage() {
   const [product, setProduct] = useState<Products | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
   
   const [formData, setFormData] = useState<ProductFormData>({
     code: "",
@@ -117,6 +120,9 @@ export default function EditProductPage() {
             categoryId: productData.categoryId,
             bottlesPerCrate: productData.bottlesPerCrate,
           });
+          // Fetch stock movements for this product
+          const stockMovementsRes = await getStockMovements(1, 100, { productId: productData.id });
+          setStockMovements(stockMovementsRes.data || []);
         } else {
           throw new Error("Produk tidak ditemukan");
         }
@@ -152,7 +158,7 @@ export default function EditProductPage() {
     }
 
     if (formData.cost < 0) {
-      errors.cost = "Harga modal tidak boleh negatif";
+      errors.cost = "Cost cannot be negative";
     }
 
     if (formData.minStock < 0) {
@@ -326,7 +332,7 @@ export default function EditProductPage() {
         hideDeleteButton={false}
         handleDelete={() => setIsDeleteModalOpen(true)}
       >
-        <FormField label="Kode Produk" htmlFor="code" required>
+        <FormField label="Kode Kategori" htmlFor="code" required>
           <Input
             type="text"
             name="code"
@@ -440,7 +446,7 @@ export default function EditProductPage() {
           </FormField>
           
           <FormField
-            label="Harga Modal"
+            label="HPP (Harga Pokok Penjualan)"
             htmlFor="cost"
             required
             errorMessage={formErrors.cost}
@@ -513,6 +519,9 @@ export default function EditProductPage() {
           />
         </FormField>
       </ManagementForm>
+
+      {/* Tabel Riwayat Pergerakan Stok */}
+      <StockMovementsTable data={stockMovements} />
 
       {/* --- [PERUBAHAN 5] Render komponen modal konfirmasi --- */}
       <ConfirmationModal

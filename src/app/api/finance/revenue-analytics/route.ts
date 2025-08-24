@@ -3,13 +3,10 @@ import db from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const timeRange = searchParams.get("timeRange") || "month";
-
-    // Fetch real data from database
-    const data = await generateRevenueData(
-      timeRange as "month" | "quarter" | "year"
-    );
+    const { searchParams } = new URL(request.url);
+    const viewType = searchParams.get("viewType") || "gross"; // Default to gross
+    
+    const data = await generateRevenueData("month", viewType as "gross" | "net");
 
     return NextResponse.json({
       success: true,
@@ -27,66 +24,32 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
+async function generateRevenueData(timeRange: "month", viewType: "gross" | "net") {
   const now = new Date();
   let startDate: Date;
   let endDate: Date = now;
   let periods: { start: Date; end: Date; label: string }[] = [];
 
-  // Calculate date ranges and periods based on timeRange
-  if (timeRange === "month") {
-    // Current year: January to December
-    const currentYear = now.getFullYear();
-    startDate = new Date(currentYear, 0, 1); // January 1
-    endDate = new Date(currentYear, 11, 31); // December 31
+  // Hanya mendukung monthly - Current year: January to December
+  const currentYear = now.getFullYear();
+  startDate = new Date(currentYear, 0, 1); // January 1
+  endDate = new Date(currentYear, 11, 31); // December 31
 
-    for (let i = 0; i < 12; i++) {
-      const periodStart = new Date(currentYear, i, 1);
-      const periodEnd = new Date(currentYear, i + 1, 0);
-      periods.push({
-        start: periodStart,
-        end: periodEnd,
-        label: periodStart.toLocaleDateString("en-US", { month: "long" }),
-      });
-    }
-  } else if (timeRange === "quarter") {
-    // Current year quarters: Q1, Q2, Q3, Q4
-    const currentYear = now.getFullYear();
-    startDate = new Date(currentYear, 0, 1); // January 1
-    endDate = new Date(currentYear, 11, 31); // December 31
-
-    for (let i = 0; i < 4; i++) {
-      const quarterStart = new Date(currentYear, i * 3, 1);
-      const quarterEnd = new Date(currentYear, i * 3 + 3, 0);
-      const quarter = i + 1;
-      periods.push({
-        start: quarterStart,
-        end: quarterEnd,
-        label: `Q${quarter} ${currentYear}`,
-      });
-    }
-  } else {
-    // Last 5 years including current year
-    const currentYear = now.getFullYear();
-    startDate = new Date(currentYear - 4, 0, 1);
-    endDate = new Date(currentYear, 11, 31);
-
-    for (let i = 4; i >= 0; i--) {
-      const year = currentYear - i;
-      const yearStart = new Date(year, 0, 1);
-      const yearEnd = new Date(year, 11, 31);
-      periods.push({
-        start: yearStart,
-        end: yearEnd,
-        label: year.toString(),
-      });
-    }
+  for (let i = 0; i < 12; i++) {
+    const periodStart = new Date(currentYear, i, 1);
+    const periodEnd = new Date(currentYear, i + 1, 0);
+    periods.push({
+      start: periodStart,
+      end: periodEnd,
+      label: periodStart.toLocaleDateString("en-US", { month: "long" }),
+    });
   }
 
   // Fetch monthly trends with real data
   const monthlyTrends = await Promise.all(
     periods.map(async (period, index) => {
-      const revenue = await db.invoices.aggregate({
+      // Get gross revenue
+      const grossRevenue = await db.invoices.aggregate({
         where: {
           invoiceDate: {
             gte: period.start,
@@ -99,11 +62,60 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         },
       });
 
+      let finalRevenue = grossRevenue._sum.totalAmount || 0;
+
+      // If net view, subtract expenses and COGS
+      if (viewType === "net") {
+        // Get total expenses for the period from transactions table
+        const expenses = await db.transactions.aggregate({
+          where: {
+            transactionDate: {
+              gte: period.start,
+              lte: period.end,
+            },
+            type: "EXPENSE", // Only expense transactions
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+
+        // Get COGS (cost of goods sold) for the period
+        const invoiceItemsWithProducts = await db.invoiceItems.findMany({
+          where: {
+            invoices: {
+              invoiceDate: {
+                gte: period.start,
+                lte: period.end,
+              },
+              paymentStatus: "PAID",
+            },
+          },
+          include: {
+            products: {
+              select: {
+                cost: true,
+              },
+            },
+          },
+        });
+
+        const totalCOGS = invoiceItemsWithProducts.reduce((sum, item) => {
+          const itemCOGS = (item.products?.cost || 0) * item.quantity;
+          return sum + itemCOGS;
+        }, 0);
+
+        // Calculate net profit = gross revenue - expenses - COGS
+        finalRevenue = finalRevenue - (expenses._sum.amount || 0) - totalCOGS;
+      }
+
       // Calculate growth compared to previous period
       let growth = 0;
       if (index > 0) {
         const prevPeriod = periods[index - 1];
-        const prevRevenue = await db.invoices.aggregate({
+        
+        // Get previous period revenue using same logic
+        const prevGrossRevenue = await db.invoices.aggregate({
           where: {
             invoiceDate: {
               gte: prevPeriod.start,
@@ -116,17 +128,59 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
           },
         });
 
-        const currentRev = revenue._sum.totalAmount || 0;
-        const prevRev = prevRevenue._sum.totalAmount || 0;
+        let prevFinalRevenue = prevGrossRevenue._sum.totalAmount || 0;
 
-        if (prevRev > 0) {
-          growth = ((currentRev - prevRev) / prevRev) * 100;
+        if (viewType === "net") {
+          // Get previous period expenses from transactions table
+          const prevExpenses = await db.transactions.aggregate({
+            where: {
+              transactionDate: {
+                gte: prevPeriod.start,
+                lte: prevPeriod.end,
+              },
+              type: "EXPENSE", // Only expense transactions
+            },
+            _sum: {
+              amount: true,
+            },
+          });
+
+          // Get previous period COGS
+          const prevInvoiceItemsWithProducts = await db.invoiceItems.findMany({
+            where: {
+              invoices: {
+                invoiceDate: {
+                  gte: prevPeriod.start,
+                  lte: prevPeriod.end,
+                },
+                paymentStatus: "PAID",
+              },
+            },
+            include: {
+              products: {
+                select: {
+                  cost: true,
+                },
+              },
+            },
+          });
+
+          const prevTotalCOGS = prevInvoiceItemsWithProducts.reduce((sum, item) => {
+            const itemCOGS = (item.products?.cost || 0) * item.quantity;
+            return sum + itemCOGS;
+          }, 0);
+
+          prevFinalRevenue = prevFinalRevenue - (prevExpenses._sum.amount || 0) - prevTotalCOGS;
+        }
+
+        if (prevFinalRevenue > 0) {
+          growth = ((finalRevenue - prevFinalRevenue) / prevFinalRevenue) * 100;
         }
       }
 
       return {
         month: period.label,
-        revenue: revenue._sum.totalAmount || 0,
+        revenue: finalRevenue,
         growth: growth,
       };
     })
@@ -205,10 +259,19 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         }
       }
 
+      // Calculate final revenue (gross or net)
+      let finalProductRevenue = item._sum.totalPrice || 0;
+      
+      if (viewType === "net") {
+        // Subtract COGS for this product
+        const productCOGS = (product?.cost || 0) * (item._sum.quantity || 0);
+        finalProductRevenue = finalProductRevenue - productCOGS;
+      }
+
       return {
         id: item.productId,
         name: product?.name || "Unknown Product",
-        revenue: item._sum.totalPrice || 0,
+        revenue: finalProductRevenue,
         units: item._sum.quantity || 0,
         growth: growth,
         category: product?.category?.name || "Uncategorized",
@@ -405,11 +468,48 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
         }
       }
 
+      // Calculate final revenue (gross or net) for this customer
+      let finalCustomerRevenue = item.totalAmount;
+      
+      if (viewType === "net") {
+        // Get all invoice items for this customer to calculate COGS
+        const customerInvoiceItems = await db.invoiceItems.findMany({
+          where: {
+            invoices: {
+              invoiceDate: {
+                gte: startDate,
+                lte: endDate,
+              },
+              paymentStatus: "PAID",
+              purchaseOrder: {
+                order: {
+                  customerId: customer.id,
+                },
+              },
+            },
+          },
+          include: {
+            products: {
+              select: {
+                cost: true,
+              },
+            },
+          },
+        });
+
+        const customerCOGS = customerInvoiceItems.reduce((sum, item) => {
+          const itemCOGS = (item.products?.cost || 0) * item.quantity;
+          return sum + itemCOGS;
+        }, 0);
+
+        finalCustomerRevenue = finalCustomerRevenue - customerCOGS;
+      }
+
       return {
         id: customer.id,
         name: customer.name || "Unknown Customer",
         location: customer.city || "Unknown Location",
-        revenue: item.totalAmount,
+        revenue: finalCustomerRevenue,
         growth: growth,
       };
     })
@@ -479,7 +579,7 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
   );
 
   // Calculate summary data
-  const totalRevenue = await db.invoices.aggregate({
+  const grossTotalRevenue = await db.invoices.aggregate({
     where: {
       invoiceDate: {
         gte: startDate,
@@ -492,8 +592,54 @@ async function generateRevenueData(timeRange: "month" | "quarter" | "year") {
     },
   });
 
+  let finalTotalRevenue = grossTotalRevenue._sum.totalAmount || 0;
+
+  // If net view, subtract total expenses and COGS for the entire period
+  if (viewType === "net") {
+    // Get total expenses for the entire year from transactions table
+    const totalExpenses = await db.transactions.aggregate({
+      where: {
+        transactionDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+        type: "EXPENSE", // Only expense transactions
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Get total COGS for the entire year
+    const allInvoiceItemsWithProducts = await db.invoiceItems.findMany({
+      where: {
+        invoices: {
+          invoiceDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          paymentStatus: "PAID",
+        },
+      },
+      include: {
+        products: {
+          select: {
+            cost: true,
+          },
+        },
+      },
+    });
+
+    const totalYearCOGS = allInvoiceItemsWithProducts.reduce((sum, item) => {
+      const itemCOGS = (item.products?.cost || 0) * item.quantity;
+      return sum + itemCOGS;
+    }, 0);
+
+    finalTotalRevenue = finalTotalRevenue - (totalExpenses._sum.amount || 0) - totalYearCOGS;
+  }
+
   const summary = {
-    totalRevenue: totalRevenue._sum.totalAmount || 0,
+    totalRevenue: finalTotalRevenue,
     growth:
       monthlyTrends.length > 1
         ? monthlyTrends[monthlyTrends.length - 1].growth

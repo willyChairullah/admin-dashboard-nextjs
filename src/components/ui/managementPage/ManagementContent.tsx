@@ -24,6 +24,7 @@ interface ManagementContentProps<T extends Record<string, any>> {
   emptyMessage?: string | "Tidak ada data ditemukan";
   linkPath: string; // Dynamic link path for editing the row
   onFilteredDataChange?: (filteredData: T[]) => void; // New prop to expose filtered data
+  disableRowLinks?: boolean; // New prop to disable row linking
 }
 
 const ManagementContent = <T extends Record<string, any>>({
@@ -34,6 +35,7 @@ const ManagementContent = <T extends Record<string, any>>({
   emptyMessage = "No data found",
   linkPath,
   onFilteredDataChange, // New prop
+  disableRowLinks = false, // New prop with default value
 }: ManagementContentProps<T>) => {
   const initialDateRange = useMemo(() => {
     return {
@@ -174,7 +176,7 @@ const ManagementContent = <T extends Record<string, any>>({
         emptyMessage={emptyMessage}
         enableFiltering={false}
         pageSize={pageSize}
-        linkPath={defaultLinkPath}
+        linkPath={disableRowLinks ? undefined : defaultLinkPath}
         onPageChange={setCurrentPage}
         onPageSizeChange={handlePageSizeChange}
         totalPages={Math.ceil(filteredData.length / pageSize)}
