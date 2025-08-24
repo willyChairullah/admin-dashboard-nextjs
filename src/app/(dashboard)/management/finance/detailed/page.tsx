@@ -3,20 +3,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/common/Card";
+import { ManagementContent, ManagementHeader } from "@/components/ui";
+import { Badge, Button } from "@/components/ui/common";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   TrendingUp,
-  ArrowLeft,
-  Calendar,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   DollarSign,
   Users,
-  Filter,
-  Eye,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  FileDown,
+  Download,
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { toast } from "sonner";
@@ -27,10 +24,10 @@ interface TransactionDetail {
   type: "INVOICE" | "EXPENSE";
   number: string;
   description: string;
-  customer?: string;
+  customer?: string | null;
   amount: number;
   status: string;
-  category?: string;
+  category?: string | null;
   hpp: number;
 }
 
@@ -41,6 +38,7 @@ interface MonthlyStats {
   grossRevenue: number;
   totalExpenseAmount: number;
   totalCOGS: number;
+  grossProfit: number;
   netProfit: number;
 }
 
@@ -55,18 +53,107 @@ export default function DetailedTransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionDetail[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "INVOICE" | "EXPENSE">(
     "ALL"
   );
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+
+  // Helper function to format transaction status
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "PAID":
+        return <Badge colorScheme="green">Lunas</Badge>;
+      default:
+        return <Badge colorScheme="yellow">Pending</Badge>;
+    }
+  };
+
+  // Helper function to format transaction type
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case "INVOICE":
+        return <Badge colorScheme="green">Invoice</Badge>;
+      case "EXPENSE":
+        return <Badge colorScheme="red">Pengeluaran</Badge>;
+      default:
+        return <Badge colorScheme="gray">-</Badge>;
+    }
+  };
+
+  // Define columns for the table
+  const columns = [
+    {
+      header: "Tanggal",
+      accessor: "date",
+      render: (value: string) => new Date(value).toLocaleDateString("id-ID", {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      }),
+    },
+    {
+      header: "Tipe",
+      accessor: "type",
+      render: (value: string) => getTypeBadge(value),
+    },
+    {
+      header: "Nomor",
+      accessor: "number",
+      render: (value: string) => (
+        <span className="font-mono text-sm">{value}</span>
+      ),
+    },
+    {
+      header: "Deskripsi",
+      accessor: "description",
+      render: (value: string) => (
+        <div className="max-w-xs truncate" title={value}>
+          {value}
+        </div>
+      ),
+    },
+    {
+      header: "Customer/Kategori",
+      accessor: "customer",
+      render: (value: string | undefined, row: TransactionDetail) => (
+        <div className="max-w-xs truncate">
+          {value || row.category || "-"}
+        </div>
+      ),
+    },
+    {
+      header: "Jumlah",
+      accessor: "amount",
+      render: (value: number) => (
+        <span className="font-semibold">{formatRupiah(value)}</span>
+      ),
+    },
+    {
+      header: "HPP",
+      accessor: "hpp",
+      render: (value: number, row: TransactionDetail) => (
+        row.type === "INVOICE" ? (
+          <span className="text-orange-600 dark:text-orange-400 font-semibold">
+            {formatRupiah(value)}
+          </span>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )
+      ),
+    },
+    {
+      header: "Status",
+      accessor: "status",
+      render: (value: string) => getStatusBadge(value),
+    },
+  ];
+
+  const excludedAccessors = ["id", "category"];
 
   const fetchTransactionDetails = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/finance/detailed-transactions?month=${selectedMonth}&search=${searchTerm}&type=${filterType}&page=${currentPage}&limit=${itemsPerPage}`
+        `/api/finance/detailed-transactions?month=${selectedMonth}&type=${filterType}&limit=999999`
       );
       const result = await response.json();
 
@@ -87,18 +174,33 @@ export default function DetailedTransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, searchTerm, filterType, currentPage, itemsPerPage]);
+  }, [selectedMonth, filterType]);
+
+  // Fetch all transactions for PDF export (without pagination)
+  const fetchAllTransactions = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/finance/detailed-transactions?month=${selectedMonth}&type=${filterType}&limit=999999`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        return result.data.transactions || [];
+      } else {
+        console.error("Failed to load all transactions:", result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error loading all transactions:", error);
+      return [];
+    }
+  }, [selectedMonth, filterType]);
 
   useEffect(() => {
     if (selectedMonth) {
       fetchTransactionDetails();
     }
   }, [fetchTransactionDetails, selectedMonth]);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedMonth, searchTerm, filterType]);
 
   const handleMonthChange = (direction: "prev" | "next") => {
     const [year, month] = selectedMonth.split("-").map(Number);
@@ -143,14 +245,25 @@ export default function DetailedTransactionsPage() {
   };
 
   const exportToPDF = async () => {
-    if (filteredTransactions.length === 0) {
-      toast.error("No data to export");
-      return;
-    }
-
     try {
+      // Show loading toast
+      const loadingToast = toast.loading("Mengambil semua data transaksi...");
+      
+      // Fetch all transactions for export
+      const allTransactions = await fetchAllTransactions();
+      
+      if (allTransactions.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.error("Tidak ada data untuk di-export");
+        return;
+      }
+
+      // Update loading message
+      toast.loading("Membuat PDF...", { id: loadingToast });
+
       const { default: jsPDF } = await import("jspdf");
-      const autoTable = (await import("jspdf-autotable")).default;
+      const autoTableModule = await import('jspdf-autotable');
+      const autoTable = autoTableModule.default;
 
       const doc = new jsPDF();
 
@@ -175,11 +288,6 @@ export default function DetailedTransactionsPage() {
           filterType === "INVOICE" ? "Invoice" : "Pengeluaran"
         }`;
       }
-      if (searchTerm) {
-        filterText += filterText
-          ? ` | Pencarian: "${searchTerm}"`
-          : `Pencarian: "${searchTerm}"`;
-      }
       if (filterText) {
         doc.setFontSize(10);
         doc.text(filterText, 14, 37);
@@ -188,55 +296,68 @@ export default function DetailedTransactionsPage() {
       // Summary statistics if available
       if (monthlyStats) {
         const startY = filterText ? 47 : 40;
-        doc.setFontSize(10);
-        doc.text(
-          `Total Transaksi: ${monthlyStats.totalTransactions}`,
-          14,
-          startY
-        );
-        doc.text(
-          `Total Pendapatan: ${formatRupiah(monthlyStats.grossRevenue)}`,
-          14,
-          startY + 7
-        );
-        doc.text(
-          `Total Pengeluaran: ${formatRupiah(monthlyStats.totalExpenseAmount)}`,
-          14,
-          startY + 14
-        );
-        doc.text(
-          `Total HPP: ${formatRupiah(monthlyStats.totalCOGS)}`,
-          14,
-          startY + 21
-        );
-        doc.text(
-          `Keuntungan Bersih: ${formatRupiah(monthlyStats.netProfit)}`,
-          14,
-          startY + 28
-        );
+        const summaryData = [
+          ['Total Transaksi', `${monthlyStats.totalTransactions}`],
+          ['Total Pendapatan', formatRupiah(monthlyStats.grossRevenue)],
+          ['Total HPP', formatRupiah(monthlyStats.totalCOGS)],
+          ['Keuntungan Kotor', formatRupiah(monthlyStats.grossProfit)],
+          ['Total Pengeluaran', formatRupiah(monthlyStats.totalExpenseAmount)],
+          ['Keuntungan Bersih', formatRupiah(monthlyStats.netProfit)],
+        ];
+
+        autoTable(doc, {
+          startY: startY,
+          head: [['Ringkasan', 'Nilai']],
+          body: summaryData,
+          theme: 'plain',
+          headStyles: { 
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0]
+          },
+          styles: { 
+            fontSize: 9,
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0]
+          },
+          columnStyles: {
+            0: { cellWidth: 70, halign: 'left' },
+            1: { cellWidth: 70, halign: 'right' }
+          }
+        });
       }
 
-      // Prepare table data using filtered transactions
-      const tableData = filteredTransactions.map((transaction) => [
-        new Date(transaction.date).toLocaleDateString("id-ID"),
+      // Filter transactions for search term
+      const filteredAllTransactions = allTransactions;
+
+      // Prepare table data using ALL filtered transactions
+      const tableData = filteredAllTransactions.map((transaction: TransactionDetail, index: number) => [
+        (index + 1).toString(), // Nomor urut
+        new Date(transaction.date).toLocaleDateString("id-ID", {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
+        }),
         transaction.type === "INVOICE" ? "Invoice" : "Pengeluaran",
         transaction.number,
-        transaction.description.length > 30
-          ? transaction.description.substring(0, 30) + "..."
+        transaction.description.length > 25
+          ? transaction.description.substring(0, 25) + "..."
           : transaction.description,
-        (transaction.customer || transaction.category || "-").length > 20
+        (transaction.customer || transaction.category || "-").length > 15
           ? (transaction.customer || transaction.category || "-").substring(
-              0,
-              20
+              0, 15
             ) + "..."
           : transaction.customer || transaction.category || "-",
-        formatRupiah(transaction.amount),
-        transaction.type === "INVOICE" ? formatRupiah(transaction.hpp) : "-",
+        formatRupiah(transaction.amount).replace('Rp ', ''),
+        transaction.type === "INVOICE" ? formatRupiah(transaction.hpp).replace('Rp ', '') : "-",
         transaction.status === "PAID" ? "Lunas" : "Pending",
       ]);
 
       // Table headers
       const headers = [
+        "No",
         "Tanggal",
         "Tipe",
         "Nomor",
@@ -250,38 +371,42 @@ export default function DetailedTransactionsPage() {
       // Calculate startY position dynamically
       let tableStartY = 40;
       if (filterText) tableStartY += 7;
-      if (monthlyStats) tableStartY += 35;
+      if (monthlyStats) tableStartY += 45;
 
       // Use autoTable function
       autoTable(doc, {
         head: [headers],
         body: tableData,
         startY: tableStartY,
+        theme: 'plain',
         styles: {
-          fontSize: 6,
-          cellPadding: 1.5,
+          fontSize: 7,
+          cellPadding: 2,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0]
         },
         headStyles: {
-          fillColor: [34, 197, 94], // Emerald color
-          textColor: 255,
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
           fontStyle: "bold",
-          fontSize: 7,
+          fontSize: 8,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0]
         },
         columnStyles: {
-          0: { cellWidth: 20 }, // Tanggal
-          1: { cellWidth: 16 }, // Tipe
-          2: { cellWidth: 22 }, // Nomor
-          3: { cellWidth: 35 }, // Deskripsi
-          4: { cellWidth: 25 }, // Customer/Kategori
-          5: { cellWidth: 25, halign: "right" }, // Jumlah
-          6: { cellWidth: 25, halign: "right" }, // HPP
-          7: { cellWidth: 15 }, // Status
-        },
-        alternateRowStyles: {
-          fillColor: [249, 250, 251],
+          0: { cellWidth: 10, halign: 'center' }, // No
+          1: { cellWidth: 18, halign: 'center' }, // Tanggal
+          2: { cellWidth: 16, halign: 'center' }, // Tipe
+          3: { cellWidth: 22, halign: 'left' }, // Nomor
+          4: { cellWidth: 28, halign: 'left' }, // Deskripsi
+          5: { cellWidth: 22, halign: 'left' }, // Customer/Kategori
+          6: { cellWidth: 22, halign: "right" }, // Jumlah
+          7: { cellWidth: 22, halign: "right" }, // HPP
+          8: { cellWidth: 15, halign: 'center' }, // Status
         },
         margin: { left: 14, right: 14 },
-        didDrawPage: function (data: any) {
+        tableWidth: 'wrap',
+        didDrawPage: function (data: { pageNumber: number }) {
           // Footer on each page
           doc.setFontSize(8);
           doc.setFont("helvetica", "normal");
@@ -308,33 +433,18 @@ export default function DetailedTransactionsPage() {
       });
 
       // Save the PDF
-      const filename = `detail-transaksi-${currentMonthData.monthName}-${currentMonthData.year}.pdf`;
+      const filename = `detail-transaksi-${currentMonthData.monthName}-${currentMonthData.year}-${filteredAllTransactions.length}-transaksi.pdf`;
       doc.save(filename);
 
-      toast.success("PDF berhasil diekspor!");
+      toast.dismiss(loadingToast);
+      toast.success(`PDF berhasil diekspor! Total ${filteredAllTransactions.length} transaksi`);
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Gagal mengekspor PDF");
     }
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch =
-      transaction.description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (transaction.customer &&
-        transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return matchesSearch;
-  });
-
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const filteredTransactions = transactions;
 
   if (userLoading) {
     return (
@@ -369,431 +479,191 @@ export default function DetailedTransactionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <Link
-              href="/management/finance/revenue-analytics"
-              className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Kembali ke Revenue Analytics</span>
-            </Link>
+    <div className="space-y-6">
+      <ManagementHeader
+        allowedRoles={["OWNER", "ADMIN"]}
+        mainPageName="management/finance/detailed"
+        headerTittle="Detail Transaksi Bulanan"
+      />
+
+      {/* Month Navigation */}
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => handleMonthChange("prev")}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Bulan Sebelumnya
+          </button>
+
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {getMonthName(selectedMonth)}
+            </h2>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="mt-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            />
           </div>
 
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-xl border-0">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-xl">
-                <FileText className="h-8 w-8 text-emerald-600" />
-              </div>
+          <button
+            onClick={() => handleMonthChange("next")}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-lg transition-colors"
+          >
+            Bulan Selanjutnya
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Monthly Statistics */}
+      {monthlyStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-                  Detail Transaksi Bulanan
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
-                  Rincian lengkap semua transaksi per bulan
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Total Transaksi
+                </p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {monthlyStats.totalTransactions}
                 </p>
               </div>
+              <FileText className="h-6 w-6 text-blue-600" />
             </div>
+          </Card>
 
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between bg-white/50 dark:bg-gray-700/50 rounded-xl p-4">
-              <button
-                onClick={() => handleMonthChange("prev")}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-lg transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Bulan Sebelumnya
-              </button>
-
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {getMonthName(selectedMonth)}
-                </h2>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="mt-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                />
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Total Pendapatan
+                </p>
+                <p className="text-xl font-bold text-green-600 leading-tight break-words">
+                  {formatRupiah(monthlyStats.grossRevenue)}
+                </p>
               </div>
-
-              <button
-                onClick={() => handleMonthChange("next")}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-lg transition-colors"
-              >
-                Bulan Selanjutnya
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              <DollarSign className="h-6 w-6 text-green-600" />
             </div>
-          </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Total HPP
+                </p>
+                <p className="text-xl font-bold text-orange-600 leading-tight break-words">
+                  {formatRupiah(monthlyStats.totalCOGS)}
+                </p>
+              </div>
+              <Users className="h-6 w-6 text-orange-600" />
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Keuntungan Kotor
+                </p>
+                <p className="text-xl font-bold text-cyan-600 leading-tight break-words">
+                  {formatRupiah(monthlyStats.grossProfit)}
+                </p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-cyan-600" />
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Total Pengeluaran
+                </p>
+                <p className="text-xl font-bold text-red-600 leading-tight break-words">
+                  {formatRupiah(monthlyStats.totalExpenseAmount)}
+                </p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-red-600" />
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Keuntungan Bersih
+                </p>
+                <p className={`text-xl font-bold leading-tight break-words ${
+                  monthlyStats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
+                }`}>
+                  {formatRupiah(monthlyStats.netProfit)}
+                </p>
+              </div>
+              <DollarSign className={`h-6 w-6 ${
+                monthlyStats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
+              }`} />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Filters and Export */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          {/* Type Filter */}
+          <select
+            value={filterType}
+            onChange={(e) =>
+              setFilterType(e.target.value as "ALL" | "INVOICE" | "EXPENSE")
+            }
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+          >
+            <option value="ALL">Semua Transaksi</option>
+            <option value="INVOICE">Invoice Saja</option>
+            <option value="EXPENSE">Pengeluaran Saja</option>
+          </select>
         </div>
 
-        {/* Monthly Statistics */}
-        {monthlyStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
-            <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl">
-                  <FileText className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {monthlyStats.totalTransactions}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    Total Transaksi
-                  </p>
-                </div>
-              </div>
-            </Card>
+        {/* Export Button */}
+        <div className="flex gap-2">
+          <Button
+            onClick={exportToPDF}
+            variant="outline"
+            size="medium"
+            disabled={loading || transactions.length === 0}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export PDF (Semua Data)
+          </Button>
+        </div>
+      </div>
 
-            <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl">
-                  <DollarSign className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-                    {formatRupiah(monthlyStats.grossRevenue)}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    Total Pendapatan
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-xl">
-                  <TrendingUp className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-                    {formatRupiah(monthlyStats.totalExpenseAmount)}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    Total Pengeluaran
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-xl">
-                  <Users className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-                    {formatRupiah(monthlyStats.totalCOGS)}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    Total HPP
-                  </p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-xl">
-                  <DollarSign className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-                    {formatRupiah(monthlyStats.netProfit)}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    Keuntungan Bersih
-                  </p>
-                </div>
-              </div>
-            </Card>
+      {/* Data Table */}
+      <div className="bg-white dark:bg-gray-950 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">
+              Loading...
+            </span>
           </div>
+        ) : (
+          <ManagementContent
+            sampleData={filteredTransactions}
+            columns={columns}
+            excludedAccessors={excludedAccessors}
+            dateAccessor="date"
+            emptyMessage={`Tidak ada transaksi ditemukan untuk bulan ${getMonthName(selectedMonth)}`}
+            linkPath="/management/finance/detailed"
+            disableRowLinks={true}
+          />
         )}
-
-        {/* Filters and Actions */}
-        <Card className="p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Cari transaksi..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-w-[250px]"
-                />
-              </div>
-
-              {/* Type Filter */}
-              <select
-                value={filterType}
-                onChange={(e) =>
-                  setFilterType(e.target.value as "ALL" | "INVOICE" | "EXPENSE")
-                }
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value="ALL">Semua Transaksi</option>
-                <option value="INVOICE">Invoice Saja</option>
-                <option value="EXPENSE">Pengeluaran Saja</option>
-              </select>
-            </div>
-
-            {/* Export Button */}
-            <div className="flex gap-2">
-              <button
-                onClick={exportToPDF}
-                disabled={filteredTransactions.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
-              >
-                <FileDown className="h-4 w-4" />
-                Export PDF
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Transactions Table */}
-        <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Daftar Transaksi - {getMonthName(selectedMonth)}
-              </h3>
-              {(searchTerm || filterType !== "ALL") && (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Menampilkan {filteredTransactions.length} dari{" "}
-                  {transactions.length} transaksi
-                </div>
-              )}
-            </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                <span className="ml-3 text-gray-600 dark:text-gray-400">
-                  Loading...
-                </span>
-              </div>
-            ) : paginatedTransactions.length > 0 ? (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Tanggal
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Tipe
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Nomor
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Deskripsi
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Customer/Kategori
-                        </th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Jumlah
-                        </th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          HPP
-                        </th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedTransactions.map((transaction) => (
-                        <tr
-                          key={transaction.id}
-                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        >
-                          <td className="py-3 px-4 text-gray-900 dark:text-white">
-                            {new Date(transaction.date).toLocaleDateString(
-                              "id-ID"
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                transaction.type === "INVOICE"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                              }`}
-                            >
-                              {transaction.type === "INVOICE"
-                                ? "Invoice"
-                                : "Pengeluaran"}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-mono text-sm">
-                            {transaction.number}
-                          </td>
-                          <td className="py-3 px-4 text-gray-900 dark:text-white">
-                            {transaction.description}
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                            {transaction.customer ||
-                              transaction.category ||
-                              "-"}
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-900 dark:text-white font-semibold">
-                            {formatRupiah(transaction.amount)}
-                          </td>
-                          <td className="py-3 px-4 text-right text-gray-900 dark:text-white font-semibold">
-                            {transaction.type === "INVOICE" ? (
-                              <span className="text-orange-600 dark:text-orange-400">
-                                {formatRupiah(transaction.hpp)}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                transaction.status === "PAID"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                              }`}
-                            >
-                              {transaction.status === "PAID"
-                                ? "Lunas"
-                                : "Pending"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Total Summary */}
-                <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Total dari {filteredTransactions.length} transaksi yang
-                      ditampilkan
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-4 text-sm font-medium">
-                      {(() => {
-                        const invoiceTotal = filteredTransactions
-                          .filter((t) => t.type === "INVOICE")
-                          .reduce((sum, t) => sum + t.amount, 0);
-                        const expenseTotal = filteredTransactions
-                          .filter((t) => t.type === "EXPENSE")
-                          .reduce((sum, t) => sum + t.amount, 0);
-                        const hppTotal = filteredTransactions
-                          .filter((t) => t.type === "INVOICE")
-                          .reduce((sum, t) => sum + t.hpp, 0);
-                        const netTotal = invoiceTotal - expenseTotal - hppTotal;
-
-                        return (
-                          <>
-                            <div className="flex justify-between sm:block">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Pendapatan:
-                              </span>
-                              <span className="text-green-600 dark:text-green-400 ml-2">
-                                {formatRupiah(invoiceTotal)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between sm:block">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Pengeluaran:
-                              </span>
-                              <span className="text-red-600 dark:text-red-400 ml-2">
-                                {formatRupiah(expenseTotal)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between sm:block">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Total HPP:
-                              </span>
-                              <span className="text-orange-600 dark:text-orange-400 ml-2">
-                                {formatRupiah(hppTotal)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between sm:block border-t sm:border-t-0 sm:border-l border-gray-300 dark:border-gray-600 pt-2 sm:pt-0 sm:pl-4">
-                              <span className="text-gray-900 dark:text-white font-semibold">
-                                Net Total:
-                              </span>
-                              <span
-                                className={`font-bold ml-2 ${
-                                  netTotal >= 0
-                                    ? "text-green-600 dark:text-green-400"
-                                    : "text-red-600 dark:text-red-400"
-                                }`}
-                              >
-                                {formatRupiah(netTotal)}
-                              </span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Menampilkan {(currentPage - 1) * itemsPerPage + 1} -{" "}
-                      {Math.min(
-                        currentPage * itemsPerPage,
-                        filteredTransactions.length
-                      )}{" "}
-                      dari {filteredTransactions.length} transaksi
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        Previous
-                      </button>
-                      <span className="px-3 py-1 text-gray-900 dark:text-white">
-                        {currentPage} / {totalPages}
-                      </span>
-                      <button
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Tidak ada transaksi
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Tidak ada transaksi ditemukan untuk bulan{" "}
-                  {getMonthName(selectedMonth)}
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
       </div>
     </div>
   );

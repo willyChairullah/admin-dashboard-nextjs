@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 
+interface TransactionDetail {
+  id: string;
+  date: string;
+  type: "INVOICE" | "EXPENSE";
+  number: string;
+  description: string;
+  customer?: string | null;
+  amount: number;
+  status: string;
+  category?: string | null;
+  hpp: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -35,7 +48,7 @@ export async function GET(request: NextRequest) {
         }
       : {};
 
-    let transactions: any[] = [];
+    let transactions: TransactionDetail[] = [];
 
     // Fetch invoices if type is ALL or INVOICE
     if (type === "ALL" || type === "INVOICE") {
@@ -233,7 +246,12 @@ export async function GET(request: NextRequest) {
 
     const grossRevenue = grossRevenueResult._sum.totalAmount || 0;
     const totalExpenseAmount = totalExpenseAmountResult._sum.amount || 0;
-    const netProfit = grossRevenue - totalExpenseAmount - totalCOGS;
+    
+    // Calculate gross profit (revenue - cost of goods sold)
+    const grossProfit = grossRevenue - totalCOGS;
+    
+    // Calculate net profit (gross profit - operating expenses)
+    const netProfit = grossProfit - totalExpenseAmount;
 
     const stats = {
       totalInvoices,
@@ -242,6 +260,7 @@ export async function GET(request: NextRequest) {
       grossRevenue,
       totalExpenseAmount,
       totalCOGS,
+      grossProfit,
       netProfit,
     };
 

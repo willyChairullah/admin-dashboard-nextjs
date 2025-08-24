@@ -356,6 +356,14 @@ export default function SideBar({
             roles: ["ADMIN", "OWNER"],
           },
           {
+            id: "piutang",
+            label: "Piutang",
+            icon: "💰",
+            href: "/management/finance/piutang",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
             id: "detailed-transactions",
             label: "Detailed Transactions",
             icon: "📜",
