@@ -13,12 +13,14 @@ export default async function PengirimanLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // For now, we'll provide an empty array until the database is migrated
+  // Ambil data deliveries dari database
+  const deliveriesData = await getDeliveries();
+  
   const myStaticData = {
     module: "sales",
     subModule: "pengiriman",
     allowedRole: ["OWNER", "HELPER"],
-    data: [], // await getDeliveries(), // This will be uncommented after migration
+    data: deliveriesData,
   };
 
   return (

@@ -205,6 +205,19 @@ async function getLastCodeForCurrentMonth(
         lastCode = lastDeliveryNote?.code || null;
         break;
 
+      case "Deliveries":
+        const lastDelivery = await db.deliveries.findFirst({
+          where: {
+            code: {
+              startsWith: codePrefix,
+            },
+          },
+          orderBy: { code: "desc" },
+          select: { code: true },
+        });
+        lastCode = lastDelivery?.code || null;
+        break;
+
       case "expenses":
       case "Expenses":
         const lastExpense = await db.expenses.findFirst({

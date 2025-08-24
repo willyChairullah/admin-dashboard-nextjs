@@ -45,7 +45,48 @@ export type DeliveryWithDetails = {
   };
 };
 
-// Get all deliveries
+// Get invoices that are ready for delivery (status: SENT and no existing delivery)
+export async function getAvailableInvoicesForDelivery() {
+  try {
+    const invoices = await db.invoices.findMany({
+      where: {
+        status: "SENT",
+        deliveries: null, // No existing delivery
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+          },
+        },
+        invoiceItems: {
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+                unit: true,
+                price: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        invoiceDate: "desc",
+      },
+    });
+
+    return invoices;
+  } catch (error) {
+    console.error("Error fetching available invoices for delivery:", error);
+    throw new Error("Failed to fetch available invoices");
+  }
+}
 export async function getDeliveries(): Promise<DeliveryWithDetails[]> {
   try {
     const deliveries = await db.deliveries.findMany({
@@ -82,47 +123,47 @@ export async function getDeliveries(): Promise<DeliveryWithDetails[]> {
   }
 }
 
-// Get available invoices for delivery (invoices with status SENT)
-export async function getAvailableInvoicesForDelivery() {
-  try {
-    const invoices = await db.invoices.findMany({
-      where: {
-        status: "SENT",
-        deliveries: {
-          is: null, // No delivery record exists yet
-        },
-      },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-          },
-        },
-        invoiceItems: {
-          include: {
-            products: {
-              select: {
-                name: true,
-                unit: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        invoiceDate: "desc",
-      },
-    });
+// // Get available invoices for delivery (invoices with status SENT)
+// export async function getAvailableInvoicesForDelivery() {
+//   try {
+//     const invoices = await db.invoices.findMany({
+//       where: {
+//         status: "SENT",
+//         deliveries: {
+//           is: null, // No delivery record exists yet
+//         },
+//       },
+//       include: {
+//         customer: {
+//           select: {
+//             id: true,
+//             name: true,
+//             address: true,
+//             phone: true,
+//           },
+//         },
+//         invoiceItems: {
+//           include: {
+//             products: {
+//               select: {
+//                 name: true,
+//                 unit: true,
+//               },
+//             },
+//           },
+//         },
+//       },
+//       orderBy: {
+//         invoiceDate: "desc",
+//       },
+//     });
 
-    return invoices;
-  } catch (error) {
-    console.error("Error fetching available invoices:", error);
-    throw new Error("Failed to fetch available invoices");
-  }
-}
+//     return invoices;
+//   } catch (error) {
+//     console.error("Error fetching available invoices:", error);
+//     throw new Error("Failed to fetch available invoices");
+//   }
+// }
 
 // Create a new delivery
 export async function createDelivery(data: DeliveryFormData) {
@@ -150,9 +191,29 @@ export async function createDelivery(data: DeliveryFormData) {
 
     revalidatePath("/sales/pengiriman");
     return { success: true, data: delivery };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating delivery:", error);
-    throw new Error("Failed to create delivery");
+
+    // Handle specific error cases
+    if (error.code === "P2002") {
+      // Unique constraint violation
+      if (error.meta?.target?.includes("invoiceId")) {
+        return {
+          success: false,
+          error:
+            "Invoice ini sudah memiliki pengiriman. Silakan pilih invoice lain.",
+        };
+      }
+      return {
+        success: false,
+        error: "Data sudah ada. Silakan periksa kembali.",
+      };
+    }
+
+    return {
+      success: false,
+      error: "Gagal membuat pengiriman. Silakan coba lagi.",
+    };
   }
 }
 

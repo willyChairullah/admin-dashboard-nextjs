@@ -231,6 +231,14 @@ export default function SideBar({
             roles: ["OWNER", "ADMIN"],
           },
           {
+            id: "pengiriman",
+            label: "Pengiriman",
+            icon: "🚚",
+            href: "/sales/pengiriman",
+            children: [],
+            roles: ["OWNER", "ADMIN"],
+          },
+          {
             id: "surat-jalan",
             label: "Surat Jalan",
             icon: "🚚",
