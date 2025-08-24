@@ -119,6 +119,7 @@ model Users {
   orders                Orders[]
   ExpensesCreated       Expenses[]          @relation("ExpenseCreator")
   ExpensesUpdated       Expenses[]          @relation("ExpenseUpdater")
+  deliveries            Deliveries[]
 
   @@map("users")
 }
@@ -319,6 +320,7 @@ model Invoices {
   updatedAt         DateTime          @updatedAt
   createdBy         String?
   delivery_notes    DeliveryNotes?
+  deliveries        Deliveries?
   payments          Payments[]
   salesReturns      SalesReturns[]
   invoiceItems      InvoiceItems[]
@@ -674,6 +676,7 @@ enum DeliveryStatus {
   PENDING
   IN_TRANSIT
   DELIVERED
+  RETURNED
   CANCELLED
 }
 
@@ -824,4 +827,23 @@ model ExpenseItems {
   expense      Expenses          @relation(fields: [expenseId], references: [id], onDelete: Cascade)
 
   @@map("expense_items")
+}
+
+model Deliveries {
+  id              String          @id @default(cuid())
+  code            String          @unique
+  invoiceId       String          @unique
+  helperId        String
+  deliveryDate    DateTime        @default(now())
+  status          DeliveryStatus  @default(PENDING)
+  completedAt     DateTime?
+  notes           String?
+  returnReason    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  invoice         Invoices        @relation(fields: [invoiceId], references: [id])
+  helper          Users           @relation(fields: [helperId], references: [id])
+
+  @@map("deliveries")
 }

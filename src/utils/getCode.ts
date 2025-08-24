@@ -26,6 +26,8 @@ const getTableAbbreviation = (tableName: string): string | null => {
       return "PRD";
     case "DeliveryNotes":
       return "SJN";
+    case "Deliveries":
+      return "DLV";
     case "expenses":
       return "EXP";
     case "Expenses":
