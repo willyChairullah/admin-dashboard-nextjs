@@ -140,7 +140,7 @@ export default function EditProductPage() {
     }
 
     if (formData.cost < 0) {
-      errors.cost = "Cost cannot be negative";
+      errors.cost = "HPP tidak boleh negatif";
     }
 
     if (formData.minStock < 0) {
@@ -392,7 +392,7 @@ export default function EditProductPage() {
             />
           </FormField>
           <FormField
-            label="Harga Modal"
+            label="HPP (Harga Pokok Penjualan)"
             htmlFor="cost"
             required
             errorMessage={formErrors.cost}

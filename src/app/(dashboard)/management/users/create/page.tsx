@@ -21,7 +21,7 @@ interface FormErrors {
   isActive?: string;
 }
 
-export default function page() {
+export default function CreateUserPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",

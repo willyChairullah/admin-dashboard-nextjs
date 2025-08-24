@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/common/Card";
 import { RevenueTrendChart } from "@/components/charts";
@@ -20,6 +20,7 @@ import {
   Edit2,
   Save,
   X,
+  FileText,
 } from "lucide-react";
 import { formatRupiah } from "@/utils/formatRupiah";
 import { toast } from "sonner";
@@ -75,27 +76,20 @@ export default function RevenueAnalytics() {
   }>({
     targetAmount: "",
   });
-  const [timeRange, setTimeRange] = useState<"month" | "quarter" | "year">(
-    "month"
-  );
+  const [viewType, setViewType] = useState<"gross" | "net">("gross");
   const [activeTab, setActiveTab] = useState<
-    "trends" | "products" | "sales" | "stores" | "aov"
+    "trends" | "products" | "sales" | "stores"
   >("trends");
 
-  const fetchTargets = async () => {
+  const fetchTargets = useCallback(async () => {
     try {
       setLoadingTargets(true);
-      const targetType =
-        timeRange === "month"
-          ? "MONTHLY"
-          : timeRange === "quarter"
-          ? "QUARTERLY"
-          : "YEARLY";
+      const targetType = "MONTHLY";
 
       console.log("🔍 Fetching targets with targetType:", targetType);
 
       const response = await fetch(
-        `/api/company-targets?targetType=${targetType}`
+        `/api/company-targets?targetType=${targetType}&viewType=${viewType}`
       );
       const result = await response.json();
 
@@ -116,7 +110,7 @@ export default function RevenueAnalytics() {
     } finally {
       setLoadingTargets(false);
     }
-  };
+  }, [viewType]); // Depend on viewType
 
   const handleTargetSuccess = () => {
     console.log("🎯 Target success callback triggered, refreshing targets...");
@@ -124,7 +118,6 @@ export default function RevenueAnalytics() {
 
     // Also log the current state
     console.log("🔄 Current targets before refresh:", targets);
-    console.log("🔄 Current timeRange:", timeRange);
 
     // Add a small delay to ensure the target was saved before refetching
     setTimeout(() => {
@@ -184,9 +177,7 @@ export default function RevenueAnalytics() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/finance/revenue-analytics?timeRange=${timeRange}`
-        );
+        const response = await fetch(`/api/finance/revenue-analytics?viewType=${viewType}`);
         const result = await response.json();
 
         if (result.success && result.data) {
@@ -204,13 +195,8 @@ export default function RevenueAnalytics() {
     };
 
     loadData();
-    fetchTargets(); // Also load targets when timeRange changes
-  }, [timeRange]);
-
-  // Load targets on initial mount
-  useEffect(() => {
-    fetchTargets();
-  }, []); // Empty dependency array for initial load only
+    fetchTargets(); // Also load targets on initial mount
+  }, [viewType]); // Load ulang saat viewType berubah
 
   // Show loading if user is still loading
   if (userLoading) {
@@ -275,7 +261,7 @@ export default function RevenueAnalytics() {
             <p className="text-emerald-600 font-medium">
               Loading Revenue Analytics...
             </p>
-            <p className="text-gray-500 text-sm">Fetching {timeRange} data</p>
+            <p className="text-gray-500 text-sm">Fetching monthly data</p>
           </div>
         </div>
       </div>
@@ -333,9 +319,7 @@ export default function RevenueAnalytics() {
                       Revenue & Sales Analytics
                     </h1>
                     <p className="text-xs sm:text-sm lg:text-base xl:text-lg 2xl:text-xl text-white/80 leading-tight">
-                      Track growth patterns -{" "}
-                      {timeRange.charAt(0).toUpperCase() + timeRange.slice(1)}{" "}
-                      View
+                      Track growth patterns - Monthly View
                     </p>
                   </div>
                 </div>
@@ -343,6 +327,16 @@ export default function RevenueAnalytics() {
 
               {/* Right side - Controls */}
               <div className="flex flex-col xs:flex-row gap-2 sm:gap-3 lg:gap-4 lg:flex-shrink-0">
+                {/* Detail Transactions Link */}
+                <Link
+                  href="/management/finance/detailed"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl text-white hover:bg-white/20 transition-all duration-200 text-xs sm:text-sm lg:text-base font-medium"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Detail Transaksi</span>
+                  <span className="sm:hidden">Detail</span>
+                </Link>
+
                 {/* Target Form - Show for SALES, OWNER, and ADMIN users */}
                 {user?.id &&
                   (user?.role === "OWNER" || user?.role === "ADMIN") && (
@@ -351,35 +345,29 @@ export default function RevenueAnalytics() {
                     </div>
                   )}
 
-                {/* Time range buttons */}
+                {/* View Type Filter - Net vs Gross */}
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl lg:rounded-2xl p-1 sm:p-2">
-                  <div className="grid grid-cols-3 gap-1 sm:flex sm:space-x-1 lg:space-x-2">
-                    {(["month", "quarter", "year"] as const).map((range) => (
-                      <button
-                        key={range}
-                        onClick={() => setTimeRange(range)}
-                        disabled={loading}
-                        className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg lg:rounded-xl font-medium transition-all duration-200 disabled:opacity-50 text-xs sm:text-sm lg:text-base flex items-center justify-center ${
-                          timeRange === range
-                            ? "bg-white text-emerald-600 shadow-lg"
-                            : "text-white hover:bg-white/20"
-                        }`}
-                      >
-                        {loading && timeRange === range && (
-                          <div className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 border border-emerald-600 border-t-transparent rounded-full animate-spin mr-1"></div>
-                        )}
-                        <span className="hidden sm:inline">
-                          {range.charAt(0).toUpperCase() + range.slice(1)}
-                        </span>
-                        <span className="sm:hidden text-xs font-bold">
-                          {range === "month"
-                            ? "M"
-                            : range === "quarter"
-                            ? "Q"
-                            : "Y"}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="flex space-x-1 sm:space-x-2">
+                    <button
+                      onClick={() => setViewType("gross")}
+                      className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm lg:text-base transition-all duration-200 ${
+                        viewType === "gross"
+                          ? "bg-white text-emerald-600 shadow-lg"
+                          : "text-white/80 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      Gross
+                    </button>
+                    <button
+                      onClick={() => setViewType("net")}
+                      className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg lg:rounded-xl font-medium text-xs sm:text-sm lg:text-base transition-all duration-200 ${
+                        viewType === "net"
+                          ? "bg-white text-emerald-600 shadow-lg"
+                          : "text-white/80 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      Net
+                    </button>
                   </div>
                 </div>
               </div>
@@ -406,7 +394,7 @@ export default function RevenueAnalytics() {
               {formatRupiah(data.summary.totalRevenue)}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm mt-1">
-              Total Revenue ({timeRange})
+              {viewType === "net" ? "Total Net Profit (Yearly)" : "Total Gross Revenue (Yearly)"}
             </p>
           </Card>
 
@@ -416,12 +404,7 @@ export default function RevenueAnalytics() {
               {data.summary.bestMonth}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
-              Best Performing{" "}
-              {timeRange === "month"
-                ? "Month"
-                : timeRange === "quarter"
-                ? "Quarter"
-                : "Year"}
+              Best Performing Month
             </p>
           </Card>
 
@@ -444,32 +427,6 @@ export default function RevenueAnalytics() {
               Top Sales Rep
             </p>
           </Card>
-
-          <Card className="p-4 sm:p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-600 mb-3 sm:mb-4" />
-            <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-              {formatRupiah(data.avgOrderValue.current)}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm mt-1">
-              Avg Order Value
-            </p>
-            <div className="flex items-center mt-2">
-              {data.avgOrderValue.trend > 0 ? (
-                <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 mr-1" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 mr-1" />
-              )}
-              <span
-                className={`text-xs sm:text-sm font-medium ${
-                  data.avgOrderValue.trend > 0
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
-              >
-                {Math.abs(data.avgOrderValue.trend).toFixed(1)}%
-              </span>
-            </div>
-          </Card>
         </div>
 
         {/* Navigation Tabs */}
@@ -482,7 +439,6 @@ export default function RevenueAnalytics() {
                   { key: "products", label: "Products", icon: Package },
                   { key: "sales", label: "Sales Reps", icon: Users },
                   { key: "stores", label: "Stores", icon: MapPin },
-                  { key: "aov", label: "Order Value", icon: DollarSign },
                 ].map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
@@ -504,9 +460,7 @@ export default function RevenueAnalytics() {
                         ? "Products"
                         : key === "sales"
                         ? "Sales"
-                        : key === "stores"
-                        ? "Stores"
-                        : "AOV"}
+                        : "Stores"}
                     </span>
                   </button>
                 ))}
@@ -514,8 +468,7 @@ export default function RevenueAnalytics() {
             </div>
             <div className="text-center sm:text-right">
               <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                Viewing:{" "}
-                {timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} Data
+                Viewing: Monthly Data
                 {loading && <span className="ml-2 animate-pulse">⟳</span>}
               </span>
             </div>
@@ -526,12 +479,7 @@ export default function RevenueAnalytics() {
         {activeTab === "trends" && (
           <Card className="p-8 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              {timeRange === "month"
-                ? "Monthly"
-                : timeRange === "quarter"
-                ? "Quarterly"
-                : "Yearly"}{" "}
-              Revenue Trends
+              Monthly Revenue Trends
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -570,12 +518,12 @@ export default function RevenueAnalytics() {
             {targets.length > 0 && (
               <div className="mb-8">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Company Revenue Targets Overview ({targets.length} targets
+                  Company {viewType === "net" ? "Net Profit" : "Revenue"} Targets Overview ({targets.length} targets
                   found)
                 </h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                  Company-wide revenue targets and achievements across all
-                  revenue streams
+                  Company-wide {viewType === "net" ? "net profit" : "revenue"} targets and achievements across all
+                  {viewType === "net" ? " profit streams" : " revenue streams"}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {targets.map((target) => (
@@ -689,7 +637,7 @@ export default function RevenueAnalytics() {
             <RevenueTrendChart
               data={data.monthlyTrends}
               targets={targets}
-              timeRange={timeRange}
+              viewType={viewType}
             />
           </Card>
         )}
@@ -868,75 +816,7 @@ export default function RevenueAnalytics() {
                     {formatRupiah(store.revenue)}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Total Revenue
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {activeTab === "aov" && (
-          <Card className="p-8 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-0 shadow-xl">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              Average Order Value Analysis
-            </h3>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-3 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 p-6 rounded-2xl">
-                <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                  Current vs Previous Period
-                </h4>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white leading-tight break-words">
-                      {formatRupiah(data.avgOrderValue.current)}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Current Period
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 leading-tight break-words">
-                      {formatRupiah(data.avgOrderValue.previous)}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Previous Period
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center mt-4">
-                  {data.avgOrderValue.trend > 0 ? (
-                    <ArrowUpRight className="h-5 w-5 text-green-600 mr-2" />
-                  ) : (
-                    <ArrowDownRight className="h-5 w-5 text-red-600 mr-2" />
-                  )}
-                  <span
-                    className={`text-lg font-medium ${
-                      data.avgOrderValue.trend > 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {Math.abs(data.avgOrderValue.trend).toFixed(1)}%{" "}
-                    {data.avgOrderValue.trend > 0 ? "increase" : "decrease"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Order Value Breakdown */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {data.avgOrderValue.breakdown.map((item: any, index: number) => (
-                <div
-                  key={index}
-                  className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-4 rounded-xl"
-                >
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {formatRupiah(item.value)}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    {item.period}
+                    {viewType === "net" ? "Net Profit" : "Total Revenue"}
                   </p>
                 </div>
               ))}
