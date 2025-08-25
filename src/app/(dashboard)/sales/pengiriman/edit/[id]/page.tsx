@@ -40,6 +40,17 @@ export default function EditDeliveryPage() {
   const [errorLoadingData, setErrorLoadingData] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    status: string;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    status: "",
+    title: "",
+    message: "",
+  });
   const [delivery, setDelivery] = useState<any | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [returnReason, setReturnReason] = useState("");
@@ -159,37 +170,92 @@ export default function EditDeliveryPage() {
     }
   };
 
-  const handleStatusUpdate = async (status: "DELIVERED" | "RETURNED") => {
-    if (status === "RETURNED" && !returnReason.trim()) {
-      toast.error("Alasan pengembalian harus diisi");
+  const handleStatusUpdate = async (
+    status: "DELIVERED" | "RETURNED" | "CANCELLED" | "IN_TRANSIT"
+  ) => {
+    if (
+      (status === "RETURNED" || status === "CANCELLED") &&
+      !returnReason.trim()
+    ) {
+      toast.error("Alasan pengembalian/pembatalan harus diisi");
       return;
     }
 
+    // Show confirmation for sensitive status changes
+    if (
+      delivery.status === "DELIVERED" &&
+      (status === "RETURNED" || status === "CANCELLED")
+    ) {
+      const actionText = status === "RETURNED" ? "dikembalikan" : "dibatalkan";
+      setConfirmationModal({
+        isOpen: true,
+        status: status,
+        title: `Konfirmasi ${
+          status === "RETURNED" ? "Pengembalian" : "Pembatalan"
+        }`,
+        message: `Apakah Anda yakin ingin mengubah status dari "Berhasil Dikirim" menjadi "${actionText}"? 
+
+Stock produk akan dikembalikan ke inventory dan tercatat dalam stock movement. 
+
+Alasan: ${returnReason}`,
+      });
+      return;
+    }
+
+    // Execute status update
+    await executeStatusUpdate(status);
+  };
+
+  const executeStatusUpdate = async (
+    status: "DELIVERED" | "RETURNED" | "CANCELLED" | "IN_TRANSIT"
+  ) => {
     setIsUpdatingStatus(true);
     try {
-      await updateDeliveryStatus(
+      const result = await updateDeliveryStatus(
         delivery.id,
         status,
         "",
-        status === "RETURNED" ? returnReason : ""
+        status === "RETURNED" || status === "CANCELLED" ? returnReason : "",
+        user?.id // Pass user ID for stock movement tracking
       );
 
-      toast.success(
-        status === "DELIVERED"
-          ? "Status pengiriman berhasil diubah menjadi 'Berhasil Dikirim'"
-          : "Status pengiriman berhasil diubah menjadi 'Dikembalikan'"
-      );
+      if (result.success) {
+        const successMessage =
+          status === "DELIVERED"
+            ? "Status pengiriman berhasil diubah menjadi 'Berhasil Dikirim'"
+            : status === "RETURNED"
+            ? "Status pengiriman berhasil diubah menjadi 'Dikembalikan'"
+            : status === "CANCELLED"
+            ? "Status pengiriman berhasil diubah menjadi 'Dibatalkan'"
+            : "Status pengiriman berhasil diubah menjadi 'Dalam Perjalanan'";
 
-      // Update local state
-      setDelivery((prev: any) => ({
-        ...prev,
-        status: status,
-        returnReason: status === "RETURNED" ? returnReason : "",
-      }));
+        toast.success(successMessage);
 
-      // Clear return reason after successful update
-      if (status === "RETURNED") {
-        setReturnReason("");
+        // Show additional message for stock restoration
+        if (
+          (status === "RETURNED" || status === "CANCELLED") &&
+          result.stockMovements &&
+          result.stockMovements.length > 0
+        ) {
+          toast.success(
+            `Stock berhasil dikembalikan untuk ${result.stockMovements.length} produk`
+          );
+        }
+
+        // Update local state
+        setDelivery((prev: any) => ({
+          ...prev,
+          status: status,
+          returnReason:
+            status === "RETURNED" || status === "CANCELLED" ? returnReason : "",
+        }));
+
+        // Clear return reason after successful update
+        if (status === "RETURNED" || status === "CANCELLED") {
+          setReturnReason("");
+        }
+      } else {
+        toast.error(result.error || "Gagal mengubah status pengiriman");
       }
     } catch (error) {
       toast.error("Gagal mengubah status pengiriman");
@@ -527,21 +593,37 @@ export default function EditDeliveryPage() {
           />
         </FormField>
 
-        {/* Status Actions - Only show if status is PENDING and user is HELPER */}
-        {delivery.status === "PENDING" && (
+        {/* Status Actions - Show if status allows changes */}
+        {(delivery.status === "PENDING" ||
+          delivery.status === "IN_TRANSIT" ||
+          delivery.status === "DELIVERED") && (
           <FormField label="Aksi Status Pengiriman">
             <div className="space-y-4">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-900/20"
-                    onClick={() => handleStatusUpdate("DELIVERED")}
-                    disabled={isUpdatingStatus}
-                  >
-                    ✓ Berhasil Dikirim
-                  </Button>
+                <div className="flex gap-3 flex-wrap">
+                  {delivery.status === "PENDING" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-600 dark:hover:bg-blue-900/20"
+                      onClick={() => handleStatusUpdate("IN_TRANSIT")}
+                      disabled={isUpdatingStatus}
+                    >
+                      🚚 Dalam Perjalanan
+                    </Button>
+                  )}
+                  {(delivery.status === "PENDING" ||
+                    delivery.status === "IN_TRANSIT") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-green-600 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-900/20"
+                      onClick={() => handleStatusUpdate("DELIVERED")}
+                      disabled={isUpdatingStatus}
+                    >
+                      ✓ Berhasil Dikirim
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -551,25 +633,76 @@ export default function EditDeliveryPage() {
                   >
                     ↩ Dikembalikan
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-900/20"
+                    onClick={() => handleStatusUpdate("CANCELLED")}
+                    disabled={isUpdatingStatus || !returnReason.trim()}
+                  >
+                    ✗ Dibatalkan
+                  </Button>
+                </div>
+
+                {/* Info text based on current status */}
+                <div className="mt-3 text-sm">
+                  {delivery.status === "PENDING" && (
+                    <p className="text-blue-600 dark:text-blue-400">
+                      💡 Pilih "Dalam Perjalanan" saat mulai pengiriman, atau
+                      langsung "Berhasil Dikirim" jika sudah selesai.
+                    </p>
+                  )}
+                  {delivery.status === "IN_TRANSIT" && (
+                    <p className="text-blue-600 dark:text-blue-400">
+                      💡 Ubah ke "Berhasil Dikirim" jika pengiriman berhasil,
+                      atau "Dikembalikan/Dibatalkan" jika ada masalah.
+                    </p>
+                  )}
+                  {delivery.status === "DELIVERED" && (
+                    <p className="text-amber-600 dark:text-amber-400">
+                      ⚠️ Status sudah "Berhasil Dikirim". Anda masih bisa
+                      mengubah ke "Dikembalikan" atau "Dibatalkan" jika
+                      diperlukan (misalnya: salah pencet, customer komplain,
+                      atau return).
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Return Reason Field */}
+              {/* Return/Cancel Reason Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Alasan Pengembalian (wajib jika dikembalikan)
+                  Alasan Pengembalian/Pembatalan
+                  <span className="text-red-500">*</span>
+                  <span className="text-xs text-gray-500 ml-1">
+                    (wajib untuk dikembalikan/dibatalkan)
+                  </span>
                 </label>
                 <InputTextArea
                   name="returnReason"
                   value={returnReason}
                   onChange={e => setReturnReason(e.target.value)}
-                  placeholder="Masukkan alasan pengembalian jika barang tidak berhasil dikirim..."
+                  placeholder="Masukkan alasan pengembalian atau pembatalan..."
                   className="w-full"
+                  rows={3}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Contoh: Alamat tidak ditemukan, customer tidak ada di lokasi,
-                  barang rusak, dll.
-                </p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <strong>Contoh alasan pengembalian:</strong> Alamat tidak
+                    ditemukan, customer tidak ada di lokasi, barang rusak/cacat,
+                    salah pencet "Berhasil Dikirim", customer komplain setelah
+                    terima barang.
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <strong>Contoh alasan pembatalan:</strong> Customer
+                    membatalkan pesanan, tidak ada yang terima, cuaca buruk,
+                    kendaraan bermasalah.
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    💡 <strong>Tips:</strong> Untuk status "Berhasil Dikirim",
+                    Anda tidak perlu mengisi alasan.
+                  </p>
+                </div>
               </div>
             </div>
           </FormField>
@@ -587,18 +720,25 @@ export default function EditDeliveryPage() {
           </FormField>
         )} */}
 
-        {/* Display return reason if status is RETURNED */}
-        {delivery.status === "RETURNED" && delivery.returnReason && (
-          <FormField label="Alasan Pengembalian">
-            <Input
-              name="returnReason"
-              type="text"
-              value={delivery.returnReason}
-              readOnly
-              className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
-            />
-          </FormField>
-        )}
+        {/* Display return reason if status is RETURNED or CANCELLED */}
+        {(delivery.status === "RETURNED" || delivery.status === "CANCELLED") &&
+          delivery.returnReason && (
+            <FormField
+              label={
+                delivery.status === "RETURNED"
+                  ? "Alasan Pengembalian"
+                  : "Alasan Pembatalan"
+              }
+            >
+              <Input
+                name="returnReason"
+                type="text"
+                value={delivery.returnReason}
+                readOnly
+                className="mt-1 block w-full bg-gray-100 cursor-default dark:bg-gray-800"
+              />
+            </FormField>
+          )}
 
         <FormField label="Catatan">
           <InputTextArea
@@ -621,6 +761,31 @@ export default function EditDeliveryPage() {
           Apakah Anda yakin ingin menghapus Pengiriman{" "}
           <strong>{delivery.code}</strong>? Tindakan ini tidak dapat dibatalkan.
         </p>
+      </ConfirmationModal>
+
+      {/* Status Change Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() =>
+          setConfirmationModal(prev => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={() => {
+          executeStatusUpdate(confirmationModal.status as any);
+          setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+        }}
+        isLoading={isUpdatingStatus}
+        title={confirmationModal.title}
+      >
+        <div className="space-y-3">
+          <p className="whitespace-pre-line">{confirmationModal.message}</p>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              ⚠️ <strong>Perhatian:</strong> Perubahan status ini akan
+              mempengaruhi stock inventory dan tercatat dalam stock movement
+              history.
+            </p>
+          </div>
+        </div>
       </ConfirmationModal>
     </div>
   );

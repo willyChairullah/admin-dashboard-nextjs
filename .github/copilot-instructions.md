@@ -1,47 +1,59 @@
-I want to create a CRUD page from this database:
+## 1) Penjualan & Invoice
 
-## Database
+- [ ]  Diskon: Bisa dalam bentuk persen (%) atau nominal.
+- [ ]  Termin pembayaran: Gunakan opsi NET 7 hari atau NET 14 hari (jangan tulis "tenggat").
+- [ ]  Fitur pajak: Sediakan pengaturan pajak pada invoice.
+- [ ]  Alur invoice: Invoice harus sampai ke toko terlebih dahulu, baru barang dikirim.
+- [ ]  Surat jalan: Tidak wajib karena banyak toko; buat sebagai opsi di invoice (centang: dengan/ tanpa surat jalan).
+- [ ]  Pengeluaran: Jangan dicampur di invoice, buat di fitur/ modul terpisah.
+- [ ]  Admin:
+    - Bisa langsung konfirmasi untuk membuat invoice.
+    - Bisa melihat stok barang.
+    - Bisa melihat riwayat dalam bentuk tabel (lihat poin 3).
 
-```
-new model like deliverynotes
-```
+## 2) Produk & Satuan
 
-## Reference
+- [ ]  Info krat:
+    - 250 ml – 500 ml: 24 botol per krat
+    - 800 ml – 1 L: 12 botol per krat
+- [ ]  Tambah varian: Refill 800 ml – 900 ml.
+- [ ]  Kode barang contoh:
+    - IND-R-250
+    - IND-B-250
 
-Consistance layout and style will reference the folder page "/sales/surat-jalan"
-Use custom UI from Components/UI
+## 3) Riwayat & Laporan (Admin)
 
-## application flow:
+- [ ]  Tabel riwayat (dapat difilter per bulan):
+    - Daftar nama toko
+    - No. telepon
+    - Alamat toko
+    - Nama sales yang order
+    - Status pembayaran: NET (7/14) atau Lunas
 
-1.Sales Order Created.
-2.PO Created.
-3.Invoice Created.
-4a.Delivery Created
-4b.Make delivery notes if needed
-5b.Delivery Created
-6.Payment an invoice.
+## 4) Produksi
 
-## I want to make flow number 5
+- [ ]  Tambahkan kolom per item:
+    - Kode produksi
+    - Tanggal produksi
+    - Total produksi
+    - Perolehan untuk gaji
+- [ ]  Buat tabel Produksi sesuai contoh yang sudah diberikan.
 
-In the Sidebar Page, it will be named the "Pengiriman" module. The page created will be placed at the path "sales/pengiriman" and read on layout.tsx will contain this data:
-const myStaticData = {
-module: "sales",
-subModule: "pengiriman",
-allowedRole: ["OWNER", "HELPER"],
-data: await getData(), // adjust according to the data retrieval
-};
+## 5) Stok & Gudang
 
-### Main Features:
+- [ ]  Gudang: Hanya dapat melakukan stock opname.
+- [ ]  Tabel Stock Opname: Buat seperti contoh yang sudah diberikan.
 
-Helper can Choose invoce was status sended.
-Helper can update that invoice status between Successfully Delivered or Returned.
+## 6) Akun & Akses
 
-### Data Storage:
+- [ ]  Akun pengguna dapat dinonaktifkan (deactivation).
+- [ ]  Buat akun untuk Helper.
 
-Save to new database and update invoice status
+## 7) Pengiriman & Retur (Helper)
 
-### Example Scenarios:
-
-The helper will send the goods after receiving the invoice. They can access the invoice along with its details, which are visible to the helper. On the same page, the helper can also update the invoice status to either "Successfully Delivered" or "Returned."
-
-Make everything complete so that it can CRUD the data.
+- [ ]  Status pengiriman (di bagian Helper):
+    - Opsi: Terkirim atau Retur
+- [ ]  Retur: (blum di cek)
+    - Retur menambah kembali jumlah barang di stok.
+    - Jika ada retur dari Helper, stok bertambah lagi secara otomatis.
+- [ ]  Penanda helper: Terdapat status "sudah terkirim atau tidak".

@@ -47,7 +47,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some((child) => pathname.startsWith(child.href))
+      item.children.some(child => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -66,7 +66,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
   useEffect(() => {
     if (
       hasChildren &&
-      item.children.some((child) => pathname.startsWith(child.href))
+      item.children.some(child => pathname.startsWith(child.href))
     ) {
       setIsSubMenuOpen(true);
     }
@@ -134,7 +134,7 @@ const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
       {/* Render children if expanded */}
       {hasChildren && isSubMenuOpen && shouldShowExpanded && (
         <ul className="space-y-1">
-          {item.children?.map((child) => {
+          {item.children?.map(child => {
             const isChildActive =
               pathname === child.href || pathname.startsWith(child.href + "/");
             return (
@@ -241,7 +241,7 @@ export default function SideBar({
           {
             id: "surat-jalan",
             label: "Surat Jalan",
-            icon: "🚚",
+            icon: "📋",
             href: "/sales/surat-jalan",
             children: [],
             roles: ["OWNER", "ADMIN"],
@@ -323,6 +323,14 @@ export default function SideBar({
             roles: ["OWNER", "ADMIN"],
           },
           {
+            id: "transaction-history",
+            label: "Riwayat Transaksi",
+            icon: "📜",
+            href: "/purchasing/transaction-history",
+            children: [],
+            roles: ["ADMIN", "OWNER"],
+          },
+          {
             id: "pengeluaran",
             label: "Pengeluaran",
             icon: "💸",
@@ -358,7 +366,7 @@ export default function SideBar({
           {
             id: "expenses",
             label: "Expenses",
-            icon: "💸",
+            icon: "📉",
             href: "/management/finance/expenses",
             children: [],
             roles: ["ADMIN", "OWNER"],
@@ -374,30 +382,30 @@ export default function SideBar({
           {
             id: "detailed-transactions",
             label: "Detailed Transactions",
-            icon: "📜",
+            icon: "📊",
             href: "/management/finance/detailed",
             children: [],
             roles: ["ADMIN", "OWNER"],
           },
         ],
       },
-      {
-        id: "hr",
-        label: "HR",
-        icon: "👥",
-        href: "#",
-        roles: ["ADMIN", "OWNER"], // Added roles
-        children: [
-          {
-            id: "attendance",
-            label: "Attendance",
-            icon: "📅",
-            href: "/hr/attendance",
-            children: [],
-            roles: ["ADMIN", "OWNER"],
-          },
-        ],
-      },
+      // {
+      //   id: "hr",
+      //   label: "HR",
+      //   icon: "👥",
+      //   href: "#",
+      //   roles: ["ADMIN", "OWNER"], // Added roles
+      //   children: [
+      //     {
+      //       id: "attendance",
+      //       label: "Attendance",
+      //       icon: "📅",
+      //       href: "/hr/attendance",
+      //       children: [],
+      //       roles: ["ADMIN", "OWNER"],
+      //     },
+      //   ],
+      // },
       // {
       //   id: "settings",
       //   label: "Settings",

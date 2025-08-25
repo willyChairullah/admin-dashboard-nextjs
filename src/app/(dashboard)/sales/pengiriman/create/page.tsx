@@ -62,6 +62,12 @@ interface Invoice {
       price: number;
     };
   }[];
+  deliveries?: {
+    id: string;
+    code: string;
+    status: string;
+    returnReason?: string | null;
+  } | null;
 }
 
 export default function CreateDeliveryPage() {
@@ -118,6 +124,14 @@ export default function CreateDeliveryPage() {
       ...prev,
       [field]: value,
     }));
+
+    // Update selected invoice when invoiceId changes
+    if (field === "invoiceId" && value) {
+      const invoice = invoices.find(inv => inv.id === value);
+      setSelectedInvoice(invoice || null);
+    } else if (field === "invoiceId" && !value) {
+      setSelectedInvoice(null);
+    }
 
     // Clear error when user starts typing
     if (formErrors[field as keyof DeliveryFormErrors]) {
@@ -222,13 +236,55 @@ export default function CreateDeliveryPage() {
             value={formData.invoiceId}
             onChange={value => handleInputChange("invoiceId", value)}
             placeholder="Pilih Invoice"
-            options={invoices.map(invoice => ({
-              value: invoice.id,
-              label: `${invoice.code} - ${
+            options={invoices.map(invoice => {
+              const baseLabel = `${invoice.code} - ${
                 invoice.customer?.name || "N/A"
-              } (${formatRupiah(invoice.totalAmount)})`,
-            }))}
+              } (${formatRupiah(invoice.totalAmount)})`;
+
+              // Add delivery status info if exists
+              if (invoice.deliveries) {
+                const statusText =
+                  invoice.deliveries.status === "CANCELLED"
+                    ? "Dibatalkan"
+                    : "Dikembalikan";
+                return {
+                  value: invoice.id,
+                  label: `${baseLabel} [${statusText}: ${invoice.deliveries.code}]`,
+                };
+              }
+
+              return {
+                value: invoice.id,
+                label: baseLabel,
+              };
+            })}
           />
+          {formData.invoiceId && selectedInvoice?.deliveries && (
+            <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-yellow-600 dark:text-yellow-400">⚠️</span>
+                <div>
+                  <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                    Invoice ini sebelumnya sudah pernah dikirim
+                  </p>
+                  <p className="text-yellow-700 dark:text-yellow-300">
+                    Delivery sebelumnya:{" "}
+                    <strong>{selectedInvoice.deliveries.code}</strong> - Status:{" "}
+                    <strong>
+                      {selectedInvoice.deliveries.status === "CANCELLED"
+                        ? "Dibatalkan"
+                        : "Dikembalikan"}
+                    </strong>
+                    {selectedInvoice.deliveries.returnReason && (
+                      <span className="block mt-1">
+                        Alasan: {selectedInvoice.deliveries.returnReason}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </FormField>
         {selectedInvoice && (
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">

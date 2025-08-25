@@ -321,7 +321,7 @@ export default function EditInvoicePage() {
     if (invoiceId) {
       fetchData();
     }
-  }, [invoiceId, calculateItemDiscount]);
+  }, [invoiceId]); // Remove calculateItemDiscount dependency
 
   // Memoized calculations to prevent unnecessary recalculations
   const calculations = React.useMemo(() => {
@@ -436,8 +436,14 @@ export default function EditInvoicePage() {
     field: keyof InvoiceItemFormData,
     value: any
   ) => {
+    console.log(`=== ITEM CHANGE ===`);
+    console.log(`Index: ${index}, Field: ${field}, Value:`, value);
+    console.log("Current items before change:", formData.items);
+
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
+
+    console.log("Item after field update:", newItems[index]);
 
     // Recalculate totalPrice for this item menggunakan fungsi discount yang benar
     if (
@@ -453,8 +459,18 @@ export default function EditInvoicePage() {
         item.discountType
       );
       item.totalPrice = (item.price - discountAmount) * item.quantity;
+
+      console.log("Recalculated totalPrice for item:", {
+        price: item.price,
+        discount: item.discount,
+        discountType: item.discountType,
+        quantity: item.quantity,
+        discountAmount,
+        totalPrice: item.totalPrice,
+      });
     }
 
+    console.log("New items array:", newItems);
     setFormData({ ...formData, items: newItems });
   };
 
@@ -513,6 +529,12 @@ export default function EditInvoicePage() {
         items: formData.items,
       };
 
+      // Debug logging
+      console.log("=== SUBMITTING INVOICE UPDATE ===");
+      console.log("Invoice ID:", invoiceId);
+      console.log("Form Data Items:", formData.items);
+      console.log("Invoice Data being sent:", invoiceData);
+
       // Use current user ID for updatedBy
       const updatedBy = user?.id || formData.createdBy;
 
@@ -537,7 +559,7 @@ export default function EditInvoicePage() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const result = await deleteInvoice(invoiceId);
+      const result = await deleteInvoice(invoiceId, user?.id || "unknown");
 
       if (result.success) {
         toast.success("Invoice deleted successfully");
@@ -555,8 +577,9 @@ export default function EditInvoicePage() {
   };
 
   // Auto-fill customer and items when purchase order is selected
+  // BUT ONLY if data is not already loaded from existing invoice
   useEffect(() => {
-    if (formData.purchaseOrderId) {
+    if (formData.purchaseOrderId && !isDataLoaded) {
       const fetchPurchaseOrderDetails = async () => {
         try {
           const purchaseOrderDetails = await getPurchaseOrderForInvoice(
@@ -605,11 +628,11 @@ export default function EditInvoicePage() {
         }
       };
       fetchPurchaseOrderDetails();
-    } else {
+    } else if (!formData.purchaseOrderId) {
       // Clear selected customer when PO is cleared
       setSelectedCustomer(null);
     }
-  }, [formData.purchaseOrderId]);
+  }, [formData.purchaseOrderId, isDataLoaded]);
 
   if (isLoadingData) {
     return (
@@ -680,43 +703,19 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
-          {/* Purchase Order - Editable if status is DRAFT */}
+          {/* Purchase Order - Read Only */}
           <FormField label="Purchase Order">
-            {formData.status === "DRAFT" ? (
-              <Select
-                value={formData.purchaseOrderId || ""}
-                onChange={(value: string) =>
-                  handleInputChange("purchaseOrderId", value)
-                }
-                placeholder="Pilih Purchase Order"
-                options={[
-                  { value: "", label: "Tidak menggunakan PO" },
-                  ...availablePurchaseOrders.map(po => ({
-                    value: po.id,
-                    label: `${po.code} - ${
-                      po.order?.customer?.name || "Customer tidak diketahui"
-                    }`,
-                  })),
-                ]}
-              />
-            ) : (
-              <>
-                <Input
-                  type="text"
-                  name="purchaseOrderDisplay"
-                  value={
-                    availablePurchaseOrders.find(
-                      po => po.id === formData.purchaseOrderId
-                    )?.code || "Tidak ada"
-                  }
-                  readOnly
-                  className="cursor-default bg-gray-100 dark:bg-gray-700"
-                />
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Purchase Order hanya dapat diubah saat status DRAFT
-                </div>
-              </>
-            )}
+            <Input
+              type="text"
+              name="purchaseOrderDisplay"
+              value={
+                availablePurchaseOrders.find(
+                  po => po.id === formData.purchaseOrderId
+                )?.code || "Tidak ada"
+              }
+              readOnly
+              className="cursor-default bg-gray-100 dark:bg-gray-700"
+            />
           </FormField>
 
           {/* Tanggal Invoice */}
@@ -770,40 +769,18 @@ export default function EditInvoicePage() {
             />
           </FormField>
 
-          {/* Customer - Editable if status is DRAFT */}
+          {/* Customer - Read Only */}
           <FormField label="Customer" errorMessage={formErrors.customerId}>
-            {formData.status === "DRAFT" ? (
-              <Select
-                value={formData.customerId || ""}
-                onChange={(value: string) =>
-                  handleInputChange("customerId", value)
-                }
-                placeholder="Pilih Customer"
-                options={[
-                  { value: "", label: "Pilih Customer" },
-                  ...availableCustomers.map(customer => ({
-                    value: customer.id,
-                    label: customer.name,
-                  })),
-                ]}
-              />
-            ) : (
-              <>
-                <Input
-                  type="text"
-                  name="customerDisplay"
-                  value={
-                    availableCustomers.find(c => c.id === formData.customerId)
-                      ?.name || "Tidak ada"
-                  }
-                  readOnly
-                  className="cursor-default bg-gray-100 dark:bg-gray-700"
-                />
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Customer hanya dapat diubah saat status DRAFT
-                </div>
-              </>
-            )}
+            <Input
+              type="text"
+              name="customerDisplay"
+              value={
+                availableCustomers.find(c => c.id === formData.customerId)
+                  ?.name || "Tidak ada"
+              }
+              readOnly
+              className="cursor-default bg-gray-100 dark:bg-gray-700"
+            />
           </FormField>
 
           {/* Biaya Pengiriman */}

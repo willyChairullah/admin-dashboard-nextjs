@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/db";
-import { DeliveryStatus } from "@prisma/client";
+import { DeliveryStatus, StockMovementType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { generateCodeByTable } from "@/utils/getCode";
 
@@ -66,13 +66,96 @@ export type DeliveryWithDetails = {
   };
 };
 
-// Get invoices that are ready for delivery (status: SENT and no existing delivery)
+// Helper function to restore stock when delivery is returned or cancelled
+async function restoreStockFromDelivery(
+  tx: any,
+  deliveryId: string,
+  invoiceId: string,
+  userId: string,
+  reason: string = "Delivery return/cancellation"
+) {
+  // Get invoice items to restore stock
+  const invoice = await tx.invoices.findUnique({
+    where: { id: invoiceId },
+    include: {
+      invoiceItems: {
+        include: {
+          products: {
+            select: {
+              id: true,
+              name: true,
+              currentStock: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!invoice) {
+    throw new Error("Invoice not found for stock restoration");
+  }
+
+  const stockMovements = [];
+
+  for (const item of invoice.invoiceItems) {
+    const product = item.products;
+    const previousStock = product.currentStock;
+    const newStock = previousStock + item.quantity; // Add back the quantity
+
+    // Create stock movement record for return/cancellation
+    const stockMovement = await tx.stockMovements.create({
+      data: {
+        type: StockMovementType.RETURN_IN, // Using RETURN_IN for stock restoration
+        quantity: item.quantity,
+        previousStock: previousStock,
+        newStock: newStock,
+        reference: `Delivery Return/Cancel: ${deliveryId}`,
+        notes: reason,
+        productId: product.id,
+        userId: userId,
+      },
+    });
+
+    stockMovements.push(stockMovement);
+
+    // Update product stock
+    await tx.products.update({
+      where: { id: product.id },
+      data: { currentStock: newStock },
+    });
+  }
+
+  return stockMovements;
+}
+
+// Get invoices that are ready for delivery (status: SENT and no existing delivery or delivery with CANCELLED/RETURNED status)
 export async function getAvailableInvoicesForDelivery() {
   try {
     const invoices = await db.invoices.findMany({
       where: {
         status: "SENT",
-        deliveries: null, // No existing delivery
+        OR: [
+          { deliveries: null }, // No existing delivery
+          {
+            deliveries: {
+              status: {
+                in: ["CANCELLED", "RETURNED"],
+              },
+            },
+          }, // Delivery with CANCELLED or RETURNED status can be reused
+        ],
+        AND: [
+          {
+            OR: [
+              { useDeliveryNote: false }, // Invoice tanpa surat jalan bisa langsung dikirim
+              {
+                useDeliveryNote: true,
+                delivery_notes: { isNot: null }, // Invoice dengan useDeliveryNote=true harus memiliki surat jalan
+              },
+            ],
+          },
+        ],
       },
       include: {
         customer: {
@@ -96,6 +179,14 @@ export async function getAvailableInvoicesForDelivery() {
             },
           },
         },
+        deliveries: {
+          select: {
+            id: true,
+            code: true,
+            status: true,
+            returnReason: true,
+          },
+        },
       },
       orderBy: {
         invoiceDate: "desc",
@@ -108,6 +199,7 @@ export async function getAvailableInvoicesForDelivery() {
     throw new Error("Failed to fetch available invoices");
   }
 }
+
 export async function getDeliveries(): Promise<DeliveryWithDetails[]> {
   try {
     const deliveries = await db.deliveries.findMany({
@@ -256,43 +348,117 @@ export async function updateDeliveryStatus(
   deliveryId: string,
   status: DeliveryStatus,
   notes?: string,
-  returnReason?: string
+  returnReason?: string,
+  userId?: string
 ) {
   try {
-    const updateData: any = {
-      status,
-      notes,
-      updatedAt: new Date(),
-    };
-
-    // if (status === "DELIVERED" || status === "RETURNED") {
-    if (status === "DELIVERED") {
-      updateData.completedAt = new Date();
-    }
-
-    // if (status === "RETURNED" && returnReason) {
-    if (returnReason) {
-      updateData.returnReason = returnReason;
-    }
-
-    const delivery = await db.deliveries.update({
-      where: { id: deliveryId },
-      data: updateData,
-      include: {
-        invoice: {
-          include: {
-            customer: true,
+    const result = await db.$transaction(async tx => {
+      // Get current delivery to check status change
+      const currentDelivery = await tx.deliveries.findUnique({
+        where: { id: deliveryId },
+        include: {
+          invoice: {
+            include: {
+              invoiceItems: {
+                include: {
+                  products: {
+                    select: {
+                      id: true,
+                      name: true,
+                      currentStock: true,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
-        helper: true,
-      },
+      });
+
+      if (!currentDelivery) {
+        throw new Error("Delivery not found");
+      }
+
+      const updateData: any = {
+        status,
+        notes,
+        updatedAt: new Date(),
+      };
+
+      // Set completion date for delivered status
+      if (status === "DELIVERED") {
+        updateData.completedAt = new Date();
+      }
+
+      // Add return reason if provided
+      if (returnReason) {
+        updateData.returnReason = returnReason;
+      }
+
+      // Handle stock restoration for RETURNED or CANCELLED status
+      let stockMovements = [];
+      if (
+        (status === "RETURNED" || status === "CANCELLED") &&
+        currentDelivery.status !== "RETURNED" &&
+        currentDelivery.status !== "CANCELLED"
+      ) {
+        // Only restore stock if status is changing TO returned/cancelled (not already in that state)
+        // Also check if stock movement doesn't already exist
+        const hasExistingMovement = await tx.stockMovements.findFirst({
+          where: {
+            reference: `Delivery Return/Cancel: ${deliveryId}`,
+            type: StockMovementType.RETURN_IN,
+          },
+        });
+
+        if (!hasExistingMovement) {
+          const movementUserId = userId || "system";
+          const movementReason = returnReason
+            ? `Delivery ${status.toLowerCase()}: ${returnReason}`
+            : `Delivery ${status.toLowerCase()}`;
+
+          stockMovements = await restoreStockFromDelivery(
+            tx,
+            deliveryId,
+            currentDelivery.invoiceId,
+            movementUserId,
+            movementReason
+          );
+        }
+      }
+
+      // Update delivery status
+      const delivery = await tx.deliveries.update({
+        where: { id: deliveryId },
+        data: updateData,
+        include: {
+          invoice: {
+            include: {
+              customer: true,
+            },
+          },
+          helper: true,
+        },
+      });
+
+      return { delivery, stockMovements };
     });
 
     revalidatePath("/sales/pengiriman");
-    return { success: true, data: delivery };
+    return {
+      success: true,
+      data: result.delivery,
+      stockMovements: result.stockMovements,
+    };
   } catch (error) {
     console.error("Error updating delivery status:", error);
-    throw new Error("Failed to update delivery status");
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update delivery status",
+    };
   }
 }
 

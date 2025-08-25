@@ -15,9 +15,10 @@ const columns = [
     render: (value: Date) => formatDate(value),
   },
   {
-    header: "Tanggal Jatuh Tempo",
+    header: "Net",
     accessor: "dueDate",
-    render: (value: Date) => formatDate(value),
+    render: (value: Date | null) =>
+      value ? formatDate(value) : "Bayar langsung",
   },
   {
     header: "Customer",

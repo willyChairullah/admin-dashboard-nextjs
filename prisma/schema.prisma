@@ -309,7 +309,6 @@ model Invoices {
   paymentStatus     PaymentStatus     @default(UNPAID)
   updatedBy         String?
   purchaseOrderId   String?           @unique
-  deliveryAddress   String?
   shippingCost      Float             @default(0)
   taxPercentage     Float             @default(0)
   type              InvoiceType       @default(PRODUCT)

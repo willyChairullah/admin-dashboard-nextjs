@@ -522,6 +522,91 @@ async function createStockMovements(
   return stockMovements;
 }
 
+// Helper function to reverse stock movements when deleting invoice
+async function reverseStockMovements(
+  tx: any,
+  invoiceId: string,
+  userId: string
+) {
+  // Find all stock movements related to this invoice
+  const invoiceStockMovements = await tx.stockMovements.findMany({
+    where: {
+      reference: `Invoice: ${invoiceId}`,
+      type: StockMovementType.SALES_OUT,
+    },
+    include: {
+      products: {
+        select: {
+          id: true,
+          currentStock: true,
+        },
+      },
+    },
+  });
+
+  const reversalMovements = [];
+
+  for (const movement of invoiceStockMovements) {
+    const product = movement.products;
+    const previousStock = product.currentStock;
+    const newStock = previousStock + movement.quantity; // Add back the quantity
+
+    // Create reversal stock movement
+    const reversalMovement = await tx.stockMovements.create({
+      data: {
+        type: StockMovementType.ADJUSTMENT_IN,
+        quantity: movement.quantity,
+        previousStock: previousStock,
+        newStock: newStock,
+        reference: `Invoice Deletion Reversal: ${invoiceId}`,
+        notes: `Stock restoration due to invoice deletion`,
+        productId: product.id,
+        userId: userId,
+      },
+    });
+
+    reversalMovements.push(reversalMovement);
+
+    // Update product stock
+    await tx.products.update({
+      where: { id: product.id },
+      data: { currentStock: newStock },
+    });
+  }
+
+  // Delete original stock movements
+  await tx.stockMovements.deleteMany({
+    where: {
+      reference: `Invoice: ${invoiceId}`,
+      type: StockMovementType.SALES_OUT,
+    },
+  });
+
+  return reversalMovements;
+}
+
+// Helper function to update stock movements when invoice is updated
+async function updateStockMovements(
+  tx: any,
+  invoiceId: string,
+  oldItems: any[],
+  newItems: InvoiceItemFormData[],
+  userId: string
+) {
+  // First, reverse the old stock movements
+  await reverseStockMovements(tx, invoiceId, userId);
+
+  // Then create new stock movements with updated items
+  const newStockMovements = await createStockMovements(
+    tx,
+    invoiceId,
+    newItems,
+    userId
+  );
+
+  return newStockMovements;
+}
+
 // Create new invoice
 export async function createInvoice(data: InvoiceFormData) {
   try {
@@ -607,10 +692,21 @@ export async function updateInvoice(
 ) {
   try {
     const result = await db.$transaction(async tx => {
-      // Get current invoice to preserve paidAmount
+      // Get current invoice to preserve paidAmount and fetch existing items for stock reversal
       const currentInvoice = await tx.invoices.findUnique({
         where: { id },
-        select: { paidAmount: true },
+        include: {
+          invoiceItems: {
+            include: {
+              products: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!currentInvoice) {
@@ -619,13 +715,22 @@ export async function updateInvoice(
 
       const remainingAmount = data.totalAmount - currentInvoice.paidAmount;
 
+      // Update stock movements if invoice items changed
+      const stockMovements = await updateStockMovements(
+        tx,
+        id,
+        currentInvoice.invoiceItems,
+        data.items,
+        updatedBy
+      );
+
       // Update invoice
       const invoice = await tx.invoices.update({
         where: { id },
         data: {
           code: data.code,
           invoiceDate: data.invoiceDate,
-          dueDate: data.dueDate || new Date(),
+          dueDate: data.dueDate,
           status: data.status,
           type: data.type,
           subtotal: data.subtotal,
@@ -651,8 +756,17 @@ export async function updateInvoice(
 
       // Create new invoice items - removed description field
       const invoiceItems = await Promise.all(
-        data.items.map(item =>
-          tx.invoiceItems.create({
+        data.items.map((item, index) => {
+          console.log(`Creating item ${index}:`, {
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount,
+            discountType: item.discountType,
+            totalPrice: item.totalPrice,
+            productId: item.productId,
+          });
+
+          return tx.invoiceItems.create({
             data: {
               quantity: item.quantity,
               price: item.price,
@@ -662,11 +776,11 @@ export async function updateInvoice(
               invoiceId: invoice.id,
               productId: item.productId, // No longer nullable
             },
-          })
-        )
+          });
+        })
       );
 
-      return { invoice, invoiceItems };
+      return { invoice, invoiceItems, stockMovements };
     });
 
     revalidatePath("/sales/invoice");
@@ -679,7 +793,7 @@ export async function updateInvoice(
 }
 
 // Delete invoice
-export async function deleteInvoice(id: string) {
+export async function deleteInvoice(id: string, deletedBy: string = "system") {
   try {
     await db.$transaction(async tx => {
       // Check if there are any payments for this invoice
@@ -692,6 +806,20 @@ export async function deleteInvoice(id: string) {
           "Cannot delete invoice. Payment data already exists for this invoice."
         );
       }
+
+      // Check if there are any deliveries for this invoice
+      const existingDeliveries = await tx.deliveries.findMany({
+        where: { invoiceId: id },
+      });
+
+      if (existingDeliveries.length > 0) {
+        throw new Error(
+          "Cannot delete invoice. Delivery data already exists for this invoice."
+        );
+      }
+
+      // Reverse stock movements before deleting invoice
+      await reverseStockMovements(tx, id, deletedBy);
 
       // Delete invoice items first (cascade should handle this, but explicit is better)
       await tx.invoiceItems.deleteMany({
@@ -710,7 +838,8 @@ export async function deleteInvoice(id: string) {
     console.error("Error deleting invoice:", error);
     if (
       error.message &&
-      error.message.includes("Payment data already exists")
+      (error.message.includes("Payment data already exists") ||
+        error.message.includes("Delivery data already exists"))
     ) {
       throw error; // Re-throw the custom error
     }
